@@ -200,7 +200,65 @@ const Index = () => {
           </Card>
         </div>
 
-        <div className="mt-8 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+        {/* Voice Commands Section */}
+        <div className="mt-8 rounded-xl border border-fuchsia-500/30 bg-black/40 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Mic className="h-5 w-5 text-fuchsia-400" />
+            Voice Commands
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Navigation</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Open my tasks"</li>
+                <li>"Go to calendar"</li>
+                <li>"Show me reminders"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Create</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Add task buy groceries"</li>
+                <li>"Remind me to call mom at 5pm"</li>
+                <li>"Take a note about the meeting"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Read & Summarize</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Read my tasks"</li>
+                <li>"Summarize my day"</li>
+                <li>"What's on my calendar?"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Search & Info</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"What's the weather?"</li>
+                <li>"Find nearby coffee shops"</li>
+                <li>"Search for React tutorials"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Manage</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Mark first task done"</li>
+                <li>"Reschedule task to tomorrow"</li>
+                <li>"Dismiss reminder"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Quick Tips</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>Tap the mic button anywhere</li>
+                <li>Double-tap for full voice chat</li>
+                <li>Tap while speaking to interrupt</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
           <h2 className="text-lg font-semibold text-white mb-3">Quick Setup</h2>
           <ol className="space-y-2 text-sm text-slate-300">
             <li className="flex items-start gap-2">
@@ -217,7 +275,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">4</span>
-              <span>Click "Start Voice Conversation" and start talking!</span>
+              <span>Click "Start Voice Conversation" or tap the floating mic button!</span>
             </li>
           </ol>
         </div>

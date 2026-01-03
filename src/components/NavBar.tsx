@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell } from "lucide-react";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import VoiceTutorial from "./VoiceTutorial";
 
 const linkBase =
   "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white transition";
@@ -14,6 +15,7 @@ const active =
 export default function NavBar() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -103,9 +105,18 @@ export default function NavBar() {
           </nav>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {user ? (
             <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowTutorial(true)}
+                className="text-slate-400 hover:text-white h-8 w-8"
+                title="Voice Commands Help"
+              >
+                <HelpCircle className="h-4 w-4" />
+              </Button>
               <NavLink to="/voice">
                 <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
                   <Mic className="mr-2 h-4 w-4" />
@@ -122,6 +133,8 @@ export default function NavBar() {
             </NavLink>
           )}
         </div>
+        
+        <VoiceTutorial open={showTutorial} onClose={() => setShowTutorial(false)} />
       </div>
     </header>
   );

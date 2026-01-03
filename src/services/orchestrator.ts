@@ -165,6 +165,31 @@ export const AVAILABLE_TOOLS = [
     description: "Get user's notes with optional search",
     parameters: { search: "string (optional)", limit: "number (default: 10)" },
   },
+  {
+    name: "update_task",
+    description: "Update a task's title, description, or priority",
+    parameters: { task_id: "string (optional)", task_title: "string (optional, to find by title)", new_title: "string (optional)", new_description: "string (optional)", new_priority: "low|medium|high|urgent (optional)" },
+  },
+  {
+    name: "search_notes",
+    description: "Search through notes by keyword",
+    parameters: { query: "string" },
+  },
+  {
+    name: "update_reminder",
+    description: "Update a reminder's text or time",
+    parameters: { reminder_id: "string (optional)", reminder_text: "string (optional, to find by text)", new_text: "string (optional)", new_due_time: "ISO datetime (optional)" },
+  },
+  {
+    name: "get_overdue_tasks",
+    description: "Get all overdue tasks",
+    parameters: {},
+  },
+  {
+    name: "get_upcoming_reminders",
+    description: "Get reminders due in the next few hours",
+    parameters: { hours: "number (default: 24)" },
+  },
 ];
 
 // Tool execution functions
@@ -1004,6 +1029,247 @@ export async function executeGetNotes(
   }
 }
 
+export async function executeUpdateTask(
+  userId: string,
+  taskId?: string,
+  taskTitle?: string,
+  newTitle?: string,
+  newDescription?: string,
+  newPriority?: string
+): Promise<ActionResult> {
+  try {
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (newTitle) updates.title = newTitle;
+    if (newDescription) updates.description = newDescription;
+    if (newPriority) updates.priority = newPriority;
+
+    if (Object.keys(updates).length === 1) {
+      throw new Error("No updates provided");
+    }
+
+    let query = supabase.from("tasks").update(updates).eq("user_id", userId);
+    
+    if (taskId) {
+      query = query.eq("id", taskId);
+    } else if (taskTitle) {
+      query = query.ilike("title", `%${taskTitle}%`);
+    } else {
+      throw new Error("Either task_id or task_title is required");
+    }
+    
+    const { data, error } = await query.select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "update_task",
+      success: true,
+      data: {
+        task: data,
+        message: `Task "${data.title}" updated successfully`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "update_task",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeSearchNotes(
+  userId: string,
+  query: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("user_id", userId)
+      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        tool: "search_notes",
+        success: true,
+        data: {
+          notes: [],
+          voiceText: `I couldn't find any notes matching "${query}".`,
+        },
+      };
+    }
+
+    const voiceText = `Found ${data.length} note${data.length > 1 ? 's' : ''} matching "${query}". ${data.slice(0, 3).map((n, i) => `${i + 1}. "${n.title}"`).join(". ")}`;
+
+    return {
+      tool: "search_notes",
+      success: true,
+      data: {
+        notes: data.map(n => ({
+          id: n.id,
+          title: n.title,
+          preview: n.content.substring(0, 100),
+        })),
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "search_notes",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeUpdateReminder(
+  userId: string,
+  reminderId?: string,
+  reminderText?: string,
+  newText?: string,
+  newDueTime?: string
+): Promise<ActionResult> {
+  try {
+    const updates: any = {};
+    if (newText) updates.text = newText;
+    if (newDueTime) updates.due_time = newDueTime;
+
+    if (Object.keys(updates).length === 0) {
+      throw new Error("No updates provided");
+    }
+
+    let query = supabase.from("reminders").update(updates).eq("user_id", userId);
+    
+    if (reminderId) {
+      query = query.eq("id", reminderId);
+    } else if (reminderText) {
+      query = query.ilike("text", `%${reminderText}%`);
+    } else {
+      throw new Error("Either reminder_id or reminder_text is required");
+    }
+    
+    const { data, error } = await query.select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "update_reminder",
+      success: true,
+      data: {
+        reminder: data,
+        message: `Reminder updated successfully`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "update_reminder",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeGetOverdueTasks(userId: string): Promise<ActionResult> {
+  try {
+    const now = new Date().toISOString();
+    
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .lt("due_date", now)
+      .order("due_date", { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        tool: "get_overdue_tasks",
+        success: true,
+        data: {
+          tasks: [],
+          voiceText: "Great news! You have no overdue tasks.",
+        },
+      };
+    }
+
+    const voiceText = `You have ${data.length} overdue task${data.length > 1 ? 's' : ''}. ${data.slice(0, 3).map((t, i) => `${i + 1}. ${t.title}`).join(". ")}`;
+
+    return {
+      tool: "get_overdue_tasks",
+      success: true,
+      data: {
+        tasks: data,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_overdue_tasks",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeGetUpcomingReminders(
+  userId: string,
+  hours: number = 24
+): Promise<ActionResult> {
+  try {
+    const now = new Date();
+    const future = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    
+    const { data, error } = await supabase
+      .from("reminders")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .gte("due_time", now.toISOString())
+      .lte("due_time", future.toISOString())
+      .order("due_time", { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        tool: "get_upcoming_reminders",
+        success: true,
+        data: {
+          reminders: [],
+          voiceText: `You have no reminders in the next ${hours} hours.`,
+        },
+      };
+    }
+
+    const voiceText = `You have ${data.length} reminder${data.length > 1 ? 's' : ''} coming up. ${data.slice(0, 3).map((r, i) => {
+      const time = new Date(r.due_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return `${i + 1}. "${r.text}" at ${time}`;
+    }).join(". ")}`;
+
+    return {
+      tool: "get_upcoming_reminders",
+      success: true,
+      data: {
+        reminders: data,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_upcoming_reminders",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 // Build system prompt with tools
 export function buildSystemPrompt(userLocation?: { lat: number; lng: number; city?: string }): string {
   const now = new Date();
@@ -1199,6 +1465,16 @@ export async function executeTool(
       return executeRescheduleTask(userId, parameters.new_due_date, parameters.task_id, parameters.task_title);
     case "get_notes":
       return executeGetNotes(userId, parameters.search, parameters.limit);
+    case "update_task":
+      return executeUpdateTask(userId, parameters.task_id, parameters.task_title, parameters.new_title, parameters.new_description, parameters.new_priority);
+    case "search_notes":
+      return executeSearchNotes(userId, parameters.query);
+    case "update_reminder":
+      return executeUpdateReminder(userId, parameters.reminder_id, parameters.reminder_text, parameters.new_text, parameters.new_due_time);
+    case "get_overdue_tasks":
+      return executeGetOverdueTasks(userId);
+    case "get_upcoming_reminders":
+      return executeGetUpcomingReminders(userId, parameters.hours);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }

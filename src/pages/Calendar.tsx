@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Mic } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from "date-fns";
 
 interface CalendarEvent {
@@ -122,6 +123,10 @@ export default function Calendar() {
               <CalendarIcon className="h-8 w-8 text-blue-400" />
               Calendar
             </h1>
+            <VoiceHint
+              commands={["Schedule meeting tomorrow at 2pm", "What's on my calendar?", "Read my events"]}
+              className="mt-2"
+            />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

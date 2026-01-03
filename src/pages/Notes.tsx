@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, FileText, Pin, Search, Edit } from "lucide-react";
+import { Plus, Trash2, FileText, Pin, Search, Edit, Mic } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 import { format } from "date-fns";
 
 interface Note {
@@ -154,6 +155,10 @@ export default function Notes() {
               Notes
             </h1>
             <p className="text-slate-400 mt-1">{notes.length} notes</p>
+            <VoiceHint
+              commands={["Take a note about the meeting", "Read my notes", "Search notes for project"]}
+              className="mt-2"
+            />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

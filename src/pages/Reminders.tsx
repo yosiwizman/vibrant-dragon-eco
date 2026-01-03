@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Bell, Clock, Check, X } from "lucide-react";
+import { Plus, Trash2, Bell, Clock, Check, X, Mic } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 import { format } from "date-fns";
 
 interface Reminder {
@@ -118,6 +119,10 @@ export default function Reminders() {
           <p className="text-slate-400 mt-1">
             {pendingReminders.length} pending reminders
           </p>
+          <VoiceHint
+            commands={["Remind me to call mom at 5pm", "Read my reminders", "Dismiss first reminder"]}
+            className="mt-2"
+          />
         </div>
 
         {/* Add Reminder */}

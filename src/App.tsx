@@ -26,6 +26,7 @@ import Notifications from "./pages/Notifications";
 import Contacts from "./pages/Contacts";
 import Messages from "./pages/Messages";
 import MicButton from "@/components/MicButton";
+import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
         <BrowserRouter>
           <VoiceProvider>
             <NavBar />
+            <VoiceStatusIndicator />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route

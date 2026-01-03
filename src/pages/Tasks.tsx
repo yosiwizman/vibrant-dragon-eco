@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, CheckSquare, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, CheckSquare, Clock, AlertTriangle, Mic } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 
 interface Task {
   id: string;
@@ -134,6 +135,10 @@ export default function Tasks() {
             <p className="text-slate-400 mt-1">
               {pendingCount} pending • {completedCount} completed
             </p>
+            <VoiceHint
+              commands={["Add task buy groceries", "Mark first task done", "Read my tasks"]}
+              className="mt-2"
+            />
           </div>
         </div>
 
