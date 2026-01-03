@@ -28,6 +28,9 @@ import Contacts from "./pages/Contacts";
 import Messages from "./pages/Messages";
 import Appointments from "./pages/Appointments";
 import AILogs from "./pages/AILogs";
+import Drafts from "./pages/Drafts";
+import BookingTasks from "./pages/BookingTasks";
+import Documents from "./pages/Documents";
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -213,6 +216,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AILogs />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/drafts"
+              element={
+                <ProtectedRoute>
+                  <Drafts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/booking-tasks"
+              element={
+                <ProtectedRoute>
+                  <BookingTasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <Documents />
                 </ProtectedRoute>
               }
             />

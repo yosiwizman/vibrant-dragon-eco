@@ -26,6 +26,9 @@ export const APP_ROUTES: NavigationRoute[] = [
   { path: "/history", aliases: ["history", "past", "previous"], description: "History" },
   { path: "/appointments", aliases: ["appointments", "appointment", "bookings", "booking", "scheduled meetings"], description: "Appointments" },
   { path: "/ai-logs", aliases: ["ai logs", "ai log", "ai history", "ai activity", "logs", "activity log"], description: "AI Logs" },
+  { path: "/drafts", aliases: ["drafts", "draft", "email drafts", "sms drafts", "message drafts"], description: "Drafts" },
+  { path: "/booking-tasks", aliases: ["booking tasks", "booking", "bookings", "call tasks", "phone tasks"], description: "Booking Tasks" },
+  { path: "/documents", aliases: ["documents", "document", "files", "uploads", "my files", "my documents"], description: "Documents" },
 ];
 
 export function findRouteByVoiceCommand(command: string): NavigationRoute | null {

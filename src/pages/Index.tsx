@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun, RefreshCw, Undo, Calendar, Activity } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun, RefreshCw, Undo, Calendar, Activity, Phone, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
@@ -159,6 +159,22 @@ const Index = () => {
                 <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
                   <Bell className="h-8 w-8 text-red-400" />
                   <span className="font-medium text-white text-sm">Alerts</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/drafts">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Edit className="h-8 w-8 text-amber-400" />
+                  <span className="font-medium text-white text-sm">Drafts</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/booking-tasks">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Phone className="h-8 w-8 text-rose-400" />
+                  <span className="font-medium text-white text-sm">Bookings</span>
                 </CardContent>
               </Card>
             </Link>

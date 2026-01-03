@@ -16,6 +16,8 @@ import { searchWeb } from "@/services/search";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
 import ChatTips from "@/components/ChatTips";
+import { logChatMessage } from "@/services/ai-logging";
+import { logChatMessage } from "@/services/ai-logging";
 
 const STORAGE_KEY = "echo:conversation:default";
 
@@ -184,14 +186,24 @@ export default function Chat() {
         role: "assistant",
         content: finalContent,
         citations: res.citations as Citation[] | undefined,
-        toolCall: toolResults.length > 0 ? { 
-          type: "orchestrator", 
+        toolCall: toolResults.length > 0 ? {
+          type: "orchestrator",
           input: toolCalls.map(t => t.tool).join(", "),
           outputMeta: { tools: toolResults.map(r => ({ tool: r.tool, success: r.success })) }
         } : undefined,
         createdAt: Date.now(),
       };
       appendMessage(assistantMsg);
+      
+      // Log the chat interaction
+      if (user) {
+        logChatMessage(user.id, userMsg.content, finalContent);
+      }
+    } catch (e: any) {
+      // Log the chat interaction
+      if (user) {
+        logChatMessage(user.id, userMsg.content, finalContent);
+      }
     } catch (e: any) {
       showError(e.message || "Failed to send message");
     } finally {
