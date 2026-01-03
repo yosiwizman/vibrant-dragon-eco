@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import QuickActions from "./QuickActions";
 import CurrentTimeDisplay from "./CurrentTimeDisplay";
 import LocationDisplay from "./LocationDisplay";
+import WeatherWidget from "./WeatherWidget";
+import RecentActivity from "./RecentActivity";
 import {
   CheckSquare,
   Bell,
@@ -180,10 +182,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Time and Location Context */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Time, Location, and Weather Context */}
+      <div className="grid gap-4 md:grid-cols-3">
         <CurrentTimeDisplay />
         <LocationDisplay />
+        <WeatherWidget />
       </div>
 
       {/* Quick Actions and Stats */}
@@ -208,38 +211,43 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Upcoming Items */}
-      {upcomingItems.length > 0 && (
-        <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-fuchsia-400" />
-              Coming Up
-            </h3>
-            <div className="space-y-2">
-              {upcomingItems.map((item) => (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-slate-800/50"
-                >
-                  {getItemIcon(item.type)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{item.title}</p>
-                    <p className="text-xs text-slate-400">{formatItemTime(item.time)}</p>
+      {/* Recent Activity and Upcoming Items */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <RecentActivity />
+        
+        {/* Upcoming Items */}
+        {upcomingItems.length > 0 && (
+          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-fuchsia-400" />
+                Coming Up
+              </h3>
+              <div className="space-y-2">
+                {upcomingItems.map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-slate-800/50"
+                  >
+                    {getItemIcon(item.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{item.title}</p>
+                      <p className="text-xs text-slate-400">{formatItemTime(item.time)}</p>
+                    </div>
+                    {item.priority && (
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        item.priority === "urgent" ? "bg-red-500/20 text-red-300" : "bg-orange-500/20 text-orange-300"
+                      }`}>
+                        {item.priority}
+                      </span>
+                    )}
                   </div>
-                  {item.priority && (
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      item.priority === "urgent" ? "bg-red-500/20 text-red-300" : "bg-orange-500/20 text-orange-300"
-                    }`}>
-                      {item.priority}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

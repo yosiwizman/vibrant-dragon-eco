@@ -10,6 +10,7 @@ import { transcribeAudio, synthesizeSpeech, playAudioBlob } from "../services/op
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
+import VoiceCommandExamples from "@/components/VoiceCommandExamples";
 import type { Message } from "../types/models";
 
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
@@ -294,23 +295,15 @@ export default function VoiceChat() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-6">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="text-4xl mb-4">🎙️</div>
-                  <p className="text-lg text-white mb-2">Voice-First AI Assistant</p>
-                  <p className="text-sm text-slate-400 max-w-md mb-4">
-                    Speak naturally to Echo. I can search the web, create reminders, manage tasks, take notes, and schedule events.
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
-                      "Remind me to call mom at 5pm"
-                    </Badge>
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
-                      "What's the weather like?"
-                    </Badge>
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
-                      "Create a task to review documents"
-                    </Badge>
+                <div className="flex flex-col h-full">
+                  <div className="flex flex-col items-center justify-center flex-1 text-center">
+                    <div className="text-4xl mb-4">🎙️</div>
+                    <p className="text-lg text-white mb-2">Voice-First AI Assistant</p>
+                    <p className="text-sm text-slate-400 max-w-md mb-4">
+                      Speak naturally to Echo. I can search the web, create reminders, manage tasks, take notes, and schedule events.
+                    </p>
                   </div>
+                  <VoiceCommandExamples />
                 </div>
               ) : (
                 messages.map((m) => (

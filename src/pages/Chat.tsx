@@ -15,6 +15,7 @@ import { chat } from "@/services/brain";
 import { searchWeb } from "@/services/search";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
+import ChatTips from "@/components/ChatTips";
 
 const STORAGE_KEY = "echo:conversation:default";
 
@@ -250,23 +251,15 @@ export default function Chat() {
           <CardContent>
             <ScrollArea className="h-[58vh] rounded-lg border border-slate-700 bg-slate-900/50 p-4">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="text-4xl mb-4">👋</div>
-                  <p className="text-lg text-white mb-2">Hello! I'm Echo, your AI assistant.</p>
-                  <p className="text-sm text-slate-400 max-w-md">
-                    I can help you search the web, create reminders, manage tasks, take notes, and schedule calendar events. Just ask!
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300">
-                      "Search for the latest AI news"
-                    </Badge>
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300">
-                      "Remind me to call mom at 5pm"
-                    </Badge>
-                    <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300">
-                      "Create a task to review documents"
-                    </Badge>
+                <div className="flex flex-col h-full">
+                  <div className="flex flex-col items-center justify-center flex-1 text-center">
+                    <div className="text-4xl mb-4">👋</div>
+                    <p className="text-lg text-white mb-2">Hello! I'm Echo, your AI assistant.</p>
+                    <p className="text-sm text-slate-400 max-w-md mb-4">
+                      I can help you search the web, create reminders, manage tasks, take notes, and schedule calendar events. Just ask!
+                    </p>
                   </div>
+                  <ChatTips onPromptClick={(prompt) => setInput(prompt)} />
                 </div>
               ) : (
                 messages.map((m) => (
