@@ -59,15 +59,8 @@ export interface Preferences {
   enableChatHistory: boolean;
   assistantName: string;
   chatHistoryLimit: number;
-  // Smart Scheduling
   enableSmartScheduling: boolean;
   defaultReminderLeadTime: number;
-  // Quiet/Listening Mode
-  quietModeExitPhrase: string;
-}
-  enableSmartScheduling: boolean;
-  defaultReminderLeadTime: number;
-  // Quiet/Listening Mode
   quietModeExitPhrase: string;
 }
 

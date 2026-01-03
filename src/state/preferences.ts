@@ -30,9 +30,6 @@ const DEFAULT: Preferences = {
   defaultReminderLeadTime: 30,
   quietModeExitPhrase: "Echo summarize",
 };
-  defaultReminderLeadTime: 30,
-  quietModeExitPhrase: "echo summarize",
-};
 
 export function loadPreferences(): Preferences {
   try {
