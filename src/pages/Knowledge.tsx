@@ -51,97 +51,102 @@ export default function Knowledge() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl p-4 space-y-6">
-      <Card className="border-white/10 bg-white/5 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="bg-gradient-to-r from-fuchsia-400 to-blue-400 bg-clip-text text-transparent">
-            Knowledge
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="md:col-span-1">
-              <Label>Title</Label>
-              <Input
-                placeholder="e.g., Project principles"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
+    <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-4">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-white">
+              Knowledge
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="md:col-span-1">
+                <Label className="text-slate-300">Title</Label>
+                <Input
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  placeholder="e.g., Project principles"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-1">
+                <Label className="text-slate-300">Tags (comma-separated)</Label>
+                <Input
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  placeholder="personal, work"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-1 flex items-end">
+                <Button onClick={onAdd} className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+                  <Plus className="mr-2 h-4 w-4" /> Add
+                </Button>
+              </div>
+              <div className="md:col-span-3">
+                <Label className="text-slate-300">Content</Label>
+                <textarea
+                  className="w-full rounded-md border border-slate-700 bg-slate-800 p-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-fuchsia-500"
+                  placeholder="Write a short fact, instruction, or note your assistant should remember..."
+                  rows={4}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="md:col-span-1">
-              <Label>Tags (comma-separated)</Label>
-              <Input
-                placeholder="personal, work"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
+            <Separator className="my-2 bg-slate-700" />
+            <div className="grid gap-2 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <Input
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  placeholder="Search your knowledge..."
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-1 flex items-center text-xs text-slate-400">
+                <Tags className="mr-2 h-4 w-4" /> Tip: tag items to find them faster.
+              </div>
             </div>
-            <div className="md:col-span-1 flex items-end">
-              <Button onClick={onAdd} className="w-full">
-                <Plus className="mr-2 h-4 w-4" /> Add
-              </Button>
-            </div>
-            <div className="md:col-span-3">
-              <Label>Content</Label>
-              <textarea
-                className="w-full rounded-md border bg-transparent p-2 text-sm outline-none"
-                placeholder="Write a short fact, instruction, or note your assistant should remember..."
-                rows={4}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            </div>
-          </div>
-          <Separator className="my-2 bg-white/10" />
-          <div className="grid gap-2 md:grid-cols-3">
-            <div className="md:col-span-2">
-              <Input
-                placeholder="Search your knowledge..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </div>
-            <div className="md:col-span-1 flex items-center text-xs text-white/60">
-              <Tags className="mr-2 h-4 w-4" /> Tip: tag items to find them faster.
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {results.length === 0 ? (
-          <Card className="border-white/10 bg-white/5 backdrop-blur">
-            <CardContent className="p-6 text-sm text-white/70">
-              Your Knowledge is empty. Add a few facts to personalize Echo.
-            </CardContent>
-          </Card>
-        ) : (
-          results.map((k) => (
-            <Card key={k.id} className="border-white/10 bg-white/5 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-white/90">{k.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-white/80 whitespace-pre-wrap">{k.content}</p>
-                {k.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {k.tags.map((t) => (
-                      <span key={t} className="rounded-full bg-white/10 px-2 py-1 text-xs text-white/80">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-xs text-white/60">
-                  <span>{new Date(k.createdAt).toLocaleString()}</span>
-                  <Button variant="destructive" size="sm" onClick={() => onDelete(k.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {results.length === 0 ? (
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+              <CardContent className="p-6 text-sm text-slate-400">
+                Your Knowledge is empty. Add a few facts to personalize Echo.
               </CardContent>
             </Card>
-          ))
-        )}
+          ) : (
+            results.map((k) => (
+              <Card key={k.id} className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+                <CardHeader>
+                  <CardTitle className="text-white">{k.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{k.content}</p>
+                  {k.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {k.tags.map((t) => (
+                        <span key={t} className="rounded-full bg-fuchsia-600/30 px-2 py-1 text-xs text-fuchsia-200">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>{new Date(k.createdAt).toLocaleString()}</span>
+                    <Button variant="destructive" size="sm" onClick={() => onDelete(k.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

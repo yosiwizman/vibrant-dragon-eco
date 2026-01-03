@@ -104,70 +104,72 @@ export default function Chat() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-4">
-      <Card className="border-white/10 bg-white/5 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="bg-gradient-to-r from-fuchsia-300 to-blue-300 bg-clip-text text-transparent">
-            Chat
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[58vh] rounded border border-white/10 p-3">
-            {messages.length === 0 ? (
-              <p className="text-sm text-white/70">
-                Say hello to Echo. Your messages will not be saved in Private Mode.
-              </p>
-            ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`mb-4 max-w-[85%] rounded-2xl px-4 py-3 backdrop-blur ${
-                    m.role === "user"
-                      ? "ml-auto bg-white/15 text-white"
-                      : "bg-black/30 text-white border border-white/10"
-                  }`}
-                >
-                  <div className="text-[10px] opacity-60">
-                    {m.role.toUpperCase()} • {new Date(m.createdAt).toLocaleTimeString()}
+    <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-4">
+      <div className="mx-auto max-w-4xl">
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-white">
+              Chat
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[58vh] rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+              {messages.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  Say hello to Echo. Your messages will not be saved in Private Mode.
+                </p>
+              ) : (
+                messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`mb-4 max-w-[85%] rounded-2xl px-4 py-3 ${
+                      m.role === "user"
+                        ? "ml-auto bg-fuchsia-600/40 text-white"
+                        : "bg-slate-800 text-slate-100 border border-slate-700"
+                    }`}
+                  >
+                    <div className="text-[10px] text-slate-400">
+                      {m.role.toUpperCase()} • {new Date(m.createdAt).toLocaleTimeString()}
+                    </div>
+                    <div className="mt-1 whitespace-pre-wrap">{m.content}</div>
+                    {m.citations && m.citations.length > 0 && (
+                      <>
+                        <Separator className="my-2 bg-slate-600" />
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-slate-300">Citations</div>
+                          {m.citations.map((c) => (
+                            <a
+                              key={c.url}
+                              href={c.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block text-xs text-fuchsia-300 hover:underline"
+                            >
+                              {c.title}
+                            </a>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="mt-1 whitespace-pre-wrap">{m.content}</div>
-                  {m.citations && m.citations.length > 0 && (
-                    <>
-                      <Separator className="my-2 bg-white/10" />
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold opacity-80">Citations</div>
-                        {m.citations.map((c) => (
-                          <a
-                            key={c.url}
-                            href={c.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block text-xs text-blue-300 hover:underline"
-                          >
-                            {c.title}
-                          </a>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
-          </ScrollArea>
-          <div className="mt-3 flex gap-2">
-            <Input
-              className="bg-black/30 text-white placeholder:text-white/40"
-              placeholder="Type to chat…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-            />
-            <Button onClick={onSend} className="bg-white text-black hover:bg-white/90">Send</Button>
-            <Button variant="secondary" onClick={onSearch} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
-              <Search className="mr-2 h-4 w-4" /> Search
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                ))
+              )}
+            </ScrollArea>
+            <div className="mt-3 flex gap-2">
+              <Input
+                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                placeholder="Type to chat…"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+              />
+              <Button onClick={onSend} className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">Send</Button>
+              <Button variant="secondary" onClick={onSearch} className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700">
+                <Search className="mr-2 h-4 w-4" /> Search
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

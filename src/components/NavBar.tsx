@@ -3,9 +3,9 @@ import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog,
 import { Button } from "@/components/ui/button";
 
 const linkBase =
-  "px-3 py-2 rounded-md text-sm font-medium text-white/80 hover:text-white transition";
+  "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white transition";
 const active =
-  "bg-white/10 text-white shadow-inner";
+  "bg-fuchsia-600/30 text-white";
 
 export default function NavBar() {
   const links = [
@@ -18,11 +18,11 @@ export default function NavBar() {
   ];
 
   return (
-    <header className="w-full border-b border-white/10 bg-gradient-to-b from-black/40 to-black/10 backdrop-blur">
+    <header className="w-full border-b border-fuchsia-500/20 bg-slate-950/90 backdrop-blur-lg">
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
         <NavLink to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center ring-1 ring-white/15">
-            <Bot className="h-4 w-4 text-white" />
+          <div className="h-8 w-8 rounded-lg bg-fuchsia-600/30 flex items-center justify-center ring-1 ring-fuchsia-400/40">
+            <Bot className="h-4 w-4 text-fuchsia-300" />
           </div>
           <span className="font-semibold tracking-wide text-white">Echo</span>
         </NavLink>
@@ -33,7 +33,7 @@ export default function NavBar() {
               key={l.to}
               to={l.to}
               className={({ isActive }) =>
-                `${linkBase} flex items-center gap-2 ${isActive ? active : "hover:bg-white/10"}`
+                `${linkBase} flex items-center gap-2 ${isActive ? active : "hover:bg-slate-800"}`
               }
             >
               {l.icon}
@@ -43,7 +43,7 @@ export default function NavBar() {
         </nav>
 
         <NavLink to="/chat">
-          <Button size="sm" className="bg-white text-black hover:bg-white/90">Open Chat</Button>
+          <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">Open Chat</Button>
         </NavLink>
       </div>
     </header>
