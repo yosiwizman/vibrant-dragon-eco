@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Bot, MessageSquareText, Mic, Settings, Bell, HelpCircle, Command } from "lucide-react";
+import { Bot, MessageSquareText, Mic, Settings, Bell, HelpCircle, Command, EarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -91,6 +91,19 @@ export default function NavBar() {
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
+        </NavLink>
+
+        <NavLink
+          to="/listening-sessions"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-purple-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+          title="Listening Sessions"
+        >
+          <EarOff className="h-4 w-4" />
+          <span className="hidden md:inline">Sessions</span>
         </NavLink>
 
         <NavLink

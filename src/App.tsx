@@ -35,6 +35,7 @@ import AILogs from "./pages/AILogs";
 import Drafts from "./pages/Drafts";
 import BookingTasks from "./pages/BookingTasks";
 import Documents from "./pages/Documents";
+import ListeningSessions from "./pages/ListeningSessions";
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -261,6 +262,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Documents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/listening-sessions"
+              element={
+                <ProtectedRoute>
+                  <ListeningSessions />
                 </ProtectedRoute>
               }
             />

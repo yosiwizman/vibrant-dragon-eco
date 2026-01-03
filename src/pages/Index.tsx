@@ -1,10 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { 
-  Mic, Sparkles, MessageSquareText, Brain, Shield, Puzzle, Bell, 
-  CheckSquare, Clock, FileText, Users, Send, Calendar, Activity, 
-  Phone, Edit, Settings, Wrench, History, BookOpenText
+import {
+  Mic, Sparkles, MessageSquareText, Brain, Shield, Puzzle, Bell,
+  CheckSquare, Clock, FileText, Users, Send, Calendar, Activity,
+  Phone, Edit, Settings, Wrench, History, BookOpenText, EarOff
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
@@ -34,12 +34,12 @@ const Index = () => {
   const toolsItems = [
     { to: "/knowledge", icon: BookOpenText, label: "Knowledge", color: "text-purple-400" },
     { to: "/knowledge-base", icon: Brain, label: "RAG Docs", color: "text-violet-400" },
+    { to: "/listening-sessions", icon: EarOff, label: "Sessions", color: "text-purple-400" },
     { to: "/tools", icon: Wrench, label: "Tools", color: "text-fuchsia-400" },
     { to: "/integrations", icon: Puzzle, label: "Integrations", color: "text-pink-400" },
     { to: "/ai-logs", icon: Activity, label: "AI Logs", color: "text-lime-400" },
     { to: "/history", icon: History, label: "History", color: "text-amber-400" },
     { to: "/drafts", icon: Edit, label: "Drafts", color: "text-rose-400" },
-    { to: "/booking-tasks", icon: Phone, label: "Bookings", color: "text-red-400" },
   ];
 
   return (
@@ -119,7 +119,7 @@ const Index = () => {
             Voice Commands
             <span className="text-xs text-slate-500 font-normal ml-2">Press ⌘K for full list</span>
           </h2>
-          <div className="grid gap-4 md:grid-cols-3 text-sm">
+          <div className="grid gap-4 md:grid-cols-4 text-sm">
             <div>
               <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Create</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
@@ -137,11 +137,19 @@ const Index = () => {
               </ul>
             </div>
             <div>
-              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Navigate</h3>
+              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Smart Scheduling</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
-                <li>"Open my tasks"</li>
-                <li>"Go to calendar"</li>
-                <li>"Show me reminders"</li>
+                <li>"Schedule meeting at 2pm"</li>
+                <li>"When should I do this task?"</li>
+                <li>"Check my schedule"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Quiet Mode</h3>
+              <ul className="space-y-1 text-slate-400 text-xs">
+                <li>"Go quiet" / "Listening mode"</li>
+                <li>"Echo summarize"</li>
+                <li>"What did you hear?"</li>
               </ul>
             </div>
           </div>
