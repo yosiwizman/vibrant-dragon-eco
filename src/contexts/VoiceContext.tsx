@@ -14,17 +14,21 @@ import { logVoiceCommand, logAIError } from "@/services/ai-logging";
 import { getMemoryContext } from "@/services/memory";
 import { saveChatMessage, getChatContext } from "@/services/chat-history";
 import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } from "@/services/wake-word-detection";
+import { isEnterPhrase, isExitPhrase, startListeningSession, addTranscript, endListeningSession, getSessionStatus } from "@/services/quiet-mode";
 
 interface VoiceContextType {
   isListening: boolean;
   isProcessing: boolean;
   isSpeaking: boolean;
+  isQuietMode: boolean;
   lastTranscript: string;
   startListening: () => Promise<void>;
   stopListening: () => void;
   speak: (text: string) => Promise<void>;
   stopSpeaking: () => void;
   processVoiceCommand: (text: string) => Promise<string>;
+  enterQuietMode: (context?: string) => void;
+  exitQuietMode: () => Promise<{ summary: string; bulletPoints: string[]; actionItems: string[] } | null>;
 }
 
 const VoiceContext = createContext<VoiceContextType | null>(null);
@@ -46,6 +50,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isQuietMode, setIsQuietMode] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
   
@@ -307,6 +312,40 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             transcriptText = transcription.text.trim();
             
             if (transcriptText) {
+              // Check for quiet mode entry/exit
+              if (isEnterPhrase(transcriptText) && user) {
+                const contextMatch = transcriptText.match(/for\s+(.+?)(?:\s*$|,)/i);
+                const context = contextMatch ? contextMatch[1] : undefined;
+                enterQuietMode(context);
+                await speak(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen. Say "${preferences.quietModeExitPhrase || "Echo summarize"}" when you're done.`);
+                return;
+              }
+
+              if (isExitPhrase(transcriptText) && isQuietMode && user) {
+                const result = await exitQuietMode();
+                if (result) {
+                  let summaryText = result.summary;
+                  if (result.bulletPoints.length > 0) {
+                    summaryText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
+                  }
+                  if (result.actionItems.length > 0) {
+                    summaryText += ` Action items: ${result.actionItems.join(". ")}.`;
+                  }
+                  playFeedback("success");
+                  await speak(summaryText);
+                } else {
+                  await speak("I didn't capture any conversation during the listening session.");
+                }
+                return;
+              }
+
+              // If in quiet mode, just record the transcript
+              if (isQuietMode && user) {
+                addTranscript(user.id, transcriptText);
+                // Don't respond, just keep listening
+                return;
+              }
+
               // Check for multi-step conversation
               if (user && hasActiveFlow(user.id)) {
                 const flowResult = processMultiStepResponse(user.id, transcriptText);
@@ -390,18 +429,61 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setIsListening(false);
   }, []);
 
+  const enterQuietMode = useCallback((context?: string) => {
+    if (!user) return;
+    startListeningSession(user.id, context);
+    setIsQuietMode(true);
+    showSuccess(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll just listen.`);
+  }, [user]);
+
+  const exitQuietMode = useCallback(async () => {
+    if (!user || !preferences.openaiApiKey) {
+      setIsQuietMode(false);
+      return null;
+    }
+
+    try {
+      const result = await endListeningSession(user.id, preferences.openaiApiKey);
+      setIsQuietMode(false);
+      
+      if (result.success) {
+        return {
+          summary: result.summary || "",
+          bulletPoints: result.bulletPoints || [],
+          actionItems: result.actionItems || [],
+        };
+      }
+    } catch (error) {
+      console.error("Failed to exit quiet mode:", error);
+    }
+    
+    setIsQuietMode(false);
+    return null;
+  }, [user, preferences.openaiApiKey]);
+
+  // Check quiet mode status on mount
+  useEffect(() => {
+    if (user) {
+      const status = getSessionStatus(user.id);
+      setIsQuietMode(status.isActive);
+    }
+  }, [user]);
+
   return (
     <VoiceContext.Provider
       value={{
         isListening,
         isProcessing,
         isSpeaking,
+        isQuietMode,
         lastTranscript,
         startListening,
         stopListening,
         speak,
         stopSpeaking,
         processVoiceCommand,
+        enterQuietMode,
+        exitQuietMode,
       }}
     >
       {children}

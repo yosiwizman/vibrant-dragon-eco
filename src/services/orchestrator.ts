@@ -7,6 +7,8 @@ import { undoLastAction, recordAction } from "./action-history";
 import { createRecurringReminder, createRecurringTask, getRecurringItems, cancelRecurringSeries } from "./recurrence";
 import { searchKnowledge, addDocument, getKnowledgeContext } from "./rag-knowledge";
 import { parseNaturalTime, recurrenceToString } from "./smart-time-parser";
+import { checkScheduleConflicts, getSchedulingSuggestions, getDailyScheduleAnalysis, learnUserPatterns, createPatternBasedReminder } from "./smart-scheduling";
+import { startListeningSession, endListeningSession, addTranscript, getSessionStatus, formatSummaryForVoice as formatListeningSummary, isEnterPhrase, isExitPhrase } from "./quiet-mode";
 
 export interface OrchestrationContext {
   userId: string;
@@ -268,6 +270,48 @@ export const AVAILABLE_TOOLS = [
     name: "cancel_appointment",
     description: "Cancel an appointment",
     parameters: { appointment_id: "string (optional)", contact_name: "string (optional, to find by contact)" },
+  },
+  // Smart Scheduling Tools
+  {
+    name: "check_schedule_conflicts",
+    description: "Check if a proposed time conflicts with existing events, tasks, or appointments. Use this BEFORE creating any scheduled item.",
+    parameters: { start_time: "ISO datetime", end_time: "ISO datetime", title: "string", estimated_duration: "number (minutes, optional)" },
+  },
+  {
+    name: "get_scheduling_suggestions",
+    description: "Get AI-powered suggestions for the best time to schedule a task or event based on user's patterns and availability",
+    parameters: { task_title: "string", estimated_duration: "number (minutes, default 30)", preferred_date: "ISO date (optional)" },
+  },
+  {
+    name: "get_schedule_analysis",
+    description: "Get a comprehensive analysis of the user's daily schedule including busy hours, free slots, and pattern-based alerts",
+    parameters: {},
+  },
+  {
+    name: "learn_user_patterns",
+    description: "Analyze user's behavior patterns for scheduling optimization. Returns learned routines and preferences.",
+    parameters: {},
+  },
+  {
+    name: "create_pattern_reminder",
+    description: "Create an automatic reminder based on a learned pattern (e.g., 'pick up daughter from school every Wednesday at 2pm')",
+    parameters: { activity: "string", day_of_week: "number (0-6, Sunday-Saturday)", time: "HH:mm format", lead_time_minutes: "number (default 30)" },
+  },
+  // Quiet/Listening Mode Tools
+  {
+    name: "start_listening_mode",
+    description: "Enter quiet/listening mode where the assistant only listens and records without interrupting. Use when user says 'go quiet', 'listening mode', 'just listen', 'meeting mode', etc.",
+    parameters: { context: "string (optional, e.g., 'team meeting', 'doctor appointment')" },
+  },
+  {
+    name: "end_listening_mode",
+    description: "Exit quiet mode and get a summary of the recorded conversation. Use when user says 'summarize', 'what did you hear', 'end listening mode', etc.",
+    parameters: {},
+  },
+  {
+    name: "get_listening_status",
+    description: "Check if listening mode is active and get current session info",
+    parameters: {},
   },
 ];
 
@@ -1786,6 +1830,8 @@ CAPABILITIES:
 - UNDO last action (within 5 minutes)
 - Search and query the user's KNOWLEDGE BASE (RAG documents)
 - Add new information to the knowledge base
+- SMART SCHEDULING: Detect conflicts, suggest optimal times, learn user patterns
+- QUIET/LISTENING MODE: Listen silently during meetings and summarize later
 
 RECURRING ITEMS:
 When user says "every day", "daily", "every week", "weekly", "every Monday", "every month", etc., use the recurring tools:
@@ -1802,6 +1848,34 @@ KNOWLEDGE BASE (RAG):
 When user asks about topics that might be in their knowledge base, use search_knowledge_base.
 When user wants to save information for later, use add_to_knowledge_base.
 The knowledge base contains documents the user has added, including technical guides and personal notes.
+
+SMART SCHEDULING:
+ALWAYS check for conflicts before creating events, tasks with due dates, or appointments:
+1. Use check_schedule_conflicts FIRST when user wants to schedule something
+2. If conflicts exist, inform the user and suggest alternatives
+3. Use get_scheduling_suggestions to recommend optimal times based on learned patterns
+4. Use learn_user_patterns to understand the user's routines
+5. When user mentions recurring activities (e.g., "I pick up my daughter every Wednesday at 2pm"), use create_pattern_reminder to set up automatic reminders with lead time
+
+Examples:
+- "Schedule a meeting tomorrow at 2pm" → First check_schedule_conflicts, then create if clear
+- "When should I do this task?" → Use get_scheduling_suggestions
+- "Remember I pick up my daughter Wednesdays at 2pm" → Use create_pattern_reminder with day_of_week=3, time="14:00", lead_time=30
+
+QUIET/LISTENING MODE:
+When user wants you to just listen without interrupting (meetings, conversations, etc.):
+1. Trigger phrases: "go quiet", "listening mode", "just listen", "don't interrupt", "meeting mode", "observe mode"
+2. Use start_listening_mode to enter quiet mode
+3. In quiet mode, you only record what you hear - NO responses or interruptions
+4. Exit phrases: "echo wake up", "summarize", "what did you hear", "end listening mode"
+5. Use end_listening_mode to get a summary with bullet points and action items
+
+Example flow:
+- User: "Echo, go quiet, I'm walking into a meeting"
+- You: start_listening_mode with context="meeting"
+- [User has meeting, you silently record]
+- User: "Echo, summarize"
+- You: end_listening_mode → provide summary, bullet points, action items
 
 NAVIGATION:
 When user says "open", "go to", "show me", "take me to" followed by a page name, use the navigate_to tool.
@@ -2075,6 +2149,302 @@ export async function executeAddToKnowledgeBase(
   }
 }
 
+// Smart Scheduling execution functions
+export async function executeCheckScheduleConflicts(
+  userId: string,
+  startTime: string,
+  endTime: string,
+  title: string,
+  estimatedDuration?: number
+): Promise<ActionResult> {
+  try {
+    const conflicts = await checkScheduleConflicts(
+      userId,
+      new Date(startTime),
+      new Date(endTime),
+      title,
+      estimatedDuration
+    );
+
+    if (conflicts.length === 0) {
+      return {
+        tool: "check_schedule_conflicts",
+        success: true,
+        data: {
+          hasConflicts: false,
+          conflicts: [],
+          voiceText: "This time slot is available. No conflicts found.",
+        },
+      };
+    }
+
+    const conflictMessages = conflicts.map(c => c.message).join(" Also, ");
+    const suggestions = conflicts.flatMap(c => c.suggestions).slice(0, 3);
+
+    return {
+      tool: "check_schedule_conflicts",
+      success: true,
+      data: {
+        hasConflicts: true,
+        conflicts,
+        suggestions,
+        voiceText: `I found some scheduling issues. ${conflictMessages}. ${suggestions.length > 0 ? `Alternative times: ${suggestions.join(", ")}` : ""}`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "check_schedule_conflicts", success: false, error: error.message };
+  }
+}
+
+export async function executeGetSchedulingSuggestions(
+  userId: string,
+  taskTitle: string,
+  estimatedDuration: number = 30,
+  preferredDate?: string
+): Promise<ActionResult> {
+  try {
+    const suggestions = await getSchedulingSuggestions(
+      userId,
+      taskTitle,
+      estimatedDuration,
+      preferredDate ? new Date(preferredDate) : undefined
+    );
+
+    if (suggestions.length === 0) {
+      return {
+        tool: "get_scheduling_suggestions",
+        success: true,
+        data: {
+          suggestions: [],
+          voiceText: "I don't have enough data yet to make scheduling suggestions. Keep using the app and I'll learn your patterns!",
+        },
+      };
+    }
+
+    const topSuggestions = suggestions.slice(0, 3);
+    const voiceText = topSuggestions.map(s => s.message).join(" ");
+
+    return {
+      tool: "get_scheduling_suggestions",
+      success: true,
+      data: {
+        suggestions: topSuggestions,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "get_scheduling_suggestions", success: false, error: error.message };
+  }
+}
+
+export async function executeGetScheduleAnalysis(userId: string): Promise<ActionResult> {
+  try {
+    const analysis = await getDailyScheduleAnalysis(userId);
+
+    let voiceText = `Today you have ${analysis.totalEvents} scheduled items taking about ${analysis.busyHours} hours. `;
+    
+    if (analysis.freeSlots.length > 0) {
+      const freeSlot = analysis.freeSlots[0];
+      const startTime = freeSlot.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      const endTime = freeSlot.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      voiceText += `Your next free slot is from ${startTime} to ${endTime}. `;
+    }
+
+    if (analysis.patternAlerts.length > 0) {
+      voiceText += analysis.patternAlerts.join(" ");
+    }
+
+    return {
+      tool: "get_schedule_analysis",
+      success: true,
+      data: {
+        ...analysis,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "get_schedule_analysis", success: false, error: error.message };
+  }
+}
+
+export async function executeLearnUserPatterns(userId: string): Promise<ActionResult> {
+  try {
+    const patterns = await learnUserPatterns(userId);
+
+    if (patterns.length === 0) {
+      return {
+        tool: "learn_user_patterns",
+        success: true,
+        data: {
+          patterns: [],
+          voiceText: "I haven't learned enough patterns yet. Keep using the app and I'll start recognizing your routines!",
+        },
+      };
+    }
+
+    const highConfidencePatterns = patterns.filter(p => p.confidence > 0.6);
+    let voiceText = `I've learned ${patterns.length} patterns about your schedule. `;
+    
+    if (highConfidencePatterns.length > 0) {
+      const examples = highConfidencePatterns.slice(0, 2).map(p =>
+        `${p.activity} on ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][p.dayOfWeek || 0]}s at ${p.timeOfDay}`
+      );
+      voiceText += `For example: ${examples.join(", and ")}.`;
+    }
+
+    return {
+      tool: "learn_user_patterns",
+      success: true,
+      data: {
+        patterns,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "learn_user_patterns", success: false, error: error.message };
+  }
+}
+
+export async function executeCreatePatternReminder(
+  userId: string,
+  activity: string,
+  dayOfWeek: number,
+  time: string,
+  leadTimeMinutes: number = 30,
+  openaiApiKey?: string
+): Promise<ActionResult> {
+  try {
+    const pattern = {
+      id: `manual-${Date.now()}`,
+      userId,
+      patternType: "recurring_activity" as const,
+      dayOfWeek,
+      timeOfDay: time,
+      activity,
+      confidence: 1,
+      occurrences: 1,
+      lastSeen: new Date(),
+    };
+
+    const result = await createPatternBasedReminder(userId, pattern, leadTimeMinutes);
+
+    if (!result.success) {
+      return { tool: "create_pattern_reminder", success: false, error: result.error };
+    }
+
+    const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayOfWeek];
+
+    return {
+      tool: "create_pattern_reminder",
+      success: true,
+      data: {
+        reminderId: result.reminderId,
+        voiceText: `Got it! I'll remind you ${leadTimeMinutes} minutes before "${activity}" every ${dayName} at ${time}. I've also saved this pattern so I'll learn to remind you automatically.`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "create_pattern_reminder", success: false, error: error.message };
+  }
+}
+
+// Quiet/Listening Mode execution functions
+export async function executeStartListeningMode(
+  userId: string,
+  context?: string
+): Promise<ActionResult> {
+  try {
+    const session = startListeningSession(userId, context);
+
+    return {
+      tool: "start_listening_mode",
+      success: true,
+      data: {
+        sessionId: session.id,
+        voiceText: `Entering listening mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen. Say "Echo, summarize" or "end listening mode" when you're done.`,
+        isListeningMode: true,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "start_listening_mode", success: false, error: error.message };
+  }
+}
+
+export async function executeEndListeningMode(
+  userId: string,
+  openaiApiKey: string
+): Promise<ActionResult> {
+  try {
+    const result = await endListeningSession(userId, openaiApiKey);
+
+    if (!result.success) {
+      return {
+        tool: "end_listening_mode",
+        success: false,
+        error: result.error || "Failed to end listening session",
+      };
+    }
+
+    let voiceText = result.summary || "No conversation was recorded.";
+    
+    if (result.bulletPoints && result.bulletPoints.length > 0) {
+      voiceText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
+    }
+    
+    if (result.actionItems && result.actionItems.length > 0) {
+      voiceText += ` Action items: ${result.actionItems.join(". ")}.`;
+    }
+
+    if (result.duration) {
+      voiceText = `After ${result.duration} minutes of listening, here's what I captured. ${voiceText}`;
+    }
+
+    return {
+      tool: "end_listening_mode",
+      success: true,
+      data: {
+        summary: result.summary,
+        bulletPoints: result.bulletPoints,
+        actionItems: result.actionItems,
+        duration: result.duration,
+        voiceText,
+        isListeningMode: false,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "end_listening_mode", success: false, error: error.message };
+  }
+}
+
+export async function executeGetListeningStatus(userId: string): Promise<ActionResult> {
+  try {
+    const status = getSessionStatus(userId);
+
+    if (!status.isActive) {
+      return {
+        tool: "get_listening_status",
+        success: true,
+        data: {
+          isActive: false,
+          voiceText: "Listening mode is not active. Say 'go quiet' or 'listening mode' to start.",
+        },
+      };
+    }
+
+    return {
+      tool: "get_listening_status",
+      success: true,
+      data: {
+        isActive: true,
+        duration: status.duration,
+        transcriptCount: status.transcriptCount,
+        voiceText: `Listening mode has been active for ${status.duration} minutes. I've captured ${status.transcriptCount} segments so far. Say "summarize" when you're ready.`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "get_listening_status", success: false, error: error.message };
+  }
+}
+
 // Execute a tool call
 export async function executeTool(
   userId: string,
@@ -2179,6 +2549,25 @@ export async function executeTool(
       return executeGetAppointments(userId, parameters.days);
     case "cancel_appointment":
       return executeCancelAppointment(userId, parameters.appointment_id, parameters.contact_name);
+    // Smart Scheduling tools
+    case "check_schedule_conflicts":
+      return executeCheckScheduleConflicts(userId, parameters.start_time, parameters.end_time, parameters.title, parameters.estimated_duration);
+    case "get_scheduling_suggestions":
+      return executeGetSchedulingSuggestions(userId, parameters.task_title, parameters.estimated_duration, parameters.preferred_date);
+    case "get_schedule_analysis":
+      return executeGetScheduleAnalysis(userId);
+    case "learn_user_patterns":
+      return executeLearnUserPatterns(userId);
+    case "create_pattern_reminder":
+      return executeCreatePatternReminder(userId, parameters.activity, parameters.day_of_week, parameters.time, parameters.lead_time_minutes);
+    // Quiet/Listening Mode tools
+    case "start_listening_mode":
+      return executeStartListeningMode(userId, parameters.context);
+    case "end_listening_mode":
+      // Note: openaiApiKey needs to be passed from the calling context
+      return executeEndListeningMode(userId, parameters.openai_api_key || "");
+    case "get_listening_status":
+      return executeGetListeningStatus(userId);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }

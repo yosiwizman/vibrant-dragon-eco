@@ -26,6 +26,12 @@ const DEFAULT: Preferences = {
   enableChatHistory: true,
   assistantName: "Echo",
   chatHistoryLimit: 50,
+  enableSmartScheduling: true,
+  defaultReminderLeadTime: 30,
+  quietModeExitPhrase: "Echo summarize",
+};
+  defaultReminderLeadTime: 30,
+  quietModeExitPhrase: "echo summarize",
 };
 
 export function loadPreferences(): Preferences {
