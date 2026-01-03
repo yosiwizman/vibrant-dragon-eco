@@ -24,6 +24,11 @@ export interface ActionResult {
 // Tool definitions for the AI
 export const AVAILABLE_TOOLS = [
   {
+    name: "get_current_time",
+    description: "Get the current date, time, and timezone information",
+    parameters: {},
+  },
+  {
     name: "web_search",
     description: "Search the web for current information, news, or any topic",
     parameters: { query: "string" },
@@ -121,6 +126,37 @@ export const AVAILABLE_TOOLS = [
 ];
 
 // Tool execution functions
+export function executeGetCurrentTime(): ActionResult {
+  const now = new Date();
+  const timeInfo = {
+    iso: now.toISOString(),
+    local: now.toLocaleString(),
+    date: now.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }),
+    time: now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    }),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long" }),
+    hour: now.getHours(),
+    minute: now.getMinutes(),
+    isWeekend: now.getDay() === 0 || now.getDay() === 6,
+  };
+
+  return {
+    tool: "get_current_time",
+    success: true,
+    data: timeInfo,
+  };
+}
+
 export async function executeGetWeather(location?: string): Promise<ActionResult> {
   try {
     let lat: number, lon: number;
@@ -827,6 +863,8 @@ export async function executeTool(
   const { tool, parameters } = toolCall;
   
   switch (tool) {
+    case "get_current_time":
+      return executeGetCurrentTime();
     case "web_search":
       return executeWebSearch(parameters.query, userId);
     case "get_weather":

@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
+import WelcomeModal from "@/components/WelcomeModal";
+import WelcomeModal from "@/components/WelcomeModal";
 
 const Index = () => {
   const { user } = useAuth();
@@ -17,6 +19,7 @@ const Index = () => {
 
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
+      <WelcomeModal />
       <div className="mx-auto max-w-5xl p-6">
         <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-8 backdrop-blur-lg shadow-xl">
           <div className="flex items-center gap-2 text-fuchsia-300">

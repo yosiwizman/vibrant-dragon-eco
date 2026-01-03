@@ -14,6 +14,7 @@ import type { Message, Conversation, Citation } from "@/types/models";
 import { chat } from "@/services/brain";
 import { searchWeb } from "@/services/search";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
+import { getLocationContext, LocationContext } from "@/services/context";
 
 const STORAGE_KEY = "echo:conversation:default";
 
@@ -43,6 +44,16 @@ export default function Chat() {
     () => conversation?.messages ?? [],
     [conversation]
   );
+  const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
+
+  // Try to get user location on mount
+  useEffect(() => {
+    getLocationContext().then(loc => {
+      if (loc) setUserLocation(loc);
+    }).catch(() => {
+      // Location not available, that's OK
+    });
+  }, []);
 
   useEffect(() => {
     if (!preferences.privateMode && conversation) {
@@ -111,8 +122,12 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      // Build messages with system prompt
-      const systemPrompt = buildSystemPrompt();
+      // Build messages with system prompt (location-aware)
+      const systemPrompt = buildSystemPrompt(userLocation ? {
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        city: userLocation.city,
+      } : undefined);
       const chatMessages = [
         { role: "system" as const, content: systemPrompt },
         ...messages.concat(userMsg).map((m) => ({
@@ -121,9 +136,12 @@ export default function Chat() {
         })),
       ];
 
-      const res = await chat(preferences.baseUrl, {
-        messages: chatMessages,
-      }, preferences.authToken);
+      const res = await chat(
+        preferences.baseUrl,
+        { messages: chatMessages },
+        preferences.authToken,
+        preferences.openaiApiKey
+      );
 
       // Check for tool calls in the response
       const toolCalls = parseToolCalls(res.content);
@@ -149,9 +167,12 @@ export default function Chat() {
             { role: "user" as const, content: `Tool execution results:\n${toolResultsText}\n\nPlease provide a natural language summary of what was done.` },
           ];
 
-          const followUp = await chat(preferences.baseUrl, {
-            messages: followUpMessages,
-          }, preferences.authToken);
+          const followUp = await chat(
+            preferences.baseUrl,
+            { messages: followUpMessages },
+            preferences.authToken,
+            preferences.openaiApiKey
+          );
 
           finalContent = followUp.content;
         }

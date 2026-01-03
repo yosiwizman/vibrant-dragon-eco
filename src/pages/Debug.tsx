@@ -8,20 +8,25 @@ import { usePreferences } from "../state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { 
-  Bug, 
-  Mic, 
-  MapPin, 
-  Database, 
-  Wifi, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Bug,
+  Mic,
+  MapPin,
+  Database,
+  Wifi,
+  CheckCircle,
+  XCircle,
   RefreshCw,
   Smartphone,
   Globe,
   Key,
-  Server
+  Server,
+  Zap,
+  Clock,
+  TestTube
 } from "lucide-react";
+import { getTimeContext } from "@/services/context";
+import { AVAILABLE_TOOLS } from "@/services/orchestrator";
 
 interface SystemCheck {
   name: string;
@@ -46,12 +51,15 @@ export default function Debug() {
     if (!user) return;
 
     try {
-      const [tasks, notes, reminders, contacts, notifications] = await Promise.all([
+      const [tasks, notes, reminders, contacts, notifications, knowledge, calendarEvents, apiProviders] = await Promise.all([
         supabase.from("tasks").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("notes").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("reminders").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("contacts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("knowledge").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("calendar_events").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("api_providers").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_enabled", true),
       ]);
 
       setDbStats({
@@ -60,6 +68,9 @@ export default function Debug() {
         reminders: reminders.count || 0,
         contacts: contacts.count || 0,
         notifications: notifications.count || 0,
+        knowledge: knowledge.count || 0,
+        events: calendarEvents.count || 0,
+        providers: apiProviders.count || 0,
       });
     } catch (error) {
       console.error("Failed to load DB stats:", error);
@@ -375,6 +386,46 @@ export default function Debug() {
                 <span className="text-slate-400">Viewport:</span>
                 <span className="text-white">{window.innerWidth} x {window.innerHeight}</span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Time Context */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="h-5 w-5 text-fuchsia-400" />
+              Time Context (AI Awareness)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-32">
+              <pre className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-xs text-slate-300 overflow-auto">
+                {JSON.stringify(getTimeContext(), null, 2)}
+              </pre>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Available AI Tools */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Zap className="h-5 w-5 text-fuchsia-400" />
+              Available AI Tools ({AVAILABLE_TOOLS.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+              {AVAILABLE_TOOLS.map((tool) => (
+                <div
+                  key={tool.name}
+                  className="p-2 rounded-lg border border-slate-700 bg-slate-800/50"
+                >
+                  <p className="font-mono text-sm text-fuchsia-300">{tool.name}</p>
+                  <p className="text-xs text-slate-400 line-clamp-2">{tool.description}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

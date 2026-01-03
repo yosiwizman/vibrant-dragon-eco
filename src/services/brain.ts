@@ -2,6 +2,8 @@ import type { Message } from "@/types/models";
 
 export interface ChatRequest {
   messages: { role: Message["role"]; content: string }[];
+  model?: string;
+  maxTokens?: number;
 }
 
 export interface ChatResponse {
@@ -9,12 +11,12 @@ export interface ChatResponse {
   citations?: { title: string; url: string }[];
 }
 
-export async function chat(
+// Chat with custom Brain API
+async function chatWithBrain(
   baseUrl: string,
   req: ChatRequest,
   token?: string
 ): Promise<ChatResponse> {
-  if (!baseUrl) throw new Error("BASE_URL is not set in Settings");
   const res = await fetch(`${baseUrl}/v1/brain/chat`, {
     method: "POST",
     headers: {
@@ -29,3 +31,55 @@ export async function chat(
   }
   return res.json();
 }
+
+// Chat with OpenAI directly
+async function chatWithOpenAI(
+  apiKey: string,
+  req: ChatRequest
+): Promise<ChatResponse> {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: req.model || "gpt-4o-mini",
+      messages: req.messages,
+      max_tokens: req.maxTokens || 1024,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI API error: ${res.status} ${text}`);
+  }
+
+  const data = await res.json();
+  return {
+    content: data.choices[0].message.content,
+  };
+}
+
+// Main chat function - uses Brain API if configured, otherwise OpenAI
+export async function chat(
+  baseUrl: string,
+  req: ChatRequest,
+  token?: string,
+  openaiApiKey?: string
+): Promise<ChatResponse> {
+  // If Brain URL is configured, use it
+  if (baseUrl) {
+    return chatWithBrain(baseUrl, req, token);
+  }
+  
+  // Otherwise, use OpenAI directly
+  if (openaiApiKey) {
+    return chatWithOpenAI(openaiApiKey, req);
+  }
+  
+  throw new Error("No AI provider configured. Please set your OpenAI API key in Settings.");
+}
+
+// Export individual functions for direct use
+export { chatWithOpenAI, chatWithBrain };

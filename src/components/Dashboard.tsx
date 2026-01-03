@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import QuickActions from "./QuickActions";
+import CurrentTimeDisplay from "./CurrentTimeDisplay";
+import LocationDisplay from "./LocationDisplay";
 import {
   CheckSquare,
   Bell,
@@ -178,6 +180,12 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Time and Location Context */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <CurrentTimeDisplay />
+        <LocationDisplay />
+      </div>
+
       {/* Quick Actions and Stats */}
       <div className="grid gap-4 md:grid-cols-5">
         <div className="md:col-span-1">

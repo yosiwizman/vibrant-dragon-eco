@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProviderCard from "@/components/ProviderCard";
+import IntegrationStatus from "@/components/IntegrationStatus";
+import AITestButton from "@/components/AITestButton";
 import { PROVIDER_CONFIGS, PROVIDER_CATEGORIES } from "@/types/providers";
 import { showError, showSuccess } from "@/utils/toast";
 import { getCurrentLocation } from "../services/location";
@@ -119,6 +121,9 @@ export default function Settings() {
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
+            {/* Integration Status Overview */}
+            <IntegrationStatus />
+
             <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg">
               <CardHeader>
                 <CardTitle className="text-xl text-white flex items-center gap-2">
@@ -132,13 +137,16 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label className="text-slate-300">API Key</Label>
-                  <Input
-                    type="password"
-                    className="bg-slate-800 border-slate-700 text-white"
-                    placeholder="sk-..."
-                    value={preferences.openaiApiKey || ""}
-                    onChange={(e) => setPreferences({ ...preferences, openaiApiKey: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      className="bg-slate-800 border-slate-700 text-white flex-1"
+                      placeholder="sk-..."
+                      value={preferences.openaiApiKey || ""}
+                      onChange={(e) => setPreferences({ ...preferences, openaiApiKey: e.target.value })}
+                    />
+                    <AITestButton apiKey={preferences.openaiApiKey || ""} provider="openai" />
+                  </div>
                   <p className="text-xs text-slate-500">
                     Stored locally. Never sent anywhere except OpenAI.
                   </p>

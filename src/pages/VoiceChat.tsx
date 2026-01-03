@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { transcribeAudio, synthesizeSpeech, playAudioBlob } from "../services/openai-voice";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
+import { getLocationContext, LocationContext } from "@/services/context";
 import type { Message } from "../types/models";
 
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
@@ -49,6 +50,16 @@ export default function VoiceChat() {
   const [isConversationActive, setIsConversationActive] = useState(false);
   const [lastToolsUsed, setLastToolsUsed] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
+
+  // Try to get user location on mount
+  useEffect(() => {
+    getLocationContext().then(loc => {
+      if (loc) setUserLocation(loc);
+    }).catch(() => {
+      // Location not available
+    });
+  }, []);
 
   const handleSilenceDetected = useCallback(() => {
     if (conversationState === "listening") {
@@ -105,8 +116,12 @@ export default function VoiceChat() {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      // Build messages with system prompt for tool usage
-      const systemPrompt = buildSystemPrompt();
+      // Build messages with system prompt for tool usage (location-aware)
+      const systemPrompt = buildSystemPrompt(userLocation ? {
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        city: userLocation.city,
+      } : undefined);
       const chatMessages = [
         { role: "system", content: systemPrompt },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
