@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProviders } from "@/hooks/useProviders";
 import { usePreferences } from "@/state/preferences";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { PROVIDER_CONFIGS } from "@/types/providers";
 import {
   CheckCircle2,
@@ -37,20 +38,22 @@ const CATEGORY_ICONS: Record<string, any> = {
 export default function IntegrationStatus() {
   const { providers, loading } = useProviders();
   const { preferences } = usePreferences();
+  const { hasKey: hasOpenAI, source: openaiSource } = useOpenAIKey();
   const [services, setServices] = useState<ServiceStatus[]>([]);
 
   useEffect(() => {
     const statusList: ServiceStatus[] = [];
 
-    // Check AI provider
-    const hasOpenAI = preferences.openaiApiKey || providers.some(p => p.provider_name === "openai" && p.is_enabled && p.api_key);
+    // Check AI provider - using centralized hook
     const hasAnthropic = providers.some(p => p.provider_name === "anthropic" && p.is_enabled && p.api_key);
     
     statusList.push({
       name: "AI Chat",
       category: "ai",
       status: hasOpenAI || hasAnthropic ? "connected" : "not_configured",
-      provider: hasOpenAI ? "OpenAI" : hasAnthropic ? "Anthropic" : undefined,
+      provider: hasOpenAI
+        ? `OpenAI${openaiSource === "preferences" ? " (Settings)" : " (Providers)"}`
+        : hasAnthropic ? "Anthropic" : undefined,
     });
 
     // Check Voice (requires OpenAI for now)
@@ -58,7 +61,7 @@ export default function IntegrationStatus() {
       name: "Voice",
       category: "voice",
       status: hasOpenAI ? "connected" : "not_configured",
-      provider: hasOpenAI ? "OpenAI Whisper + TTS" : undefined,
+      provider: hasOpenAI ? "OpenAI Whisper + TTS" : "Add API key in Settings",
     });
 
     // Check Search (we have free DuckDuckGo + Wikipedia)
@@ -117,7 +120,7 @@ export default function IntegrationStatus() {
     });
 
     setServices(statusList);
-  }, [providers, preferences.openaiApiKey]);
+  }, [providers, hasOpenAI, openaiSource]);
 
   if (loading) {
     return (

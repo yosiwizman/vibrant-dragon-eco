@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePreferences } from "@/state/preferences";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { useVoice } from "@/contexts/VoiceContext";
 import { showError, showSuccess } from "@/utils/toast";
 
@@ -13,7 +14,8 @@ export default function MicButton() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { 
+  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
+  const {
     isListening, 
     isProcessing, 
     isSpeaking, 
@@ -53,8 +55,8 @@ export default function MicButton() {
   };
 
   const handleQuickSend = async () => {
-    if (!quickInput.trim() || !user || !preferences.openaiApiKey) {
-      if (!preferences.openaiApiKey) {
+    if (!quickInput.trim() || !user || !openaiApiKey) {
+      if (!openaiApiKey) {
         showError("Please set your OpenAI API key in Settings");
       }
       return;

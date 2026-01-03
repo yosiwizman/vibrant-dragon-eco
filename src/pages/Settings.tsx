@@ -29,7 +29,7 @@ import {
   Volume2, Key, Mic, Settings2, Brain, Search, MapPin, CloudSun,
   MessageSquare, Calendar, Shield, Zap, Clock, Globe, User, Bell,
   Trash2, Database, History, Sparkles, AlertCircle, ExternalLink,
-  CalendarClock, EarOff
+  CalendarClock, EarOff, CheckCircle2
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -222,14 +222,17 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+            <Card className="border-fuchsia-500/30 bg-slate-800/50 backdrop-blur">
               <CardHeader>
                 <CardTitle className="text-xl text-white flex items-center gap-2">
                   <Key className="h-5 w-5 text-fuchsia-400" />
-                  OpenAI Configuration
+                  OpenAI API Key
+                  <Badge className="ml-2 bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50">
+                    Required
+                  </Badge>
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  Your primary AI provider for chat, voice, and transcription
+                  This is the ONLY place you need to enter your API key. It powers all AI features including chat, voice, and transcription.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -245,8 +248,20 @@ export default function Settings() {
                     />
                     <AITestButton apiKey={preferences.openaiApiKey || ""} provider="openai" />
                   </div>
+                  {preferences.openaiApiKey ? (
+                    <div className="flex items-center gap-2 text-green-400 text-sm">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>API key configured - all AI features are enabled</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Enter your OpenAI API key to enable voice and chat features</span>
+                    </div>
+                  )}
                   <p className="text-xs text-slate-500">
-                    Stored locally. Never sent anywhere except OpenAI.
+                    Your key is stored locally in your browser. It's only sent to OpenAI's servers when you use AI features.
+                    Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-fuchsia-400 hover:underline">platform.openai.com</a>
                   </p>
                 </div>
               </CardContent>

@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
+import APIKeyStatus from "@/components/APIKeyStatus";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
 import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
@@ -15,6 +17,7 @@ import ChatTips from "@/components/ChatTips";
 
 const Index = () => {
   const { user } = useAuth();
+  const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const { isListening, isProcessing, isSpeaking, startListening, stopListening } = useVoice();
 
   const getGreeting = () => {
@@ -74,17 +77,19 @@ const Index = () => {
             thinks, and responds.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={handleVoiceToggle}
+              disabled={!hasOpenAIKey}
               className={`shadow-lg shadow-fuchsia-500/25 ${
-                isListening 
-                  ? "bg-red-600 hover:bg-red-500 animate-pulse" 
+                isListening
+                  ? "bg-red-600 hover:bg-red-500 animate-pulse"
                   : "bg-fuchsia-600 hover:bg-fuchsia-500"
-              }`}
+              } ${!hasOpenAIKey ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={!hasOpenAIKey ? "Add your OpenAI API key in Settings first" : undefined}
             >
-              <Mic className="mr-2 h-5 w-5" /> 
-              {isListening ? "Stop Listening" : "Start Voice"}
+              <Mic className="mr-2 h-5 w-5" />
+              {isListening ? "Stop Listening" : hasOpenAIKey ? "Start Voice" : "Add API Key First"}
             </Button>
             <Link to="/chat">
               <Button size="lg" variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20">
@@ -93,6 +98,13 @@ const Index = () => {
             </Link>
           </div>
         </div>
+
+        {/* API Key Status - Shows if not configured */}
+        {!hasOpenAIKey && (
+          <div className="mt-4">
+            <APIKeyStatus />
+          </div>
+        )}
 
         {/* Voice Transcript Display - Shows when voice is active */}
         {isVoiceActive && (

@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePreferences } from "@/state/preferences";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -52,6 +53,7 @@ export default function FloatingVoiceWidget() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
+  const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const { 
     isListening, 
     isProcessing, 

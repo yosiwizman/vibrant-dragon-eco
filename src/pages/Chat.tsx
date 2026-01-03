@@ -8,6 +8,7 @@ import { Search, Send, Loader2, Wrench, Mic, Volume2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "@/state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { useVoice } from "@/contexts/VoiceContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Message, Conversation, Citation } from "@/types/models";
@@ -37,6 +38,7 @@ function saveConversation(conv: Conversation) {
 export default function Chat() {
   const { preferences } = usePreferences();
   const { user } = useAuth();
+  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
   const { isListening, isProcessing, isSpeaking, startListening, stopListening, speak, lastResponse } = useVoice();
   const [conversation, setConversation] = useState<Conversation | null>(
     loadConversation()

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { usePreferences } from "@/state/preferences";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { transcribeAudio, synthesizeSpeech } from "@/services/openai-voice";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
@@ -47,6 +48,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences } = usePreferences();
+  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
   const { playFeedback } = useVoiceFeedback();
   
   const [isListening, setIsListening] = useState(false);
@@ -111,7 +113,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const speak = useCallback(async (text: string) => {
-    if (!preferences.openaiApiKey) {
+    if (!openaiApiKey) {
       console.error("OpenAI API key not configured");
       showError("OpenAI API key not configured. Go to Settings to add it.");
       return;
@@ -131,7 +133,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       
       const speechBlob = await synthesizeSpeech(
         text,
-        preferences.openaiApiKey,
+        openaiApiKey,
         preferences.openaiVoice || "nova"
       );
       
@@ -195,10 +197,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setIsSpeaking(false);
       // Don't show error toast for every TTS failure, just log it
     }
-  }, [preferences.openaiApiKey, preferences.openaiVoice, stopSpeaking]);
+  }, [openaiApiKey, preferences.openaiVoice, stopSpeaking]);
 
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
-    if (!preferences.openaiApiKey || !user) {
+    if (!openaiApiKey || !user) {
       throw new Error("Not configured - please add your OpenAI API key in Settings");
     }
 
@@ -247,7 +249,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${preferences.openaiApiKey}`,
+          Authorization: `Bearer ${openaiApiKey}`,
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
@@ -290,7 +292,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${preferences.openaiApiKey}`,
+              Authorization: `Bearer ${openaiApiKey}`,
             },
             body: JSON.stringify({
               model: "gpt-4o-mini",
@@ -335,12 +337,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       console.error("Voice command processing error:", error);
       throw error;
     }
-  }, [preferences.openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
+  }, [openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
 
   const startListening = useCallback(async () => {
     if (isListening) return;
 
-    if (!preferences.openaiApiKey) {
+    if (!openaiApiKey) {
       showError("Please add your OpenAI API key in Settings first");
       return;
     }
@@ -385,13 +387,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           streamRef.current = null;
         }
         
-        if (blob.size > 0 && preferences.openaiApiKey) {
+        if (blob.size > 0 && openaiApiKey) {
           let transcriptText = "";
           try {
             setIsProcessing(true);
             console.log("Transcribing audio, blob size:", blob.size);
             
-            const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
+            const transcription = await transcribeAudio(blob, openaiApiKey);
             transcriptText = transcription.text.trim();
             
             console.log("Transcription result:", transcriptText);
@@ -516,7 +518,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to start recording:", error);
       showError(error.message || "Failed to start recording. Please check microphone permissions.");
     }
-  }, [isListening, preferences.openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode, preferences.quietModeExitPhrase]);
+  }, [isListening, openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode, preferences.quietModeExitPhrase]);
 
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -541,13 +543,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const exitQuietMode = useCallback(async () => {
-    if (!user || !preferences.openaiApiKey) {
+    if (!user || !openaiApiKey) {
       setIsQuietMode(false);
       return null;
     }
 
     try {
-      const result = await endListeningSession(user.id, preferences.openaiApiKey);
+      const result = await endListeningSession(user.id, openaiApiKey);
       setIsQuietMode(false);
       
       if (result.success) {
@@ -563,7 +565,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     
     setIsQuietMode(false);
     return null;
-  }, [user, preferences.openaiApiKey]);
+  }, [user, openaiApiKey]);
 
   // Check quiet mode status on mount
   useEffect(() => {

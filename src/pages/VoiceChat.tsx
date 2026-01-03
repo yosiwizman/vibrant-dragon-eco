@@ -7,6 +7,7 @@ import { Mic, MicOff, Volume2, Loader2, Phone, PhoneOff, Wrench, Navigation, Set
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "../state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { transcribeAudio, synthesizeSpeech } from "../services/openai-voice";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
@@ -52,6 +53,7 @@ export default function VoiceChat() {
   const navigate = useNavigate();
   const { preferences } = usePreferences();
   const { user } = useAuth();
+  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentTranscript, setCurrentTranscript] = useState("");
@@ -74,18 +76,18 @@ export default function VoiceChat() {
 
   // Configure voice notifications
   useEffect(() => {
-    if (preferences.openaiApiKey) {
+    if (openaiApiKey) {
       configureVoiceNotifications({
-        apiKey: preferences.openaiApiKey,
+        apiKey: openaiApiKey,
         voice: preferences.openaiVoice,
         enabled: true,
       });
     }
-  }, [preferences.openaiApiKey, preferences.openaiVoice]);
+  }, [openaiApiKey, preferences.openaiVoice]);
 
   // Morning briefing function
   const playMorningBriefing = async () => {
-    if (!preferences.openaiApiKey || !user) {
+    if (!openaiApiKey || !user) {
       showError("Please set your OpenAI API key in Settings");
       return;
     }
@@ -120,11 +122,11 @@ export default function VoiceChat() {
 
   // Speak text with proper error handling
   const speakText = async (text: string): Promise<void> => {
-    if (!preferences.openaiApiKey || !text.trim()) return;
+    if (!openaiApiKey || !text.trim()) return;
 
     try {
       console.log("Synthesizing speech for:", text.substring(0, 50) + "...");
-      const speechBlob = await synthesizeSpeech(text, preferences.openaiApiKey, preferences.openaiVoice || "nova");
+      const speechBlob = await synthesizeSpeech(text, openaiApiKey, preferences.openaiVoice || "nova");
       
       if (speechBlob.size === 0) {
         console.error("Empty speech blob received");
@@ -225,7 +227,7 @@ export default function VoiceChat() {
   };
 
   const processAudio = async (blob: Blob) => {
-    if (!preferences.openaiApiKey) {
+    if (!openaiApiKey) {
       showError("Please set your OpenAI API key in Settings");
       setConversationState("idle");
       return;
@@ -236,7 +238,7 @@ export default function VoiceChat() {
 
     try {
       console.log("Transcribing audio, blob size:", blob.size);
-      const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
+      const transcription = await transcribeAudio(blob, openaiApiKey);
       let userText = transcription.text.trim();
 
       console.log("Transcription result:", userText);
@@ -274,7 +276,7 @@ export default function VoiceChat() {
         { role: "user", content: normalizedText },
       ];
 
-      let response = await chatWithOpenAITools(chatMessages, preferences.openaiApiKey);
+      let response = await chatWithOpenAITools(chatMessages, openaiApiKey);
 
       // Check for tool calls and execute them
       const toolCalls = parseToolCalls(response);
@@ -312,7 +314,7 @@ export default function VoiceChat() {
             { role: "user", content: `Tool execution results:\n${toolResultsText}\n\nProvide a BRIEF, conversational voice response (1-2 sentences max). If there's voice text in the results, use that. Don't repeat JSON or technical details.` },
           ];
 
-          response = await chatWithOpenAITools(followUpMessages, preferences.openaiApiKey);
+          response = await chatWithOpenAITools(followUpMessages, openaiApiKey);
         }
       }
 
@@ -390,7 +392,7 @@ export default function VoiceChat() {
   };
 
   const startConversation = async () => {
-    if (!preferences.openaiApiKey) {
+    if (!openaiApiKey) {
       showError("Please set your OpenAI API key in Settings");
       return;
     }
