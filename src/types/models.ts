@@ -62,6 +62,49 @@ export interface Preferences {
   enableSmartScheduling: boolean;
   defaultReminderLeadTime: number;
   quietModeExitPhrase: string;
+  // New enhanced preferences
+  enableActionHistory: boolean;
+  maxUndoTimeMinutes: number;
+  enableProductivityTracking: boolean;
+  defaultTaskPriority: "low" | "medium" | "high" | "urgent";
+  defaultReminderChannel: "push" | "sms" | "email";
+  enableConflictDetection: boolean;
+  enablePatternLearning: boolean;
+  snoozeDefaultMinutes: number;
+  notificationSoundEnabled: boolean;
+  compactVoiceResponses: boolean;
+}
+
+export interface ToolExecutionLog {
+  id: string;
+  userId: string;
+  tool: string;
+  parameters: Record<string, any>;
+  success: boolean;
+  duration: number;
+  error?: string;
+  timestamp: string;
+}
+
+export interface ProductivityStats {
+  period: string;
+  tasksCompleted: number;
+  tasksCreated: number;
+  completionRate: string;
+  currentStreak: number;
+  averageTasksPerDay: number;
+  mostProductiveDay: string;
+  mostProductiveHour: number;
+}
+
+export interface SystemStatus {
+  tasks: { total: number; pending: number; completed: number; overdue: number };
+  reminders: { pending: number; completed: number };
+  notes: { total: number; pinned: number };
+  contacts: { total: number };
+  notifications: { unread: number };
+  appointments: { upcoming: number };
+  knowledge: { documents: number; memories: number };
 }
 
 export interface Memory {

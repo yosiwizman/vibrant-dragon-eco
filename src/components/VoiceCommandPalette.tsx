@@ -32,6 +32,9 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
       { phrase: "Show settings", description: "Go to settings page" },
       { phrase: "Open knowledge base", description: "Go to knowledge base" },
       { phrase: "Go home", description: "Go to dashboard" },
+      { phrase: "Open listening sessions", description: "View past listening sessions" },
+      { phrase: "Show appointments", description: "Go to appointments page" },
+      { phrase: "Open documents", description: "Go to documents page" },
     ],
   },
   {
@@ -140,6 +143,32 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
       { phrase: "Add contact [name]", description: "Create new contact" },
       { phrase: "Find contact [name]", description: "Search contacts" },
       { phrase: "Call [name]", description: "Initiate call" },
+      { phrase: "Message [name]", description: "Draft message to contact" },
+      { phrase: "Update contact [name]", description: "Update contact info" },
+      { phrase: "Delete contact [name]", description: "Remove contact" },
+    ],
+  },
+  {
+    name: "Appointments",
+    icon: Calendar,
+    color: "text-teal-400",
+    commands: [
+      { phrase: "Schedule appointment at [time]", description: "Create appointment" },
+      { phrase: "Show my appointments", description: "List upcoming appointments" },
+      { phrase: "Cancel appointment with [name]", description: "Cancel appointment" },
+      { phrase: "Reschedule appointment to [time]", description: "Change appointment time" },
+    ],
+  },
+  {
+    name: "System",
+    icon: Command,
+    color: "text-slate-400",
+    commands: [
+      { phrase: "What's my status?", description: "Get system overview" },
+      { phrase: "Show productivity stats", description: "View productivity metrics" },
+      { phrase: "How am I doing?", description: "Get productivity summary" },
+      { phrase: "Clear notifications", description: "Clear read notifications" },
+      { phrase: "Mark all notifications read", description: "Mark all as read" },
     ],
   },
 ];

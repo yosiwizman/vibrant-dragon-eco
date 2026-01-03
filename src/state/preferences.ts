@@ -29,6 +29,17 @@ const DEFAULT: Preferences = {
   enableSmartScheduling: true,
   defaultReminderLeadTime: 30,
   quietModeExitPhrase: "Echo summarize",
+  // New enhanced preferences
+  enableActionHistory: true,
+  maxUndoTimeMinutes: 5,
+  enableProductivityTracking: true,
+  defaultTaskPriority: "medium",
+  defaultReminderChannel: "push",
+  enableConflictDetection: true,
+  enablePatternLearning: true,
+  snoozeDefaultMinutes: 15,
+  notificationSoundEnabled: true,
+  compactVoiceResponses: true,
 };
 
 export function loadPreferences(): Preferences {
