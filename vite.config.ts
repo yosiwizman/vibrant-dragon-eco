@@ -1,17 +1,28 @@
 import { defineConfig } from "vite";
-import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-export default defineConfig(() => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [dyadComponentTagger(), react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(async () => {
+  const plugins = [react()];
+  
+  // Try to load the dyad component tagger, but don't fail if it's not available
+  try {
+    const { default: dyadComponentTagger } = await import("@dyad-sh/react-vite-component-tagger");
+    plugins.unshift(dyadComponentTagger());
+  } catch {
+    // Component tagger not available, continue without it
+  }
+
+  return {
+    server: {
+      host: "::",
+      port: 8080,
     },
-  },
-}));
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  };
+});
