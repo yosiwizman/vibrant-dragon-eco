@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bot, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Bot, Mail, Lock, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
 export default function Login() {
@@ -16,6 +17,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -24,6 +26,42 @@ export default function Login() {
       navigate("/");
     }
   }, [user, loading, navigate]);
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsMagicLinkLoading(true);
+    setError(null);
+    setMessage(null);
+
+    if (!email) {
+      setError("Please enter your email address");
+      setIsMagicLinkLoading(false);
+      return;
+    }
+
+    try {
+      const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
+
+      if (magicLinkError) {
+        console.error("Magic link error:", magicLinkError);
+        setError(magicLinkError.message);
+        return;
+      }
+
+      setMessage("✨ Magic link sent! Check your email and click the link to sign in. The link will expire in 1 hour.");
+      showSuccess("Magic link sent to your email!");
+    } catch (err: any) {
+      console.error("Magic link exception:", err);
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setIsMagicLinkLoading(false);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,16 +97,13 @@ export default function Login() {
       }
 
       if (data.user) {
-        // Check if email confirmation is required
         if (data.user.identities && data.user.identities.length === 0) {
           setError("This email is already registered. Please sign in instead.");
         } else if (data.session) {
-          // User is automatically signed in (email confirmation disabled)
           showSuccess("Account created successfully!");
           navigate("/");
         } else {
-          // Email confirmation is required
-          setMessage("Check your email for the confirmation link. If you don't receive it, please disable email confirmation in Supabase dashboard for personal use.");
+          setMessage("Check your email for the confirmation link.");
         }
       }
     } catch (err: any) {
@@ -100,9 +135,9 @@ export default function Login() {
       if (signInError) {
         console.error("Sign in error:", signInError);
         if (signInError.message.includes("Email not confirmed")) {
-          setError("Email not confirmed. Please check your email or disable email confirmation in Supabase dashboard for personal use.");
+          setError("Email not confirmed. Try using Magic Link instead!");
         } else if (signInError.message.includes("Invalid login credentials")) {
-          setError("Invalid email or password. Please check your credentials or sign up for a new account.");
+          setError("Invalid email or password. Try using Magic Link or sign up for a new account.");
         } else {
           setError(signInError.message);
         }
@@ -143,22 +178,74 @@ export default function Login() {
             Sign in to access your personal AI assistant
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Magic Link Section - Primary */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-fuchsia-300">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm font-medium">Recommended: Magic Link</span>
+            </div>
+            <form onSubmit={handleMagicLink} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="magic-email" className="text-slate-300">
+                  <Mail className="inline h-4 w-4 mr-2" />
+                  Email Address
+                </Label>
+                <Input
+                  id="magic-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  disabled={isMagicLinkLoading}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                disabled={isMagicLinkLoading}
+              >
+                {isMagicLinkLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending magic link...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Magic Link
+                  </>
+                )}
+              </Button>
+            </form>
+            <p className="text-xs text-slate-500 text-center">
+              No password needed! We'll send a secure link to your email.
+            </p>
+          </div>
+
+          <div className="relative">
+            <Separator className="bg-slate-700" />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 px-2 text-xs text-slate-500">
+              or use password
+            </span>
+          </div>
+
+          {/* Password Auth Section - Secondary */}
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-              <TabsTrigger value="signin" className="data-[state=active]:bg-fuchsia-600">
+              <TabsTrigger value="signin" className="data-[state=active]:bg-slate-700 text-xs">
                 Sign In
               </TabsTrigger>
-              <TabsTrigger value="signup" className="data-[state=active]:bg-fuchsia-600">
+              <TabsTrigger value="signup" className="data-[state=active]:bg-slate-700 text-xs">
                 Sign Up
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4 mt-4">
+              <form onSubmit={handleSignIn} className="space-y-3 mt-3">
                 <div className="space-y-2">
-                  <Label htmlFor="signin-email" className="text-slate-300">
-                    <Mail className="inline h-4 w-4 mr-2" />
+                  <Label htmlFor="signin-email" className="text-slate-400 text-xs">
                     Email
                   </Label>
                   <Input
@@ -167,13 +254,12 @@ export default function Login() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-9 text-sm"
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password" className="text-slate-300">
-                    <Lock className="inline h-4 w-4 mr-2" />
+                  <Label htmlFor="signin-password" className="text-slate-400 text-xs">
                     Password
                   </Label>
                   <Input
@@ -182,32 +268,32 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-9 text-sm"
                     disabled={isLoading}
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                  variant="outline"
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-800 h-9"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                       Signing in...
                     </>
                   ) : (
-                    "Sign In"
+                    "Sign In with Password"
                   )}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4 mt-4">
+              <form onSubmit={handleSignUp} className="space-y-3 mt-3">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-slate-300">
-                    <Mail className="inline h-4 w-4 mr-2" />
+                  <Label htmlFor="signup-email" className="text-slate-400 text-xs">
                     Email
                   </Label>
                   <Input
@@ -216,13 +302,12 @@ export default function Login() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-9 text-sm"
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-slate-300">
-                    <Lock className="inline h-4 w-4 mr-2" />
+                  <Label htmlFor="signup-password" className="text-slate-400 text-xs">
                     Password (min 6 characters)
                   </Label>
                   <Input
@@ -231,18 +316,19 @@ export default function Login() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-9 text-sm"
                     disabled={isLoading}
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                  variant="outline"
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-800 h-9"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                       Creating account...
                     </>
                   ) : (
@@ -254,30 +340,17 @@ export default function Login() {
           </Tabs>
 
           {error && (
-            <div className="mt-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-sm flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-sm flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {message && (
-            <div className="mt-4 p-3 rounded-lg bg-green-500/20 border border-green-500/50 text-green-300 text-sm">
+            <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/50 text-green-300 text-sm">
               {message}
             </div>
           )}
-
-          <div className="mt-6 p-4 rounded-lg bg-slate-800/50 border border-slate-700">
-            <h4 className="text-sm font-medium text-white mb-2">⚠️ Email not working?</h4>
-            <p className="text-xs text-slate-400">
-              For personal use, disable email confirmation in your Supabase dashboard:
-            </p>
-            <ol className="text-xs text-slate-400 mt-2 space-y-1 list-decimal list-inside">
-              <li>Go to Supabase Dashboard → Authentication</li>
-              <li>Click on "Providers" → "Email"</li>
-              <li>Toggle OFF "Confirm email"</li>
-              <li>Save and try signing up again</li>
-            </ol>
-          </div>
         </CardContent>
       </Card>
     </div>
