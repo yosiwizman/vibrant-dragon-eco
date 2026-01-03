@@ -1,5 +1,4 @@
 import { NavLink } from "react-router-dom";
-import { NavLink } from "react-router-dom";
 import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
