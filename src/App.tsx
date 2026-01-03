@@ -26,7 +26,10 @@ import Calendar from "./pages/Calendar";
 import Notifications from "./pages/Notifications";
 import Contacts from "./pages/Contacts";
 import Messages from "./pages/Messages";
+import Appointments from "./pages/Appointments";
+import AILogs from "./pages/AILogs";
 import MicButton from "@/components/MicButton";
+import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
 import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
 import VoiceQuickActions from "@/components/VoiceQuickActions";
@@ -197,10 +200,27 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/appointments"
+              element={
+                <ProtectedRoute>
+                  <Appointments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-logs"
+              element={
+                <ProtectedRoute>
+                  <AILogs />
+                </ProtectedRoute>
+              }
+            />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MicButton />
             <VoiceQuickActions />
+            <FloatingVoiceWidget />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>

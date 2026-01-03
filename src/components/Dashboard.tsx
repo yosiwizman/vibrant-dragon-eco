@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import QuickActions from "./QuickActions";
+import AIUsageWidget from "./AIUsageWidget";
 import CurrentTimeDisplay from "./CurrentTimeDisplay";
 import LocationDisplay from "./LocationDisplay";
 import WeatherWidget from "./WeatherWidget";
@@ -211,11 +212,17 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Activity and Upcoming Items */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <RecentActivity />
+      {/* AI Usage Widget */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <AIUsageWidget />
+        <div className="md:col-span-2">
+          <RecentActivity />
+        </div>
+      </div>
+
+      {/* Upcoming Items */}
+      <div className="grid gap-4 md:grid-cols-1">
         
-        {/* Upcoming Items */}
         {upcomingItems.length > 0 && (
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">

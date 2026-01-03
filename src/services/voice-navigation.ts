@@ -23,7 +23,9 @@ export const APP_ROUTES: NavigationRoute[] = [
   { path: "/settings", aliases: ["settings", "preferences", "config", "configuration", "options"], description: "Settings" },
   { path: "/profile", aliases: ["profile", "account", "my account", "user"], description: "User profile" },
   { path: "/integrations", aliases: ["integrations", "apps", "connections", "services", "api"], description: "Integrations" },
-  { path: "/history", aliases: ["history", "logs", "activity", "past"], description: "History" },
+  { path: "/history", aliases: ["history", "past", "previous"], description: "History" },
+  { path: "/appointments", aliases: ["appointments", "appointment", "bookings", "booking", "scheduled meetings"], description: "Appointments" },
+  { path: "/ai-logs", aliases: ["ai logs", "ai log", "ai history", "ai activity", "logs", "activity log"], description: "AI Logs" },
 ];
 
 export function findRouteByVoiceCommand(command: string): NavigationRoute | null {

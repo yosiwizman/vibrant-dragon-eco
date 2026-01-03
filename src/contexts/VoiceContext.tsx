@@ -10,6 +10,7 @@ import { showError, showSuccess } from "@/utils/toast";
 import { useVoiceFeedback } from "@/components/VoiceFeedback";
 import { hasActiveFlow, processMultiStepResponse, getFlowState, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
 import { getKnowledgeContext, initializeRAGKnowledge } from "@/services/rag-knowledge";
+import { logVoiceCommand, logAIError } from "@/services/ai-logging";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -295,11 +296,22 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
               const response = await processVoiceCommand(text);
               playFeedback("success");
+              
+              // Log the voice interaction
+              if (user) {
+                logVoiceCommand(user.id, text, response);
+              }
+              
               await speak(response);
             }
           } catch (error: any) {
             playFeedback("error");
             showError(error.message || "Voice processing failed");
+            
+            // Log the error
+            if (user) {
+              logAIError(user.id, error.message || "Voice processing failed", { transcript: text });
+            }
           }
         }
       };

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command, Brain } from "lucide-react";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command, Brain, Calendar, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -127,6 +127,30 @@ export default function NavBar() {
         >
           <Puzzle className="h-4 w-4" />
           <span className="hidden sm:inline">Integrations</span>
+        </NavLink>
+
+        <NavLink
+          to="/appointments"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Calendar className="h-4 w-4" />
+          <span className="hidden sm:inline">Appointments</span>
+        </NavLink>
+
+        <NavLink
+          to="/ai-logs"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Activity className="h-4 w-4" />
+          <span className="hidden sm:inline">AI Logs</span>
         </NavLink>
 
         <NavLink
