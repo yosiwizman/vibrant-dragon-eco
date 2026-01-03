@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { searchWeb } from "./search";
+import { searchWeb, getWeather, findNearbyPlaces, geocodeAddress } from "./search";
+import { getCurrentLocation } from "./location";
 
 export interface OrchestrationContext {
   userId: string;
@@ -26,6 +27,16 @@ export const AVAILABLE_TOOLS = [
     name: "web_search",
     description: "Search the web for current information, news, or any topic",
     parameters: { query: "string" },
+  },
+  {
+    name: "get_weather",
+    description: "Get current weather for a location. If no location specified, uses user's current location.",
+    parameters: { location: "string (optional, e.g., 'New York' or 'London, UK')" },
+  },
+  {
+    name: "find_nearby",
+    description: "Find nearby places like restaurants, gas stations, pharmacies, etc.",
+    parameters: { query: "string (e.g., 'coffee shop', 'gas station', 'pharmacy')" },
   },
   {
     name: "create_reminder",
@@ -87,9 +98,86 @@ export const AVAILABLE_TOOLS = [
     description: "Delete or dismiss a reminder",
     parameters: { reminder_id: "string", or: "reminder_text: string (to find by text)" },
   },
+  {
+    name: "draft_email",
+    description: "Draft an email based on user's request",
+    parameters: { prompt: "string (what the email should say)", to: "string (optional recipient)" },
+  },
+  {
+    name: "draft_sms",
+    description: "Draft a text message based on user's request",
+    parameters: { prompt: "string (what the message should say)", to: "string (optional recipient name or number)" },
+  },
 ];
 
 // Tool execution functions
+export async function executeGetWeather(location?: string): Promise<ActionResult> {
+  try {
+    let lat: number, lon: number;
+    let locationName = "your location";
+    
+    if (location) {
+      const geocoded = await geocodeAddress(location);
+      if (!geocoded) {
+        return {
+          tool: "get_weather",
+          success: false,
+          error: `Could not find location: ${location}`,
+        };
+      }
+      lat = geocoded.lat;
+      lon = geocoded.lon;
+      locationName = location;
+    } else {
+      const currentLoc = await getCurrentLocation();
+      lat = currentLoc.lat;
+      lon = currentLoc.lng;
+    }
+    
+    const weather = await getWeather(lat, lon);
+    
+    return {
+      tool: "get_weather",
+      success: true,
+      data: {
+        ...weather,
+        location: locationName,
+        summary: `${weather.description}, ${weather.temperature}°C (feels like ${weather.feelsLike}°C), humidity ${weather.humidity}%, wind ${weather.windSpeed} km/h`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_weather",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeFindNearby(query: string): Promise<ActionResult> {
+  try {
+    const currentLoc = await getCurrentLocation();
+    const places = await findNearbyPlaces(query, currentLoc, 5);
+    
+    return {
+      tool: "find_nearby",
+      success: true,
+      data: places.map(p => ({
+        name: p.name.split(",")[0],
+        distance: `${(p.distanceMeters / 1000).toFixed(1)} km`,
+        fullAddress: p.name,
+        type: p.type,
+      })),
+    };
+  } catch (error: any) {
+    return {
+      tool: "find_nearby",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export async function executeWebSearch(query: string, userId: string): Promise<ActionResult> {
   try {
     const results = await searchWeb(query);
@@ -485,15 +573,87 @@ export async function getContacts(userId: string, search?: string): Promise<Acti
   }
 }
 
+export async function executeDraftEmail(
+  userId: string,
+  prompt: string,
+  to?: string
+): Promise<ActionResult> {
+  try {
+    // Save a basic draft
+    const { data, error } = await supabase.from("email_logs").insert({
+      user_id: userId,
+      direction: "outbound",
+      status: "draft",
+      to_email: to || "[recipient]",
+      subject: "New Email",
+      body: prompt,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "draft_email",
+      success: true,
+      data: {
+        draft: data,
+        message: `Email draft created. You can find it in Messages.`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "draft_email",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeDraftSMS(
+  userId: string,
+  prompt: string,
+  to?: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase.from("sms_logs").insert({
+      user_id: userId,
+      direction: "outbound",
+      status: "draft",
+      to_number: to || "[recipient]",
+      text: prompt,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "draft_sms",
+      success: true,
+      data: {
+        draft: data,
+        message: `SMS draft created. You can find it in Messages.`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "draft_sms",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 // Build system prompt with tools
 export function buildSystemPrompt(): string {
   return `You are Echo, a personal AI assistant. You help the user with various tasks including:
 - Web searching for information
+- Getting weather information
+- Finding nearby places
 - Managing reminders and alarms
 - Creating and tracking tasks/to-dos
 - Taking notes
 - Managing calendar events
 - Sending notifications
+- Managing contacts
+- Drafting emails and SMS messages
 
 You have access to the following tools:
 ${AVAILABLE_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n")}
@@ -542,6 +702,10 @@ export async function executeTool(
   switch (tool) {
     case "web_search":
       return executeWebSearch(parameters.query, userId);
+    case "get_weather":
+      return executeGetWeather(parameters.location);
+    case "find_nearby":
+      return executeFindNearby(parameters.query);
     case "create_reminder":
       return createReminder(userId, parameters.text, parameters.due_time, parameters.channel);
     case "create_task":
@@ -566,6 +730,10 @@ export async function executeTool(
       return completeTask(userId, parameters.task_id, parameters.task_title);
     case "delete_reminder":
       return deleteReminder(userId, parameters.reminder_id, parameters.reminder_text);
+    case "draft_email":
+      return executeDraftEmail(userId, parameters.prompt, parameters.to);
+    case "draft_sms":
+      return executeDraftSMS(userId, parameters.prompt, parameters.to);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }
