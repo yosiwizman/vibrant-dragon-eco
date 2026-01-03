@@ -351,6 +351,22 @@ export default function Login() {
               {message}
             </div>
           )}
+
+          {/* Helper for Supabase URL configuration */}
+          <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+            <p className="text-xs text-slate-400 mb-2">
+              <strong className="text-slate-300">⚙️ Supabase URL Configuration</strong>
+            </p>
+            <p className="text-xs text-slate-500 mb-2">
+              If magic link redirects to wrong URL, update these in Supabase Dashboard → Authentication → URL Configuration:
+            </p>
+            <div className="bg-slate-900 rounded p-2 text-xs font-mono text-fuchsia-300 break-all">
+              {window.location.origin}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Set this as your <strong>Site URL</strong> and add <code className="text-fuchsia-300">{window.location.origin}/*</code> to <strong>Redirect URLs</strong>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
