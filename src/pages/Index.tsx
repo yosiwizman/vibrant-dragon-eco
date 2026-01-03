@@ -7,17 +7,29 @@ import {
   Phone, Edit, Settings, Wrench, History, BookOpenText, EarOff
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVoice } from "@/contexts/VoiceContext";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
+import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
+import ChatTips from "@/components/ChatTips";
 
 const Index = () => {
   const { user } = useAuth();
+  const { isListening, isProcessing, isSpeaking, startListening, stopListening } = useVoice();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
+  };
+
+  const handleVoiceToggle = async () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      await startListening();
+    }
   };
 
   const quickAccessItems = [
@@ -42,6 +54,8 @@ const Index = () => {
     { to: "/drafts", icon: Edit, label: "Drafts", color: "text-rose-400" },
   ];
 
+  const isVoiceActive = isListening || isProcessing || isSpeaking;
+
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
       <WelcomeModal />
@@ -60,11 +74,18 @@ const Index = () => {
             thinks, and responds.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link to="/voice">
-              <Button size="lg" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 shadow-lg shadow-fuchsia-500/25">
-                <Mic className="mr-2 h-5 w-5" /> Start Voice
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              onClick={handleVoiceToggle}
+              className={`shadow-lg shadow-fuchsia-500/25 ${
+                isListening 
+                  ? "bg-red-600 hover:bg-red-500 animate-pulse" 
+                  : "bg-fuchsia-600 hover:bg-fuchsia-500"
+              }`}
+            >
+              <Mic className="mr-2 h-5 w-5" /> 
+              {isListening ? "Stop Listening" : "Start Voice"}
+            </Button>
             <Link to="/chat">
               <Button size="lg" variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20">
                 <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
@@ -72,6 +93,23 @@ const Index = () => {
             </Link>
           </div>
         </div>
+
+        {/* Voice Transcript Display - Shows when voice is active */}
+        {isVoiceActive && (
+          <div className="mt-4">
+            <VoiceTranscriptDisplay showResponse={true} />
+          </div>
+        )}
+
+        {/* Quick Voice Commands - Shows when not actively using voice */}
+        {!isVoiceActive && (
+          <div className="mt-4">
+            <ChatTips onPromptClick={async (prompt) => {
+              // Start listening and process the prompt
+              await startListening();
+            }} />
+          </div>
+        )}
 
         {/* Dashboard Stats - Live Data */}
         <div className="mt-6">

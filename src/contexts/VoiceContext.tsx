@@ -2,14 +2,14 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { usePreferences } from "@/state/preferences";
-import { transcribeAudio, synthesizeSpeech, playAudioBlob } from "@/services/openai-voice";
+import { transcribeAudio, synthesizeSpeech } from "@/services/openai-voice";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
 import { normalizeSpeechInput } from "@/services/conversation-manager";
 import { showError, showSuccess } from "@/utils/toast";
 import { useVoiceFeedback } from "@/components/VoiceFeedback";
-import { hasActiveFlow, processMultiStepResponse, getFlowState, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
-import { getKnowledgeContext, initializeRAGKnowledge } from "@/services/rag-knowledge";
+import { hasActiveFlow, processMultiStepResponse, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
+import { initializeRAGKnowledge } from "@/services/rag-knowledge";
 import { logVoiceCommand, logAIError } from "@/services/ai-logging";
 import { getMemoryContext } from "@/services/memory";
 import { saveChatMessage, getChatContext } from "@/services/chat-history";
@@ -22,6 +22,8 @@ interface VoiceContextType {
   isSpeaking: boolean;
   isQuietMode: boolean;
   lastTranscript: string;
+  currentTranscript: string;
+  lastResponse: string;
   startListening: () => Promise<void>;
   stopListening: () => void;
   speak: (text: string) => Promise<void>;
@@ -52,12 +54,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isQuietMode, setIsQuietMode] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
+  const [currentTranscript, setCurrentTranscript] = useState("");
+  const [lastResponse, setLastResponse] = useState("");
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Get location on mount
   useEffect(() => {
@@ -98,6 +103,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      URL.revokeObjectURL(currentAudioRef.current.src);
       currentAudioRef.current = null;
     }
     setIsSpeaking(false);
@@ -105,50 +112,99 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   const speak = useCallback(async (text: string) => {
     if (!preferences.openaiApiKey) {
-      showError("OpenAI API key not configured");
+      console.error("OpenAI API key not configured");
+      showError("OpenAI API key not configured. Go to Settings to add it.");
       return;
     }
 
+    if (!text || text.trim().length === 0) {
+      console.warn("Empty text provided to speak function");
+      return;
+    }
+
+    // Stop any current audio
+    stopSpeaking();
+
     try {
       setIsSpeaking(true);
+      console.log("Synthesizing speech for:", text.substring(0, 50) + "...");
+      
       const speechBlob = await synthesizeSpeech(
         text,
         preferences.openaiApiKey,
-        preferences.openaiVoice
+        preferences.openaiVoice || "nova"
       );
+      
+      console.log("Speech blob received, size:", speechBlob.size);
+      
+      if (speechBlob.size === 0) {
+        throw new Error("Empty audio blob received");
+      }
       
       const audio = new Audio();
       currentAudioRef.current = audio;
-      audio.src = URL.createObjectURL(speechBlob);
+      const audioUrl = URL.createObjectURL(speechBlob);
+      audio.src = audioUrl;
+      
+      // Set volume
+      audio.volume = 1.0;
       
       await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(audio.src);
-          currentAudioRef.current = null;
+        const cleanup = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
           setIsSpeaking(false);
+        };
+
+        audio.onended = () => {
+          console.log("Audio playback ended");
+          cleanup();
           resolve();
         };
-        audio.onerror = () => {
-          URL.revokeObjectURL(audio.src);
-          currentAudioRef.current = null;
-          setIsSpeaking(false);
+        
+        audio.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          cleanup();
           reject(new Error("Audio playback failed"));
         };
-        audio.play().catch(reject);
+
+        audio.oncanplaythrough = () => {
+          console.log("Audio can play through, starting playback");
+          audio.play().catch((err) => {
+            console.error("Play failed:", err);
+            cleanup();
+            reject(err);
+          });
+        };
+
+        // Fallback if oncanplaythrough doesn't fire
+        setTimeout(() => {
+          if (audio.readyState >= 3) {
+            audio.play().catch((err) => {
+              console.error("Fallback play failed:", err);
+              cleanup();
+              reject(err);
+            });
+          }
+        }, 100);
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Speech synthesis error:", error);
       setIsSpeaking(false);
-      throw error;
+      // Don't show error toast for every TTS failure, just log it
     }
-  }, [preferences.openaiApiKey, preferences.openaiVoice]);
+  }, [preferences.openaiApiKey, preferences.openaiVoice, stopSpeaking]);
 
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
     if (!preferences.openaiApiKey || !user) {
-      throw new Error("Not configured");
+      throw new Error("Not configured - please add your OpenAI API key in Settings");
     }
 
     setIsProcessing(true);
     setLastTranscript(text);
+    setCurrentTranscript("");
 
     try {
       const normalizedText = normalizeSpeechInput(text);
@@ -201,7 +257,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error("AI request failed");
+        const errorText = await response.text();
+        throw new Error(`AI request failed: ${errorText}`);
       }
 
       const data = await response.json();
@@ -270,26 +327,44 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         saveChatMessage(user.id, "assistant", finalResponse);
       }
 
+      setLastResponse(finalResponse);
       setIsProcessing(false);
       return finalResponse;
-    } catch (error) {
+    } catch (error: any) {
       setIsProcessing(false);
+      console.error("Voice command processing error:", error);
       throw error;
     }
-  }, [preferences.openaiApiKey, user, userLocation, navigate]);
+  }, [preferences.openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
 
   const startListening = useCallback(async () => {
     if (isListening) return;
 
+    if (!preferences.openaiApiKey) {
+      showError("Please add your OpenAI API key in Settings first");
+      return;
+    }
+
     try {
       playFeedback("start");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setCurrentTranscript("");
       
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        } 
+      });
+      
+      streamRef.current = stream;
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
-        : "audio/webm";
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "audio/mp4";
 
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
@@ -303,13 +378,24 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       mediaRecorderRef.current.onstop = async () => {
         playFeedback("stop");
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        stream.getTracks().forEach((track) => track.stop());
+        
+        // Clean up stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
         
         if (blob.size > 0 && preferences.openaiApiKey) {
           let transcriptText = "";
           try {
+            setIsProcessing(true);
+            console.log("Transcribing audio, blob size:", blob.size);
+            
             const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
             transcriptText = transcription.text.trim();
+            
+            console.log("Transcription result:", transcriptText);
+            setCurrentTranscript(transcriptText);
             
             if (transcriptText) {
               // Check for quiet mode entry/exit
@@ -317,12 +403,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 const contextMatch = transcriptText.match(/for\s+(.+?)(?:\s*$|,)/i);
                 const context = contextMatch ? contextMatch[1] : undefined;
                 enterQuietMode(context);
+                setIsProcessing(false);
                 await speak(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen. Say "${preferences.quietModeExitPhrase || "Echo summarize"}" when you're done.`);
                 return;
               }
 
               if (isExitPhrase(transcriptText) && isQuietMode && user) {
                 const result = await exitQuietMode();
+                setIsProcessing(false);
                 if (result) {
                   let summaryText = result.summary;
                   if (result.bulletPoints.length > 0) {
@@ -342,6 +430,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               // If in quiet mode, just record the transcript
               if (isQuietMode && user) {
                 addTranscript(user.id, transcriptText);
+                setIsProcessing(false);
                 // Don't respond, just keep listening
                 return;
               }
@@ -357,6 +446,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                   );
                   await speak(response);
                 } else if (flowResult.nextPrompt) {
+                  setIsProcessing(false);
                   await speak(flowResult.nextPrompt);
                 }
                 return;
@@ -367,6 +457,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 const modResult = handleInlineModification(user.id, transcriptText);
                 if (modResult.handled && modResult.message) {
                   playFeedback("success");
+                  setIsProcessing(false);
                   await speak(modResult.message);
                   return;
                 }
@@ -377,6 +468,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               if (multiStepIntent && user) {
                 const flowStart = startMultiStepFlow(user.id, multiStepIntent);
                 if (flowStart) {
+                  setIsProcessing(false);
                   await speak(flowStart.prompt);
                   return;
                 }
@@ -385,6 +477,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               // Check for cancel/undo commands
               if (/\b(cancel|stop|never\s*mind)\b/i.test(transcriptText) && user && hasActiveFlow(user.id)) {
                 cancelFlow(user.id);
+                setIsProcessing(false);
                 await speak("Cancelled. What else can I help with?");
                 return;
               }
@@ -398,9 +491,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               }
               
               await speak(response);
+            } else {
+              setIsProcessing(false);
             }
           } catch (error: any) {
             playFeedback("error");
+            setIsProcessing(false);
+            console.error("Voice processing error:", error);
             showError(error.message || "Voice processing failed");
             
             // Log the error
@@ -408,15 +505,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               logAIError(user.id, error.message || "Voice processing failed", { transcript: transcriptText });
             }
           }
+        } else {
+          setIsProcessing(false);
         }
       };
 
       mediaRecorderRef.current.start(100);
       setIsListening(true);
     } catch (error: any) {
-      showError(error.message || "Failed to start recording");
+      console.error("Failed to start recording:", error);
+      showError(error.message || "Failed to start recording. Please check microphone permissions.");
     }
-  }, [isListening, preferences.openaiApiKey, processVoiceCommand, speak]);
+  }, [isListening, preferences.openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode, preferences.quietModeExitPhrase]);
 
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -425,6 +525,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
     setIsListening(false);
   }, []);
@@ -477,6 +581,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         isSpeaking,
         isQuietMode,
         lastTranscript,
+        currentTranscript,
+        lastResponse,
         startListening,
         stopListening,
         speak,

@@ -7,12 +7,11 @@ import { Mic, MicOff, Volume2, Loader2, Phone, PhoneOff, Wrench, Navigation, Set
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "../state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
-import { transcribeAudio, synthesizeSpeech, playAudioBlob } from "../services/openai-voice";
+import { transcribeAudio, synthesizeSpeech } from "../services/openai-voice";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
 import { normalizeSpeechInput } from "@/services/conversation-manager";
-import { stopSpeaking } from "@/services/enhanced-voice";
 import { generateMorningBriefing, configureVoiceNotifications } from "@/services/voice-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import VoiceCommandExamples from "@/components/VoiceCommandExamples";
@@ -103,25 +102,10 @@ export default function VoiceChat() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      setConversationState("speaking");
-      const speechBlob = await synthesizeSpeech(briefing, preferences.openaiApiKey, preferences.openaiVoice);
-      const audio = new Audio();
-      audioRef.current = audio;
-      audio.src = URL.createObjectURL(speechBlob);
-      
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(audio.src);
-          audioRef.current = null;
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(audio.src);
-          audioRef.current = null;
-          reject(new Error("Audio playback failed"));
-        };
-        audio.play().catch(reject);
-      });
+      if (!isMuted) {
+        setConversationState("speaking");
+        await speakText(briefing);
+      }
 
       if (isConversationActive && preferences.conversationMode) {
         startListening();
@@ -131,6 +115,68 @@ export default function VoiceChat() {
     } catch (err: any) {
       showError(err.message || "Failed to generate briefing");
       setConversationState("idle");
+    }
+  };
+
+  // Speak text with proper error handling
+  const speakText = async (text: string): Promise<void> => {
+    if (!preferences.openaiApiKey || !text.trim()) return;
+
+    try {
+      console.log("Synthesizing speech for:", text.substring(0, 50) + "...");
+      const speechBlob = await synthesizeSpeech(text, preferences.openaiApiKey, preferences.openaiVoice || "nova");
+      
+      if (speechBlob.size === 0) {
+        console.error("Empty speech blob received");
+        return;
+      }
+
+      console.log("Speech blob size:", speechBlob.size);
+      
+      const audio = new Audio();
+      audioRef.current = audio;
+      const audioUrl = URL.createObjectURL(speechBlob);
+      audio.src = audioUrl;
+      audio.volume = 1.0;
+      
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (audioRef.current === audio) {
+            audioRef.current = null;
+          }
+        };
+
+        audio.onended = () => {
+          console.log("Audio playback ended");
+          cleanup();
+          resolve();
+        };
+        
+        audio.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          cleanup();
+          reject(new Error("Audio playback failed"));
+        };
+
+        audio.oncanplaythrough = () => {
+          console.log("Audio ready, starting playback");
+          audio.play().catch((err) => {
+            console.error("Play failed:", err);
+            cleanup();
+            reject(err);
+          });
+        };
+
+        // Fallback timeout
+        setTimeout(() => {
+          if (audio.readyState >= 3) {
+            audio.play().catch(reject);
+          }
+        }, 100);
+      });
+    } catch (err) {
+      console.error("Speech synthesis error:", err);
     }
   };
 
@@ -170,9 +216,12 @@ export default function VoiceChat() {
   const stopCurrentAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      if (audioRef.current.src) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
       audioRef.current = null;
     }
-    stopSpeaking();
   };
 
   const processAudio = async (blob: Blob) => {
@@ -186,8 +235,11 @@ export default function VoiceChat() {
     setLastToolsUsed([]);
 
     try {
+      console.log("Transcribing audio, blob size:", blob.size);
       const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
       let userText = transcription.text.trim();
+
+      console.log("Transcription result:", userText);
 
       if (!userText) {
         if (isConversationActive && preferences.conversationMode) {
@@ -295,28 +347,7 @@ export default function VoiceChat() {
       // Speak the response (unless muted)
       if (!isMuted) {
         setConversationState("speaking");
-        try {
-          const speechBlob = await synthesizeSpeech(cleanResponse, preferences.openaiApiKey, preferences.openaiVoice);
-          const audio = new Audio();
-          audioRef.current = audio;
-          audio.src = URL.createObjectURL(speechBlob);
-          
-          await new Promise<void>((resolve, reject) => {
-            audio.onended = () => {
-              URL.revokeObjectURL(audio.src);
-              audioRef.current = null;
-              resolve();
-            };
-            audio.onerror = () => {
-              URL.revokeObjectURL(audio.src);
-              audioRef.current = null;
-              reject(new Error("Audio playback failed"));
-            };
-            audio.play().catch(reject);
-          });
-        } catch (err) {
-          console.error("Speech synthesis error:", err);
-        }
+        await speakText(cleanResponse);
       }
 
       // Save to voice history
@@ -346,6 +377,7 @@ export default function VoiceChat() {
         setConversationState("idle");
       }
     } catch (err: any) {
+      console.error("Voice processing error:", err);
       showError(err.message || "Voice processing failed");
       setConversationState("idle");
     }
@@ -475,6 +507,34 @@ export default function VoiceChat() {
               </div>
             </div>
 
+            {/* Live Transcript Display */}
+            {(conversationState === "listening" || conversationState === "processing") && (
+              <div className="mb-4 p-4 rounded-lg bg-slate-800/50 border border-fuchsia-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  {conversationState === "listening" ? (
+                    <Badge className="bg-red-500/20 text-red-400 border-red-500/50 animate-pulse">
+                      <Mic className="h-3 w-3 mr-1" />
+                      Listening...
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Processing...
+                    </Badge>
+                  )}
+                </div>
+                {currentTranscript && (
+                  <p className="text-white text-sm">
+                    <span className="text-slate-400">You said: </span>
+                    "{currentTranscript}"
+                  </p>
+                )}
+                {!currentTranscript && conversationState === "listening" && (
+                  <p className="text-slate-400 text-sm italic">Speak now...</p>
+                )}
+              </div>
+            )}
+
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-6">
               {messages.length === 0 ? (
@@ -530,13 +590,6 @@ export default function VoiceChat() {
               )}
               <div ref={messagesEndRef} />
             </div>
-
-            {/* Current Transcript */}
-            {currentTranscript && conversationState === "processing" && (
-              <div className="mb-4 p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                <p className="text-sm text-slate-300 italic">"{currentTranscript}"</p>
-              </div>
-            )}
 
             {/* Tools Used Indicator */}
             {lastToolsUsed.length > 0 && conversationState === "processing" && (

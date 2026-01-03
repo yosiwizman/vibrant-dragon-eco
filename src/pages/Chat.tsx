@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Search, Send, Loader2, Wrench, Trash2 } from "lucide-react";
+import { Search, Send, Loader2, Wrench, Mic, Volume2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "@/state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVoice } from "@/contexts/VoiceContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Message, Conversation, Citation } from "@/types/models";
 import { chat } from "@/services/brain";
@@ -16,6 +16,7 @@ import { searchWeb } from "@/services/search";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
 import ChatTips from "@/components/ChatTips";
+import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
 import { logChatMessage } from "@/services/ai-logging";
 
 const STORAGE_KEY = "echo:conversation:default";
@@ -36,6 +37,7 @@ function saveConversation(conv: Conversation) {
 export default function Chat() {
   const { preferences } = usePreferences();
   const { user } = useAuth();
+  const { isListening, isProcessing, isSpeaking, startListening, stopListening, speak, lastResponse } = useVoice();
   const [conversation, setConversation] = useState<Conversation | null>(
     loadConversation()
   );
@@ -47,6 +49,8 @@ export default function Chat() {
     [conversation]
   );
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
+
+  const isVoiceActive = isListening || isProcessing || isSpeaking;
 
   // Try to get user location on mount
   useEffect(() => {
@@ -235,9 +239,31 @@ export default function Chat() {
     }
   };
 
+  const handleVoiceToggle = async () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      await startListening();
+    }
+  };
+
+  const speakLastMessage = async () => {
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+    if (lastAssistantMsg) {
+      await speak(lastAssistantMsg.content);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-4">
       <div className="mx-auto max-w-4xl">
+        {/* Voice Transcript Display - Shows above chat when voice is active */}
+        {isVoiceActive && (
+          <div className="mb-4">
+            <VoiceTranscriptDisplay showResponse={true} />
+          </div>
+        )}
+
         <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-2xl font-bold text-white">
@@ -253,7 +279,7 @@ export default function Chat() {
             </Button>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[58vh] rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+            <ScrollArea className="h-[50vh] rounded-lg border border-slate-700 bg-slate-900/50 p-4">
               {messages.length === 0 ? (
                 <div className="flex flex-col h-full">
                   <div className="flex flex-col items-center justify-center flex-1 text-center">
@@ -320,6 +346,8 @@ export default function Chat() {
               )}
               <div ref={messagesEndRef} />
             </ScrollArea>
+            
+            {/* Input Area */}
             <div className="mt-3 flex gap-2">
               <Input
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
@@ -345,9 +373,45 @@ export default function Chat() {
                 <Search className="mr-2 h-4 w-4" /> Search
               </Button>
             </div>
-            <p className="text-xs text-slate-500 mt-2 text-center">
-              Press Enter to send • Echo can create reminders, tasks, notes, and calendar events
-            </p>
+
+            {/* Voice Controls */}
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleVoiceToggle}
+                  className={`border-slate-600 ${
+                    isListening 
+                      ? "bg-red-500/20 text-red-400 border-red-500/50 animate-pulse" 
+                      : "text-slate-300 hover:bg-slate-800"
+                  }`}
+                  disabled={isProcessing}
+                >
+                  <Mic className="mr-2 h-4 w-4" />
+                  {isListening ? "Listening..." : "Voice Input"}
+                </Button>
+                {messages.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={speakLastMessage}
+                    className={`border-slate-600 ${
+                      isSpeaking 
+                        ? "bg-green-500/20 text-green-400 border-green-500/50 animate-pulse" 
+                        : "text-slate-300 hover:bg-slate-800"
+                    }`}
+                    disabled={isSpeaking}
+                  >
+                    <Volume2 className="mr-2 h-4 w-4" />
+                    {isSpeaking ? "Speaking..." : "Read Last"}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                Press Enter to send • Click mic for voice
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
