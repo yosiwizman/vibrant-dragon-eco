@@ -5,7 +5,6 @@ import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell,
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
-import WelcomeModal from "@/components/WelcomeModal";
 
 const Index = () => {
   const { user } = useAuth();
