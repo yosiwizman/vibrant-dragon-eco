@@ -77,6 +77,16 @@ export const AVAILABLE_TOOLS = [
     description: "Get the user's contacts",
     parameters: { search: "string (optional)" },
   },
+  {
+    name: "complete_task",
+    description: "Mark a task as completed",
+    parameters: { task_id: "string", or: "task_title: string (to find by title)" },
+  },
+  {
+    name: "delete_reminder",
+    description: "Delete or dismiss a reminder",
+    parameters: { reminder_id: "string", or: "reminder_text: string (to find by text)" },
+  },
 ];
 
 // Tool execution functions
@@ -378,6 +388,77 @@ export async function createContact(
   }
 }
 
+export async function completeTask(
+  userId: string,
+  taskId?: string,
+  taskTitle?: string
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("tasks").update({
+      status: "completed",
+      completed_at: new Date().toISOString()
+    }).eq("user_id", userId);
+    
+    if (taskId) {
+      query = query.eq("id", taskId);
+    } else if (taskTitle) {
+      query = query.ilike("title", `%${taskTitle}%`);
+    } else {
+      throw new Error("Either task_id or task_title is required");
+    }
+    
+    const { data, error } = await query.select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "complete_task",
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      tool: "complete_task",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function deleteReminder(
+  userId: string,
+  reminderId?: string,
+  reminderText?: string
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("reminders").update({ status: "dismissed" }).eq("user_id", userId);
+    
+    if (reminderId) {
+      query = query.eq("id", reminderId);
+    } else if (reminderText) {
+      query = query.ilike("text", `%${reminderText}%`);
+    } else {
+      throw new Error("Either reminder_id or reminder_text is required");
+    }
+    
+    const { data, error } = await query.select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "delete_reminder",
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      tool: "delete_reminder",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export async function getContacts(userId: string, search?: string): Promise<ActionResult> {
   try {
     let query = supabase.from("contacts").select("*").eq("user_id", userId);
@@ -481,6 +562,10 @@ export async function executeTool(
       return createContact(userId, parameters.name, parameters.phone, parameters.notes);
     case "get_contacts":
       return getContacts(userId, parameters.search);
+    case "complete_task":
+      return completeTask(userId, parameters.task_id, parameters.task_title);
+    case "delete_reminder":
+      return deleteReminder(userId, parameters.reminder_id, parameters.reminder_text);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }

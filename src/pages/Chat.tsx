@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Loader2, Wrench } from "lucide-react";
+import { Search, Send, Loader2, Wrench, Trash2 } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "@/state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { Message, Conversation, Citation } from "@/types/models";
 import { chat } from "@/services/brain";
 import { searchWeb } from "@/services/search";
@@ -37,6 +38,7 @@ export default function Chat() {
   );
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messages = useMemo<Message[]>(
     () => conversation?.messages ?? [],
     [conversation]
@@ -48,18 +50,50 @@ export default function Chat() {
     }
   }, [conversation, preferences.privateMode]);
 
-  const appendMessage = (msg: Message) => {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Save message to database
+  const saveMessageToDb = async (role: string, content: string) => {
+    if (!user || preferences.privateMode) return;
+    
+    try {
+      await supabase.from("chat_messages").insert({
+        user_id: user.id,
+        role,
+        content,
+      });
+    } catch (error) {
+      console.error("Failed to save message to database:", error);
+    }
+  };
+
+  const appendMessage = async (msg: Message) => {
     setConversation((prev) => {
       const base: Conversation =
         prev ?? { id: "default", createdAt: Date.now(), title: "Echo", messages: [] };
       const next = { ...base, messages: [...base.messages, msg] };
       return next;
     });
+    
+    // Save to database
+    await saveMessageToDb(msg.role, msg.content);
   };
 
-  const clearConversation = () => {
+  const clearConversation = async () => {
     setConversation(null);
     localStorage.removeItem(STORAGE_KEY);
+    
+    // Also clear from database
+    if (user && !preferences.privateMode) {
+      try {
+        await supabase.from("chat_messages").delete().eq("user_id", user.id);
+      } catch (error) {
+        console.error("Failed to clear messages from database:", error);
+      }
+    }
+    
     showSuccess("Conversation cleared");
   };
 
@@ -266,6 +300,7 @@ export default function Chat() {
                   <span className="text-sm">Echo is thinking...</span>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </ScrollArea>
             <div className="mt-3 flex gap-2">
               <Input

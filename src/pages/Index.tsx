@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Dashboard from "@/components/Dashboard";
 
 const Index = () => {
   const { user } = useAuth();
@@ -48,8 +49,13 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Dashboard Stats */}
+        <div className="mt-6">
+          <Dashboard />
+        </div>
+
         {/* Quick Actions */}
-        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
           <Link to="/tasks">
             <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
