@@ -14,6 +14,9 @@ const DEFAULT: Preferences = {
   conversationMode: true,
   silenceThreshold: 0.01,
   silenceTimeout: 1500,
+  voiceSpeed: 1.0,
+  autoListenAfterSpeech: true,
+  wakeWord: "echo",
 };
 
 export function loadPreferences(): Preferences {

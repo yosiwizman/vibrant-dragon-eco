@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Volume2, Loader2, Phone, PhoneOff, Wrench } from "lucide-react";
+import { Mic, MicOff, Volume2, Loader2, Phone, PhoneOff, Wrench, Navigation, Settings, VolumeX } from "lucide-react";
 import { showError, showSuccess } from "@/utils/toast";
 import { usePreferences } from "../state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,8 @@ import { transcribeAudio, synthesizeSpeech, playAudioBlob } from "../services/op
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
+import { normalizeSpeechInput } from "@/services/conversation-manager";
+import { stopSpeaking } from "@/services/enhanced-voice";
 import VoiceCommandExamples from "@/components/VoiceCommandExamples";
 import type { Message } from "../types/models";
 
@@ -43,6 +46,7 @@ async function chatWithOpenAITools(
 }
 
 export default function VoiceChat() {
+  const navigate = useNavigate();
   const { preferences } = usePreferences();
   const { user } = useAuth();
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
@@ -50,8 +54,11 @@ export default function VoiceChat() {
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [isConversationActive, setIsConversationActive] = useState(false);
   const [lastToolsUsed, setLastToolsUsed] = useState<string[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Try to get user location on mount
   useEffect(() => {
@@ -61,6 +68,17 @@ export default function VoiceChat() {
       // Location not available
     });
   }, []);
+
+  // Handle pending navigation after speaking
+  useEffect(() => {
+    if (pendingNavigation && conversationState === "idle") {
+      const timer = setTimeout(() => {
+        navigate(pendingNavigation);
+        setPendingNavigation(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingNavigation, conversationState, navigate]);
 
   const handleSilenceDetected = useCallback(() => {
     if (conversationState === "listening") {
@@ -84,6 +102,14 @@ export default function VoiceChat() {
     }
   }, [audioBlob]);
 
+  const stopCurrentAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    stopSpeaking();
+  };
+
   const processAudio = async (blob: Blob) => {
     if (!preferences.openaiApiKey) {
       showError("Please set your OpenAI API key in Settings");
@@ -96,7 +122,7 @@ export default function VoiceChat() {
 
     try {
       const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
-      const userText = transcription.text.trim();
+      let userText = transcription.text.trim();
 
       if (!userText) {
         if (isConversationActive && preferences.conversationMode) {
@@ -107,6 +133,8 @@ export default function VoiceChat() {
         return;
       }
 
+      // Normalize speech input for better understanding
+      const normalizedText = normalizeSpeechInput(userText);
       setCurrentTranscript(userText);
 
       const userMessage: Message = {
@@ -125,8 +153,8 @@ export default function VoiceChat() {
       } : undefined);
       const chatMessages = [
         { role: "system", content: systemPrompt },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: userText },
+        ...messages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: normalizedText },
       ];
 
       let response = await chatWithOpenAITools(chatMessages, preferences.openaiApiKey);
@@ -134,33 +162,57 @@ export default function VoiceChat() {
       // Check for tool calls and execute them
       const toolCalls = parseToolCalls(response);
       let toolResults: ActionResult[] = [];
+      let navigationPath: string | null = null;
 
       if (toolCalls.length > 0 && user) {
         for (const toolCall of toolCalls) {
           const result = await executeTool(user.id, toolCall);
           toolResults.push(result);
+
+          // Check for navigation
+          if (toolCall.tool === "navigate_to" && result.success && result.data?.path) {
+            navigationPath = result.data.path;
+          }
         }
 
         setLastToolsUsed(toolResults.map(r => r.tool));
 
         // Get a follow-up response summarizing what was done
         if (toolResults.length > 0) {
-          const toolResultsText = toolResults.map(r => 
-            `Tool: ${r.tool}\nSuccess: ${r.success}\n${r.success ? `Result: ${JSON.stringify(r.data, null, 2)}` : `Error: ${r.error}`}`
-          ).join("\n\n");
+          const toolResultsText = toolResults.map(r => {
+            if (r.tool === "navigate_to") {
+              return `Navigation: ${r.success ? `Going to ${r.data?.description}` : r.error}`;
+            }
+            if (r.data?.voiceText) {
+              return `Tool: ${r.tool}\nResult: ${r.data.voiceText}`;
+            }
+            return `Tool: ${r.tool}\nSuccess: ${r.success}\n${r.success ? `Result: ${JSON.stringify(r.data, null, 2)}` : `Error: ${r.error}`}`;
+          }).join("\n\n");
 
           const followUpMessages = [
             ...chatMessages,
             { role: "assistant", content: response },
-            { role: "user", content: `Tool execution results:\n${toolResultsText}\n\nPlease provide a brief, conversational summary of what was done. Keep it short for voice.` },
+            { role: "user", content: `Tool execution results:\n${toolResultsText}\n\nProvide a BRIEF, conversational voice response (1-2 sentences max). If there's voice text in the results, use that. Don't repeat JSON or technical details.` },
           ];
 
           response = await chatWithOpenAITools(followUpMessages, preferences.openaiApiKey);
         }
       }
 
-      // Clean response for speech (remove JSON blocks)
-      const cleanResponse = response.replace(/```json[\s\S]*?```/g, '').trim();
+      // Clean response for speech (remove JSON blocks and markdown)
+      let cleanResponse = response
+        .replace(/```json[\s\S]*?```/g, '')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#{1,6}\s/g, '')
+        .trim();
+
+      // If we have voice text from tools, prefer that
+      const voiceTextResult = toolResults.find(r => r.data?.voiceText);
+      if (voiceTextResult?.data?.voiceText) {
+        cleanResponse = voiceTextResult.data.voiceText;
+      }
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -175,10 +227,32 @@ export default function VoiceChat() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Speak the response
-      setConversationState("speaking");
-      const speechBlob = await synthesizeSpeech(cleanResponse, preferences.openaiApiKey, preferences.openaiVoice);
-      await playAudioBlob(speechBlob);
+      // Speak the response (unless muted)
+      if (!isMuted) {
+        setConversationState("speaking");
+        try {
+          const speechBlob = await synthesizeSpeech(cleanResponse, preferences.openaiApiKey, preferences.openaiVoice);
+          const audio = new Audio();
+          audioRef.current = audio;
+          audio.src = URL.createObjectURL(speechBlob);
+          
+          await new Promise<void>((resolve, reject) => {
+            audio.onended = () => {
+              URL.revokeObjectURL(audio.src);
+              audioRef.current = null;
+              resolve();
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(audio.src);
+              audioRef.current = null;
+              reject(new Error("Audio playback failed"));
+            };
+            audio.play().catch(reject);
+          });
+        } catch (err) {
+          console.error("Speech synthesis error:", err);
+        }
+      }
 
       // Show success toast for tool actions
       if (toolResults.length > 0) {
@@ -188,7 +262,12 @@ export default function VoiceChat() {
         }
       }
 
-      if (isConversationActive && preferences.conversationMode) {
+      // Handle navigation after speaking
+      if (navigationPath) {
+        setPendingNavigation(navigationPath);
+      }
+
+      if (isConversationActive && preferences.conversationMode && !navigationPath) {
         startListening();
       } else {
         setConversationState("idle");
@@ -217,6 +296,7 @@ export default function VoiceChat() {
   const endConversation = () => {
     setIsConversationActive(false);
     stopRecording();
+    stopCurrentAudio();
     setConversationState("idle");
   };
 
@@ -225,7 +305,19 @@ export default function VoiceChat() {
       stopRecording();
     } else if (conversationState === "idle") {
       await startListening();
+    } else if (conversationState === "speaking") {
+      // Stop speaking and start listening
+      stopCurrentAudio();
+      await startListening();
     }
+  };
+
+  const toggleMute = () => {
+    if (!isMuted && conversationState === "speaking") {
+      stopCurrentAudio();
+      setConversationState("idle");
+    }
+    setIsMuted(!isMuted);
   };
 
   const clearMessages = () => {
@@ -277,19 +369,37 @@ export default function VoiceChat() {
       <div className="mx-auto max-w-2xl flex flex-col h-[calc(100vh-88px)]">
         <Card className="flex-1 border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl flex flex-col">
           <CardContent className="flex-1 flex flex-col p-6">
-            {/* Header with clear button */}
+            {/* Header with controls */}
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white">Voice Chat</h2>
-              {messages.length > 0 && (
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-white">Voice Chat</h2>
+                {isConversationActive && (
+                  <Badge variant="outline" className="border-green-500 text-green-400 text-xs">
+                    Active
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearMessages}
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMute}
+                  className={`h-8 w-8 ${isMuted ? 'text-red-400' : 'text-slate-400'} hover:text-white`}
+                  title={isMuted ? "Unmute" : "Mute"}
                 >
-                  Clear
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </Button>
-              )}
+                {messages.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearMessages}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Messages Area */}
@@ -299,9 +409,21 @@ export default function VoiceChat() {
                   <div className="flex flex-col items-center justify-center flex-1 text-center">
                     <div className="text-4xl mb-4">🎙️</div>
                     <p className="text-lg text-white mb-2">Voice-First AI Assistant</p>
-                    <p className="text-sm text-slate-400 max-w-md mb-4">
-                      Speak naturally to Echo. I can search the web, create reminders, manage tasks, take notes, and schedule events.
+                    <p className="text-sm text-slate-400 max-w-md mb-2">
+                      Speak naturally to Echo. I can navigate the app, read your tasks and reminders, give you daily summaries, and much more.
                     </p>
+                    <div className="flex flex-wrap gap-2 justify-center mt-2">
+                      <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
+                        <Navigation className="h-3 w-3 mr-1" />
+                        "Open my tasks"
+                      </Badge>
+                      <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
+                        "Read my reminders"
+                      </Badge>
+                      <Badge variant="outline" className="border-fuchsia-500/50 text-fuchsia-300 text-xs">
+                        "Summarize my day"
+                      </Badge>
+                    </div>
                   </div>
                   <VoiceCommandExamples />
                 </div>
@@ -351,18 +473,31 @@ export default function VoiceChat() {
               </div>
             )}
 
+            {/* Pending Navigation Indicator */}
+            {pendingNavigation && (
+              <div className="mb-4 flex items-center gap-2 text-sm text-green-300">
+                <Navigation className="h-4 w-4" />
+                <span>Navigating to {pendingNavigation}...</span>
+              </div>
+            )}
+
             {/* Voice Control Area */}
             <div className="flex flex-col items-center space-y-4">
               {/* State Indicator */}
               <div className="text-center">
-                <div
-                  className={`w-28 h-28 rounded-full bg-gradient-to-br ${getStateColor()} flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                <button
+                  onClick={toggleListening}
+                  disabled={conversationState === "processing"}
+                  className={`w-28 h-28 rounded-full bg-gradient-to-br ${getStateColor()} flex items-center justify-center shadow-2xl transition-all ${
                     conversationState === "listening" ? "ring-4 ring-fuchsia-400/50 scale-110" : ""
-                  }`}
+                  } ${conversationState !== "processing" ? "hover:scale-105 active:scale-95 cursor-pointer" : "cursor-not-allowed"}`}
                 >
                   <div className="text-white">{getStateIcon()}</div>
-                </div>
+                </button>
                 <p className="mt-3 text-lg font-medium text-white">{getStateText()}</p>
+                {conversationState === "speaking" && (
+                  <p className="text-xs text-slate-400 mt-1">Tap to interrupt</p>
+                )}
               </div>
 
               {/* Control Buttons */}
@@ -404,9 +539,17 @@ export default function VoiceChat() {
 
               {/* Conversation Mode Indicator */}
               {isConversationActive && (
-                <p className="text-sm text-fuchsia-300">
+                <p className="text-sm text-fuchsia-300 text-center">
                   Conversation mode active • Speak naturally, Echo will respond automatically
+                  {isMuted && " • Audio muted"}
                 </p>
+              )}
+
+              {/* Quick Tips */}
+              {!isConversationActive && conversationState === "idle" && (
+                <div className="text-center text-xs text-slate-500 max-w-md">
+                  <p>Try: "Open my tasks" • "Read my reminders" • "What's on my calendar?" • "Summarize my day"</p>
+                </div>
               )}
 
               {recorderError && (

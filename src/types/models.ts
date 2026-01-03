@@ -47,6 +47,9 @@ export interface Preferences {
   conversationMode: boolean;
   silenceThreshold: number;
   silenceTimeout: number;
+  voiceSpeed: number;
+  autoListenAfterSpeech: boolean;
+  wakeWord: string;
 }
 
 export const OPENAI_VOICES: { value: OpenAIVoice; label: string; description: string }[] = [

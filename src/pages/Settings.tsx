@@ -283,6 +283,40 @@ export default function Settings() {
                   />
                 </div>
 
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+                  <div>
+                    <Label className="text-white">Auto-Listen After Speech</Label>
+                    <p className="text-sm text-slate-400">
+                      Automatically start listening after Echo finishes speaking
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.autoListenAfterSpeech}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, autoListenAfterSpeech: checked })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label className="text-slate-300">
+                    Voice Speed: {preferences.voiceSpeed?.toFixed(1) || "1.0"}x
+                  </Label>
+                  <Slider
+                    value={[preferences.voiceSpeed || 1.0]}
+                    onValueChange={([value]) =>
+                      setPreferences({ ...preferences, voiceSpeed: value })
+                    }
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Adjust how fast Echo speaks (0.5x - 2.0x)
+                  </p>
+                </div>
+
                 <div className="grid gap-3">
                   <Label className="text-slate-300">
                     Silence Timeout: {preferences.silenceTimeout}ms
@@ -298,7 +332,26 @@ export default function Settings() {
                     className="w-full"
                   />
                   <p className="text-xs text-slate-500">
-                    How long to wait after you stop speaking
+                    How long to wait after you stop speaking before processing
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  <Label className="text-slate-300">
+                    Silence Sensitivity: {((1 - (preferences.silenceThreshold || 0.01)) * 100).toFixed(0)}%
+                  </Label>
+                  <Slider
+                    value={[1 - (preferences.silenceThreshold || 0.01)]}
+                    onValueChange={([value]) =>
+                      setPreferences({ ...preferences, silenceThreshold: 1 - value })
+                    }
+                    min={0.9}
+                    max={0.99}
+                    step={0.01}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Higher = more sensitive to quiet speech
                   </p>
                 </div>
               </CardContent>

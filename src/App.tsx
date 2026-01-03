@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { VoiceProvider } from "@/contexts/VoiceContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import NavBar from "@/components/NavBar";
@@ -36,8 +37,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <NavBar />
-          <Routes>
+          <VoiceProvider>
+            <NavBar />
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route
               path="/"
@@ -175,9 +177,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <MicButton />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <MicButton />
+          </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

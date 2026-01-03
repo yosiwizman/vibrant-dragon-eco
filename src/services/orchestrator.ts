@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { searchWeb, getWeather, findNearbyPlaces, geocodeAddress } from "./search";
 import { getCurrentLocation } from "./location";
+import { getDailySummary, formatSummaryForVoice, getTasksReadout, getRemindersReadout, getNotesReadout, getCalendarReadout } from "./daily-summary";
+import { findRouteByVoiceCommand, APP_ROUTES } from "./voice-navigation";
 
 export interface OrchestrationContext {
   userId: string;
@@ -122,6 +124,46 @@ export const AVAILABLE_TOOLS = [
     name: "add_knowledge",
     description: "Store a new fact or preference about the user",
     parameters: { category: "string", key: "string", value: "string" },
+  },
+  {
+    name: "navigate_to",
+    description: "Navigate to a page in the app. Use this when user says 'open', 'go to', 'show me' followed by a page name.",
+    parameters: { page: "string (e.g., 'tasks', 'reminders', 'notes', 'calendar', 'contacts', 'messages', 'settings', 'home')" },
+  },
+  {
+    name: "get_daily_summary",
+    description: "Get a comprehensive summary of the user's day including tasks, reminders, calendar events, and notes",
+    parameters: {},
+  },
+  {
+    name: "read_tasks",
+    description: "Read out the user's tasks in a voice-friendly format",
+    parameters: { status: "pending|completed|all (default: pending)" },
+  },
+  {
+    name: "read_reminders",
+    description: "Read out the user's pending reminders in a voice-friendly format",
+    parameters: {},
+  },
+  {
+    name: "read_notes",
+    description: "Read out the user's recent notes in a voice-friendly format",
+    parameters: { limit: "number (default: 5)" },
+  },
+  {
+    name: "read_calendar",
+    description: "Read out upcoming calendar events in a voice-friendly format",
+    parameters: { days: "number (default: 2)" },
+  },
+  {
+    name: "reschedule_task",
+    description: "Reschedule a task to a new date",
+    parameters: { task_id: "string (optional)", task_title: "string (optional, to find by title)", new_due_date: "ISO datetime string" },
+  },
+  {
+    name: "get_notes",
+    description: "Get user's notes with optional search",
+    parameters: { search: "string (optional)", limit: "number (default: 10)" },
   },
 ];
 
@@ -751,6 +793,217 @@ export async function executeDraftSMS(
   }
 }
 
+export function executeNavigateTo(page: string): ActionResult {
+  const route = findRouteByVoiceCommand(page);
+  
+  if (route) {
+    return {
+      tool: "navigate_to",
+      success: true,
+      data: {
+        path: route.path,
+        description: route.description,
+        message: `Navigating to ${route.description}`,
+      },
+    };
+  }
+  
+  // Return available pages if not found
+  const availablePages = APP_ROUTES.map(r => r.aliases[0]).join(", ");
+  return {
+    tool: "navigate_to",
+    success: false,
+    error: `Page "${page}" not found. Available pages: ${availablePages}`,
+  };
+}
+
+export async function executeGetDailySummary(userId: string): Promise<ActionResult> {
+  try {
+    const summary = await getDailySummary(userId);
+    const voiceText = formatSummaryForVoice(summary);
+    
+    return {
+      tool: "get_daily_summary",
+      success: true,
+      data: {
+        summary,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_daily_summary",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeReadTasks(userId: string, status: string = "pending"): Promise<ActionResult> {
+  try {
+    const readout = await getTasksReadout(userId, status);
+    
+    return {
+      tool: "read_tasks",
+      success: true,
+      data: {
+        voiceText: readout,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "read_tasks",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeReadReminders(userId: string): Promise<ActionResult> {
+  try {
+    const readout = await getRemindersReadout(userId);
+    
+    return {
+      tool: "read_reminders",
+      success: true,
+      data: {
+        voiceText: readout,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "read_reminders",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeReadNotes(userId: string, limit: number = 5): Promise<ActionResult> {
+  try {
+    const readout = await getNotesReadout(userId, limit);
+    
+    return {
+      tool: "read_notes",
+      success: true,
+      data: {
+        voiceText: readout,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "read_notes",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeReadCalendar(userId: string, days: number = 2): Promise<ActionResult> {
+  try {
+    const readout = await getCalendarReadout(userId, days);
+    
+    return {
+      tool: "read_calendar",
+      success: true,
+      data: {
+        voiceText: readout,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "read_calendar",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeRescheduleTask(
+  userId: string,
+  newDueDate: string,
+  taskId?: string,
+  taskTitle?: string
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("tasks").update({
+      due_date: newDueDate,
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+    
+    if (taskId) {
+      query = query.eq("id", taskId);
+    } else if (taskTitle) {
+      query = query.ilike("title", `%${taskTitle}%`);
+    } else {
+      throw new Error("Either task_id or task_title is required");
+    }
+    
+    const { data, error } = await query.select().single();
+
+    if (error) throw error;
+
+    const newDate = new Date(newDueDate).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+
+    return {
+      tool: "reschedule_task",
+      success: true,
+      data: {
+        task: data,
+        message: `Task "${data.title}" rescheduled to ${newDate}`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "reschedule_task",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeGetNotes(
+  userId: string,
+  search?: string,
+  limit: number = 10
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("notes").select("*").eq("user_id", userId);
+    
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return {
+      tool: "get_notes",
+      success: true,
+      data: data?.map(n => ({
+        id: n.id,
+        title: n.title,
+        content: n.content.substring(0, 200) + (n.content.length > 200 ? "..." : ""),
+        tags: n.tags,
+        created_at: n.created_at,
+      })) || [],
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_notes",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 // Build system prompt with tools
 export function buildSystemPrompt(userLocation?: { lat: number; lng: number; city?: string }): string {
   const now = new Date();
@@ -785,7 +1038,7 @@ USER LOCATION:
 USER LOCATION: Not available. If the user asks for weather or nearby places without specifying a location, ask them for their location or use the get_weather/find_nearby tools which will request permission.`;
   }
 
-  return `You are Echo, a personal AI assistant. You are helpful, friendly, and proactive.
+  return `You are Echo, a personal AI voice assistant. You are helpful, friendly, conversational, and proactive. You are designed for VOICE-FIRST interaction - keep responses concise and natural for spoken conversation.
 
 CURRENT TIME & DATE:
 - Date: ${timeInfo.date}
@@ -800,7 +1053,19 @@ Use this time context naturally in conversations. For example:
 - Be aware of business hours, weekends, etc.
 ${locationContext}
 
+VOICE INTERACTION GUIDELINES:
+1. Keep responses SHORT and conversational - this is voice, not text
+2. Use natural speech patterns, contractions, and casual language
+3. Avoid bullet points, numbered lists, or formatting - speak naturally
+4. When reading lists (tasks, reminders, etc.), limit to 3-5 items unless asked for more
+5. Confirm actions briefly: "Done!", "Got it!", "All set!"
+6. Be tolerant of speech recognition errors - understand intent even with typos
+7. For navigation requests, use navigate_to tool and confirm where you're going
+
 CAPABILITIES:
+- Navigate to any page in the app (tasks, reminders, notes, calendar, contacts, messages, settings, etc.)
+- Read out tasks, reminders, notes, and calendar events
+- Provide daily summaries of all activities
 - Web searching for current information
 - Getting weather (current conditions and forecasts)
 - Finding nearby places (restaurants, gas stations, pharmacies, etc.)
@@ -808,10 +1073,22 @@ CAPABILITIES:
 - Creating and tracking tasks/to-dos
 - Taking notes
 - Managing calendar events
+- Rescheduling tasks to new dates
 - Sending notifications
 - Managing contacts
 - Drafting emails and SMS messages
 - Storing and retrieving personal knowledge/preferences
+
+NAVIGATION:
+When user says "open", "go to", "show me", "take me to" followed by a page name, use the navigate_to tool.
+Available pages: home, tasks, reminders, notes, calendar, contacts, messages, notifications, knowledge, tools, settings, profile, integrations, history, voice, chat
+
+READING DATA:
+- Use read_tasks to read tasks aloud
+- Use read_reminders to read reminders aloud
+- Use read_notes to read recent notes aloud
+- Use read_calendar to read upcoming events aloud
+- Use get_daily_summary for a comprehensive day overview
 
 AVAILABLE TOOLS:
 ${AVAILABLE_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n")}
@@ -825,14 +1102,17 @@ When you need to use a tool, respond with a JSON block:
 }
 \`\`\`
 
-GUIDELINES:
+IMPORTANT GUIDELINES:
 1. Be proactive - if the user mentions a time/date, offer to create a reminder or event
 2. Use location context when available for weather and nearby searches
 3. For relative times ("tomorrow at 3pm"), calculate the actual ISO datetime
-4. Keep responses concise but helpful
-5. After using a tool, summarize what you did in natural language
+4. Keep responses BRIEF for voice - 1-3 sentences max unless reading data
+5. After using a tool, give a SHORT spoken confirmation
 6. If multiple tools are needed, use them one at a time
-7. For drafting emails/SMS, create the draft and let the user know they can find it in Messages`;
+7. For drafting emails/SMS, create the draft and briefly confirm
+8. When user asks to "read" or "tell me" their tasks/reminders/notes, use the read_* tools
+9. When user asks for a "summary" or "how's my day", use get_daily_summary
+10. Understand common speech patterns: "to do" = "todo", "remind me" = create reminder, etc.`;
 }
 
 // Parse tool calls from AI response
@@ -903,6 +1183,22 @@ export async function executeTool(
       return getKnowledge(userId, parameters.category, parameters.search);
     case "add_knowledge":
       return addKnowledge(userId, parameters.category, parameters.key, parameters.value);
+    case "navigate_to":
+      return executeNavigateTo(parameters.page);
+    case "get_daily_summary":
+      return executeGetDailySummary(userId);
+    case "read_tasks":
+      return executeReadTasks(userId, parameters.status);
+    case "read_reminders":
+      return executeReadReminders(userId);
+    case "read_notes":
+      return executeReadNotes(userId, parameters.limit);
+    case "read_calendar":
+      return executeReadCalendar(userId, parameters.days);
+    case "reschedule_task":
+      return executeRescheduleTask(userId, parameters.new_due_date, parameters.task_id, parameters.task_title);
+    case "get_notes":
+      return executeGetNotes(userId, parameters.search, parameters.limit);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }
