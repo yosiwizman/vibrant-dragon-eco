@@ -13,7 +13,17 @@ export default function MicButton() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { isListening, isProcessing, isSpeaking, startListening, stopListening, processVoiceCommand, speak, stopSpeaking } = useVoice();
+  const { 
+    isListening, 
+    isProcessing, 
+    isSpeaking, 
+    currentTranscript,
+    startListening, 
+    stopListening, 
+    processVoiceCommand, 
+    speak, 
+    stopSpeaking 
+  } = useVoice();
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [quickInput, setQuickInput] = useState("");
@@ -29,7 +39,7 @@ export default function MicButton() {
       stopListening();
     } else if (isSpeaking) {
       stopSpeaking();
-    } else {
+    } else if (!isProcessing) {
       await startListening();
     }
   };
@@ -81,8 +91,8 @@ export default function MicButton() {
   };
 
   const getMicState = () => {
-    if (isListening) return { icon: Mic, color: "bg-red-500 animate-pulse", label: "Listening..." };
-    if (isProcessing) return { icon: Loader2, color: "bg-blue-500", label: "Processing..." };
+    if (isListening) return { icon: Mic, color: "bg-red-500 animate-pulse ring-4 ring-red-500/30", label: "Listening..." };
+    if (isProcessing) return { icon: Loader2, color: "bg-yellow-500", label: "Processing..." };
     if (isSpeaking) return { icon: Volume2, color: "bg-green-500 animate-pulse", label: "Speaking..." };
     return { icon: Mic, color: "bg-fuchsia-600 hover:bg-fuchsia-500", label: "Voice" };
   };
@@ -92,6 +102,14 @@ export default function MicButton() {
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+      {/* Live Transcript Display */}
+      {(isListening || isProcessing) && currentTranscript && (
+        <div className="p-3 rounded-2xl bg-slate-900/95 border border-fuchsia-500/30 backdrop-blur-lg shadow-2xl animate-in slide-in-from-bottom-2 max-w-xs">
+          <p className="text-xs text-fuchsia-300 mb-1">You said:</p>
+          <p className="text-sm text-white">"{currentTranscript}"</p>
+        </div>
+      )}
+
       {/* Quick Input */}
       {isExpanded && (
         <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/95 border border-slate-700 backdrop-blur-lg shadow-2xl animate-in slide-in-from-bottom-2">
@@ -147,7 +165,8 @@ export default function MicButton() {
         <button
           onClick={handleMicClick}
           onDoubleClick={handleMicLongPress}
-          className={`h-14 w-14 rounded-full flex items-center justify-center shadow-2xl transition-all ${micState.color} text-white hover:scale-105 active:scale-95`}
+          disabled={isProcessing}
+          className={`h-14 w-14 rounded-full flex items-center justify-center shadow-2xl transition-all ${micState.color} text-white hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
           aria-label={micState.label}
           title={`${micState.label} (double-tap for voice chat)`}
         >

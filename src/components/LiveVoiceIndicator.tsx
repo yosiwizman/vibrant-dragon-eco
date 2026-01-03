@@ -11,12 +11,15 @@ interface LiveVoiceIndicatorProps {
 }
 
 export default function LiveVoiceIndicator({ className, onClick }: LiveVoiceIndicatorProps) {
-  const { isListening, isProcessing, isSpeaking, currentTranscript, lastTranscript } = useVoice();
+  const { isListening, isProcessing, isSpeaking, currentTranscript, lastTranscript, lastResponse } = useVoice();
 
   // Don't show if nothing is happening
   if (!isListening && !isProcessing && !isSpeaking) {
     return null;
   }
+
+  // Get the best transcript to display
+  const displayTranscript = currentTranscript || lastTranscript;
 
   const getIcon = () => {
     if (isListening) return <Mic className="h-3 w-3" />;
@@ -39,10 +42,25 @@ export default function LiveVoiceIndicator({ className, onClick }: LiveVoiceIndi
     return "";
   };
 
+  const getDisplayText = () => {
+    if (isListening && displayTranscript) {
+      return `"${displayTranscript.slice(0, 30)}${displayTranscript.length > 30 ? '...' : ''}"`;
+    }
+    if (isProcessing && displayTranscript) {
+      return `"${displayTranscript.slice(0, 30)}${displayTranscript.length > 30 ? '...' : ''}"`;
+    }
+    if (isSpeaking && lastResponse) {
+      return `"${lastResponse.slice(0, 30)}${lastResponse.length > 30 ? '...' : ''}"`;
+    }
+    return null;
+  };
+
+  const extraText = getDisplayText();
+
   return (
     <Badge 
       className={cn(
-        "cursor-pointer animate-pulse flex items-center gap-1.5",
+        "cursor-pointer animate-pulse flex items-center gap-1.5 max-w-xs",
         getColor(),
         className
       )}
@@ -50,9 +68,9 @@ export default function LiveVoiceIndicator({ className, onClick }: LiveVoiceIndi
     >
       {getIcon()}
       <span className="hidden sm:inline">{getText()}</span>
-      {(isListening || isProcessing) && (currentTranscript || lastTranscript) && (
-        <span className="hidden md:inline text-xs opacity-75 max-w-[100px] truncate">
-          "{currentTranscript || lastTranscript}"
+      {extraText && (
+        <span className="hidden md:inline text-xs opacity-75 truncate max-w-[150px]">
+          {extraText}
         </span>
       )}
     </Badge>

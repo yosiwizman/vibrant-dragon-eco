@@ -3,7 +3,8 @@
 import { useVoice } from "@/contexts/VoiceContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Loader2, Volume2, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Mic, Loader2, Volume2, MessageSquare, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VoiceTranscriptDisplayProps {
@@ -23,11 +24,16 @@ export default function VoiceTranscriptDisplay({
     isSpeaking, 
     currentTranscript, 
     lastTranscript, 
-    lastResponse 
+    lastResponse,
+    stopListening,
+    stopSpeaking
   } = useVoice();
 
-  // Don't show anything if nothing is happening
-  if (!isListening && !isProcessing && !isSpeaking && !lastTranscript && !lastResponse) {
+  // Get the best transcript to display
+  const displayTranscript = currentTranscript || lastTranscript;
+
+  // Don't show anything if nothing is happening and no recent activity
+  if (!isListening && !isProcessing && !isSpeaking && !displayTranscript && !lastResponse) {
     return null;
   }
 
@@ -59,14 +65,32 @@ export default function VoiceTranscriptDisplay({
     return null;
   };
 
+  const handleStop = () => {
+    if (isListening) {
+      stopListening();
+    } else if (isSpeaking) {
+      stopSpeaking();
+    }
+  };
+
   if (compact) {
     return (
       <div className={cn("flex items-center gap-2", className)}>
         {getStatusBadge()}
-        {(isListening || isProcessing) && currentTranscript && (
+        {(isListening || isProcessing) && displayTranscript && (
           <span className="text-sm text-slate-300 truncate max-w-[200px]">
-            "{currentTranscript}"
+            "{displayTranscript}"
           </span>
+        )}
+        {(isListening || isSpeaking) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleStop}
+            className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+          >
+            <X className="h-3 w-3" />
+          </Button>
         )}
       </div>
     );
@@ -80,23 +104,37 @@ export default function VoiceTranscriptDisplay({
       <CardContent className="p-4 space-y-3">
         {/* Status Badge */}
         <div className="flex items-center justify-between">
-          {getStatusBadge()}
-          {(lastTranscript || currentTranscript) && (
-            <span className="text-xs text-slate-500">
-              {new Date().toLocaleTimeString()}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
+          </div>
+          <div className="flex items-center gap-2">
+            {(displayTranscript || lastResponse) && (
+              <span className="text-xs text-slate-500">
+                {new Date().toLocaleTimeString()}
+              </span>
+            )}
+            {(isListening || isSpeaking) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleStop}
+                className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Current/Last Transcript (What you said) */}
-        {(currentTranscript || lastTranscript) && (
+        {displayTranscript && (
           <div className="space-y-1">
             <div className="flex items-center gap-1 text-xs text-slate-400">
               <MessageSquare className="h-3 w-3" />
               <span>You said:</span>
             </div>
             <p className="text-sm text-white bg-fuchsia-600/20 rounded-lg px-3 py-2 border border-fuchsia-500/30">
-              "{currentTranscript || lastTranscript}"
+              "{displayTranscript}"
             </p>
           </div>
         )}
@@ -115,10 +153,18 @@ export default function VoiceTranscriptDisplay({
         )}
 
         {/* Processing indicator */}
-        {isProcessing && !currentTranscript && (
+        {isProcessing && !displayTranscript && (
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Transcribing your voice...</span>
+          </div>
+        )}
+
+        {/* Listening indicator when no transcript yet */}
+        {isListening && !displayTranscript && (
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <Mic className="h-4 w-4 animate-pulse text-red-400" />
+            <span>Speak now...</span>
           </div>
         )}
       </CardContent>

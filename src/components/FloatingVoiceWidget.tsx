@@ -52,7 +52,22 @@ export default function FloatingVoiceWidget() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { isListening, isProcessing, isSpeaking, isQuietMode, lastTranscript, processVoiceCommand, speak, stopSpeaking, startListening, stopListening, exitQuietMode } = useVoice();
+  const { 
+    isListening, 
+    isProcessing, 
+    isSpeaking, 
+    isQuietMode, 
+    lastTranscript, 
+    currentTranscript,
+    lastResponse: contextLastResponse,
+    processVoiceCommand, 
+    speak, 
+    stopSpeaking, 
+    startListening, 
+    stopListening, 
+    exitQuietMode 
+  } = useVoice();
+  
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window !== "undefined") {
@@ -61,7 +76,10 @@ export default function FloatingVoiceWidget() {
     }
     return false;
   });
-  const [lastResponse, setLastResponse] = useState<string | null>(null);
+  const [localLastResponse, setLocalLastResponse] = useState<string | null>(null);
+
+  // Use context response or local response
+  const displayResponse = contextLastResponse || localLastResponse;
 
   // Persist visibility preference
   useEffect(() => {
@@ -97,13 +115,13 @@ export default function FloatingVoiceWidget() {
 
   const handleQuickCommand = async (command: string) => {
     try {
-      setLastResponse(null);
+      setLocalLastResponse(null);
       const response = await processVoiceCommand(command);
-      setLastResponse(response);
+      setLocalLastResponse(response);
       await speak(response);
     } catch (error) {
       console.error("Quick command failed:", error);
-      setLastResponse("Sorry, something went wrong.");
+      setLocalLastResponse("Sorry, something went wrong.");
     }
   };
 
@@ -138,10 +156,13 @@ export default function FloatingVoiceWidget() {
       if (result.bulletPoints.length > 0) {
         summaryText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
       }
-      setLastResponse(summaryText);
+      setLocalLastResponse(summaryText);
       await speak(summaryText);
     }
   };
+
+  // Get the transcript to display (prefer current over last)
+  const displayTranscript = currentTranscript || lastTranscript;
 
   return (
     <div className="fixed bottom-24 left-4 z-40">
@@ -176,9 +197,9 @@ export default function FloatingVoiceWidget() {
                 <span className="text-xs font-medium text-white">
                   {getStatusText()}
                 </span>
-                {isListening && lastTranscript && (
+                {(isListening || isProcessing) && displayTranscript && (
                   <span className="text-[10px] text-slate-400 truncate max-w-[150px]">
-                    "{lastTranscript}"
+                    "{displayTranscript}"
                   </span>
                 )}
               </div>
@@ -203,16 +224,34 @@ export default function FloatingVoiceWidget() {
             </div>
           </div>
 
+          {/* Live Transcript Display (when listening/processing) */}
+          {(isListening || isProcessing) && displayTranscript && !isExpanded && (
+            <div className="mt-2 p-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30">
+              <p className="text-xs text-white">
+                <span className="text-fuchsia-300">You: </span>
+                "{displayTranscript}"
+              </p>
+            </div>
+          )}
+
           {/* Last Response Preview */}
-          {lastResponse && !isExpanded && (
+          {displayResponse && !isExpanded && !isListening && !isProcessing && (
             <div className="mt-2 p-2 rounded-lg bg-slate-800/50 border border-slate-700">
-              <p className="text-xs text-slate-300 line-clamp-2">{lastResponse}</p>
+              <p className="text-xs text-slate-300 line-clamp-2">{displayResponse}</p>
             </div>
           )}
 
           {/* Quick Commands Grid */}
           {isExpanded && (
             <>
+              {/* Live Transcript in Expanded View */}
+              {(isListening || isProcessing) && displayTranscript && (
+                <div className="mt-3 p-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30">
+                  <p className="text-xs text-slate-400 mb-1">You said:</p>
+                  <p className="text-sm text-white">"{displayTranscript}"</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-4 gap-1.5 pt-3 mt-3 border-t border-slate-700">
                 {QUICK_COMMANDS.map((cmd) => (
                   <Tooltip key={cmd.label}>
@@ -236,10 +275,10 @@ export default function FloatingVoiceWidget() {
               </div>
 
               {/* Last Response */}
-              {lastResponse && (
+              {displayResponse && (
                 <div className="mt-3 p-2 rounded-lg bg-slate-800/50 border border-slate-700">
-                  <p className="text-xs text-slate-400 mb-1">Last response:</p>
-                  <p className="text-xs text-slate-200 line-clamp-3">{lastResponse}</p>
+                  <p className="text-xs text-slate-400 mb-1">Echo:</p>
+                  <p className="text-xs text-slate-200 line-clamp-3">{displayResponse}</p>
                 </div>
               )}
 
