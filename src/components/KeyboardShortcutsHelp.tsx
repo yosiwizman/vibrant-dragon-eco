@@ -33,6 +33,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: "Voice & Chat",
     shortcuts: [
       { keys: isMac ? "⌘K" : "Ctrl+K", description: "Open Command Palette" },
+      { keys: isMac ? "⌘N" : "Ctrl+N", description: "Quick Add (Task/Reminder/Note)" },
       { keys: isMac ? "⌘V" : "Ctrl+V", description: "Go to Voice Chat" },
       { keys: isMac ? "⌘J" : "Ctrl+J", description: "Go to Text Chat" },
       { keys: "Space", description: "Push to Talk (on Voice page)" },

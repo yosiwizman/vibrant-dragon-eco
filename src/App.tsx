@@ -8,6 +8,7 @@ import { VoiceProvider } from "@/contexts/VoiceContext";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
+import QuickAddModal, { useQuickAdd } from "@/components/QuickAddModal";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import NavBar from "@/components/NavBar";
@@ -55,6 +56,12 @@ function GlobalShortcutsWrapper() {
   return null;
 }
 
+// Wrapper component for quick add modal
+function QuickAddWrapper() {
+  const { isOpen, close, defaultTab } = useQuickAdd();
+  return <QuickAddModal open={isOpen} onClose={close} defaultTab={defaultTab} />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -69,6 +76,7 @@ const App = () => (
             <GlobalShortcutsWrapper />
             <KeyboardShortcutsHelp />
             <OnboardingTour />
+            <QuickAddWrapper />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route

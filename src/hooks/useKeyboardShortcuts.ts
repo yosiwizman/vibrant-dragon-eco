@@ -115,6 +115,7 @@ export function useGlobalShortcuts() {
       description: "Go to Text Chat",
       action: () => navigate("/chat"),
     },
+    // Note: ⌘N for Quick Add is handled by QuickAddModal's useQuickAdd hook
   ];
 
   useKeyboardShortcuts(shortcuts);
