@@ -108,6 +108,16 @@ export const AVAILABLE_TOOLS = [
     description: "Draft a text message based on user's request",
     parameters: { prompt: "string (what the message should say)", to: "string (optional recipient name or number)" },
   },
+  {
+    name: "get_knowledge",
+    description: "Retrieve stored knowledge/facts about the user",
+    parameters: { category: "string (optional)", search: "string (optional)" },
+  },
+  {
+    name: "add_knowledge",
+    description: "Store a new fact or preference about the user",
+    parameters: { category: "string", key: "string", value: "string" },
+  },
 ];
 
 // Tool execution functions
@@ -608,6 +618,70 @@ export async function executeDraftEmail(
   }
 }
 
+export async function getKnowledge(
+  userId: string,
+  category?: string,
+  search?: string
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("knowledge").select("*").eq("user_id", userId);
+    
+    if (category) {
+      query = query.eq("category", category);
+    }
+    
+    if (search) {
+      query = query.or(`key.ilike.%${search}%,value.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query.order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return {
+      tool: "get_knowledge",
+      success: true,
+      data: data?.map(k => ({ category: k.category, key: k.key, value: k.value })) || [],
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_knowledge",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function addKnowledge(
+  userId: string,
+  category: string,
+  key: string,
+  value: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase.from("knowledge").insert({
+      user_id: userId,
+      category,
+      key,
+      value,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "add_knowledge",
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      tool: "add_knowledge",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export async function executeDraftSMS(
   userId: string,
   prompt: string,
@@ -654,6 +728,7 @@ export function buildSystemPrompt(): string {
 - Sending notifications
 - Managing contacts
 - Drafting emails and SMS messages
+- Storing and retrieving personal knowledge/preferences
 
 You have access to the following tools:
 ${AVAILABLE_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n")}
@@ -734,6 +809,10 @@ export async function executeTool(
       return executeDraftEmail(userId, parameters.prompt, parameters.to);
     case "draft_sms":
       return executeDraftSMS(userId, parameters.prompt, parameters.to);
+    case "get_knowledge":
+      return getKnowledge(userId, parameters.category, parameters.search);
+    case "add_knowledge":
+      return addKnowledge(userId, parameters.category, parameters.key, parameters.value);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }

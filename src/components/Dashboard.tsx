@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  CheckSquare, 
-  Bell, 
-  FileText, 
-  Calendar, 
-  Users, 
+import QuickActions from "./QuickActions";
+import {
+  CheckSquare,
+  Bell,
+  FileText,
+  Calendar,
+  Users,
   TrendingUp,
   Clock,
   AlertCircle
@@ -177,21 +178,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.label} className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-2xl font-bold text-white">{stat.value}</p>
-                  <p className="text-xs text-slate-400">{stat.label}</p>
+      {/* Quick Actions and Stats */}
+      <div className="grid gap-4 md:grid-cols-5">
+        <div className="md:col-span-1">
+          <QuickActions />
+        </div>
+        <div className="md:col-span-4 grid gap-4 grid-cols-2 md:grid-cols-4">
+          {statCards.map((stat) => (
+            <Card key={stat.label} className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stat.value}</p>
+                    <p className="text-xs text-slate-400">{stat.label}</p>
+                  </div>
+                  <div className={stat.color}>{stat.icon}</div>
                 </div>
-                <div className={stat.color}>{stat.icon}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Upcoming Items */}
