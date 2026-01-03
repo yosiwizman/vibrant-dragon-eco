@@ -124,12 +124,12 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      // Build messages with system prompt (location-aware)
       const systemPrompt = buildSystemPrompt(userLocation ? {
         lat: userLocation.lat,
         lng: userLocation.lng,
         city: userLocation.city,
       } : undefined);
+      
       const chatMessages = [
         { role: "system" as const, content: systemPrompt },
         ...messages.concat(userMsg).map((m) => ({
@@ -145,21 +145,18 @@ export default function Chat() {
         preferences.openaiApiKey
       );
 
-      // Check for tool calls in the response
       const toolCalls = parseToolCalls(res.content);
-      let toolResults: ActionResult[] = [];
+      const toolResults: ActionResult[] = [];
       let finalContent = res.content;
 
       if (toolCalls.length > 0 && user) {
-        // Execute each tool call
         for (const toolCall of toolCalls) {
           const result = await executeTool(user.id, toolCall);
           toolResults.push(result);
         }
 
-        // If tools were executed, get a follow-up response
         if (toolResults.length > 0) {
-          const toolResultsText = toolResults.map(r => 
+          const toolResultsText = toolResults.map(r =>
             `Tool: ${r.tool}\nSuccess: ${r.success}\n${r.success ? `Result: ${JSON.stringify(r.data, null, 2)}` : `Error: ${r.error}`}`
           ).join("\n\n");
 
@@ -192,14 +189,15 @@ export default function Chat() {
         } : undefined,
         createdAt: Date.now(),
       };
+      
       appendMessage(assistantMsg);
       
-      // Log the chat interaction
       if (user) {
         logChatMessage(user.id, userMsg.content, finalContent);
       }
-    } catch (e: any) {
-      showError(e.message || "Failed to send message");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send message";
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
