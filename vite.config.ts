@@ -1,14 +1,14 @@
-import { defineConfig } from "vite";
+import { defineConfig, PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig(async () => {
-  const plugins = [react()];
+  const plugins: PluginOption[] = [react()];
   
   // Try to load the dyad component tagger, but don't fail if it's not available
   try {
     const { default: dyadComponentTagger } = await import("@dyad-sh/react-vite-component-tagger");
-    plugins.unshift(dyadComponentTagger());
+    plugins.unshift(dyadComponentTagger() as PluginOption);
   } catch {
     // Component tagger not available, continue without it
   }
