@@ -22,6 +22,7 @@ import Reminders from "./pages/Reminders";
 import Notes from "./pages/Notes";
 import Calendar from "./pages/Calendar";
 import Notifications from "./pages/Notifications";
+import Contacts from "./pages/Contacts";
 import MicButton from "@/components/MicButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -154,6 +155,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <ProtectedRoute>
+                  <Contacts />
                 </ProtectedRoute>
               }
             />

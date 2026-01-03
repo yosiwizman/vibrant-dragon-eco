@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -95,6 +95,14 @@ const Index = () => {
               <CardContent className="p-4 flex items-center gap-3">
                 <Bell className="h-6 w-6 text-fuchsia-400" />
                 <span className="font-medium text-white">Notifications</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/contacts">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Users className="h-6 w-6 text-cyan-400" />
+                <span className="font-medium text-white">Contacts</span>
               </CardContent>
             </Card>
           </Link>

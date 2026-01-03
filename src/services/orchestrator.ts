@@ -67,6 +67,16 @@ export const AVAILABLE_TOOLS = [
     description: "Send a notification to the user",
     parameters: { title: "string", body: "string", type: "reminder|task|message|system" },
   },
+  {
+    name: "create_contact",
+    description: "Add a new contact to the address book",
+    parameters: { name: "string", phone: "string", notes: "string (optional)" },
+  },
+  {
+    name: "get_contacts",
+    description: "Get the user's contacts",
+    parameters: { search: "string (optional)" },
+  },
 ];
 
 // Tool execution functions
@@ -338,6 +348,62 @@ export async function sendNotification(
   }
 }
 
+export async function createContact(
+  userId: string,
+  name: string,
+  phone: string,
+  notes?: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase.from("contacts").insert({
+      user_id: userId,
+      name,
+      phone,
+      notes: notes || null,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "create_contact",
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      tool: "create_contact",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function getContacts(userId: string, search?: string): Promise<ActionResult> {
+  try {
+    let query = supabase.from("contacts").select("*").eq("user_id", userId);
+    
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query.order("name", { ascending: true });
+
+    if (error) throw error;
+
+    return {
+      tool: "get_contacts",
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_contacts",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 // Build system prompt with tools
 export function buildSystemPrompt(): string {
   return `You are Echo, a personal AI assistant. You help the user with various tasks including:
@@ -411,6 +477,10 @@ export async function executeTool(
       return getCalendarEvents(userId, parameters.start_date, parameters.end_date);
     case "send_notification":
       return sendNotification(userId, parameters.title, parameters.body, parameters.type);
+    case "create_contact":
+      return createContact(userId, parameters.name, parameters.phone, parameters.notes);
+    case "get_contacts":
+      return getContacts(userId, parameters.search);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }
