@@ -104,36 +104,45 @@ export default function Chat() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl p-4 space-y-4">
-      <Card>
+    <div className="mx-auto max-w-4xl p-4">
+      <Card className="border-white/10 bg-white/5 backdrop-blur">
         <CardHeader>
-          <CardTitle>Chat</CardTitle>
+          <CardTitle className="bg-gradient-to-r from-fuchsia-300 to-blue-300 bg-clip-text text-transparent">
+            Chat
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[50vh] rounded border p-3">
+          <ScrollArea className="h-[58vh] rounded border border-white/10 p-3">
             {messages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/70">
                 Say hello to Echo. Your messages will not be saved in Private Mode.
               </p>
             ) : (
               messages.map((m) => (
-                <div key={m.id} className="mb-4">
-                  <div className="text-xs text-muted-foreground">
+                <div
+                  key={m.id}
+                  className={`mb-4 max-w-[85%] rounded-2xl px-4 py-3 backdrop-blur ${
+                    m.role === "user"
+                      ? "ml-auto bg-white/15 text-white"
+                      : "bg-black/30 text-white border border-white/10"
+                  }`}
+                >
+                  <div className="text-[10px] opacity-60">
                     {m.role.toUpperCase()} • {new Date(m.createdAt).toLocaleTimeString()}
                   </div>
                   <div className="mt-1 whitespace-pre-wrap">{m.content}</div>
                   {m.citations && m.citations.length > 0 && (
                     <>
-                      <Separator className="my-2" />
+                      <Separator className="my-2 bg-white/10" />
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold">Citations</div>
+                        <div className="text-xs font-semibold opacity-80">Citations</div>
                         {m.citations.map((c) => (
                           <a
                             key={c.url}
                             href={c.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block text-xs text-blue-600 hover:underline"
+                            className="block text-xs text-blue-300 hover:underline"
                           >
                             {c.title}
                           </a>
@@ -147,13 +156,14 @@ export default function Chat() {
           </ScrollArea>
           <div className="mt-3 flex gap-2">
             <Input
-              placeholder="Type your message..."
+              className="bg-black/30 text-white placeholder:text-white/40"
+              placeholder="Type to chat…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
             />
-            <Button onClick={onSend}>Send</Button>
-            <Button variant="secondary" onClick={onSearch}>
-              <Search className="mr-2 h-4 w-4" /> Use Web Search
+            <Button onClick={onSend} className="bg-white text-black hover:bg-white/90">Send</Button>
+            <Button variant="secondary" onClick={onSearch} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+              <Search className="mr-2 h-4 w-4" /> Search
             </Button>
           </div>
         </CardContent>

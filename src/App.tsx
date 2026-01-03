@@ -11,6 +11,8 @@ import Settings from "./pages/Settings";
 import Tools from "./pages/Tools";
 import History from "./pages/History";
 import Debug from "./pages/Debug";
+import Knowledge from "./pages/Knowledge";
+import MicButton from "@/components/MicButton";
 
 const queryClient = new QueryClient();
 
@@ -26,11 +28,13 @@ const App = () => (
           <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tools" element={<Tools />} />
+          <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/history" element={<History />} />
           <Route path="/debug" element={<Debug />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <MicButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
