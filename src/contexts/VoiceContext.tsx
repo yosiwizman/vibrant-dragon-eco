@@ -246,14 +246,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         stream.getTracks().forEach((track) => track.stop());
         
         if (blob.size > 0 && preferences.openaiApiKey) {
+          let transcriptText = "";
           try {
             const transcription = await transcribeAudio(blob, preferences.openaiApiKey);
-            const text = transcription.text.trim();
+            transcriptText = transcription.text.trim();
             
-            if (text) {
+            if (transcriptText) {
               // Check for multi-step conversation
               if (user && hasActiveFlow(user.id)) {
-                const flowResult = processMultiStepResponse(user.id, text);
+                const flowResult = processMultiStepResponse(user.id, transcriptText);
                 if (flowResult.complete && flowResult.collectedData) {
                   // Flow complete, process the collected data
                   playFeedback("success");
@@ -269,7 +270,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
               // Check for inline modifications
               if (user) {
-                const modResult = handleInlineModification(user.id, text);
+                const modResult = handleInlineModification(user.id, transcriptText);
                 if (modResult.handled && modResult.message) {
                   playFeedback("success");
                   await speak(modResult.message);
@@ -278,7 +279,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               }
 
               // Check if user wants to start a multi-step flow
-              const multiStepIntent = detectMultiStepIntent(text);
+              const multiStepIntent = detectMultiStepIntent(transcriptText);
               if (multiStepIntent && user) {
                 const flowStart = startMultiStepFlow(user.id, multiStepIntent);
                 if (flowStart) {
@@ -288,18 +289,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               }
 
               // Check for cancel/undo commands
-              if (/\b(cancel|stop|never\s*mind)\b/i.test(text) && user && hasActiveFlow(user.id)) {
+              if (/\b(cancel|stop|never\s*mind)\b/i.test(transcriptText) && user && hasActiveFlow(user.id)) {
                 cancelFlow(user.id);
                 await speak("Cancelled. What else can I help with?");
                 return;
               }
 
-              const response = await processVoiceCommand(text);
+              const response = await processVoiceCommand(transcriptText);
               playFeedback("success");
               
               // Log the voice interaction
               if (user) {
-                logVoiceCommand(user.id, text, response);
+                logVoiceCommand(user.id, transcriptText, response);
               }
               
               await speak(response);
@@ -310,7 +311,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             
             // Log the error
             if (user) {
-              logAIError(user.id, error.message || "Voice processing failed", { transcript: text });
+              logAIError(user.id, error.message || "Voice processing failed", { transcript: transcriptText });
             }
           }
         }
