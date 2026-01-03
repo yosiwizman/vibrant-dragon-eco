@@ -1,4 +1,5 @@
 import type { Message } from "@/types/models";
+import { parseNaturalTime, ParsedTime } from "./smart-time-parser";
 
 export interface ConversationContext {
   messages: Message[];
@@ -77,53 +78,31 @@ export function normalizeSpeechInput(text: string): string {
   return normalized;
 }
 
-// Extract time expressions from text
-export function extractTimeExpression(text: string): { time: Date | null; remaining: string } {
-  const now = new Date();
-  let time: Date | null = null;
-  let remaining = text;
+// Extract time expressions from text using smart parser
+export function extractTimeExpression(text: string): {
+  time: Date | null;
+  remaining: string;
+  isRecurring?: boolean;
+  recurrenceRule?: any;
+} {
+  // Use the enhanced smart time parser
+  const parsed = parseNaturalTime(text);
   
-  // Relative time patterns
-  const relativePatterns = [
-    { pattern: /in (\d+) minutes?/i, handler: (m: RegExpMatchArray) => new Date(now.getTime() + parseInt(m[1]) * 60000) },
-    { pattern: /in (\d+) hours?/i, handler: (m: RegExpMatchArray) => new Date(now.getTime() + parseInt(m[1]) * 3600000) },
-    { pattern: /in (\d+) days?/i, handler: (m: RegExpMatchArray) => new Date(now.getTime() + parseInt(m[1]) * 86400000) },
-    { pattern: /tomorrow/i, handler: () => new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0) },
-    { pattern: /next week/i, handler: () => new Date(now.getTime() + 7 * 86400000) },
-    { pattern: /tonight/i, handler: () => new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0) },
-    { pattern: /this evening/i, handler: () => new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0) },
-    { pattern: /this afternoon/i, handler: () => new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 0) },
-    { pattern: /this morning/i, handler: () => new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0) },
-  ];
-  
-  for (const { pattern, handler } of relativePatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      time = handler(match);
-      remaining = text.replace(pattern, "").trim();
-      break;
-    }
+  if (parsed) {
+    return {
+      time: parsed.date,
+      remaining: parsed.remainingText,
+      isRecurring: parsed.isRecurring,
+      recurrenceRule: parsed.recurrenceRule,
+    };
   }
   
-  // Absolute time patterns (e.g., "at 3pm", "at 15:00")
-  const absolutePattern = /at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
-  const absoluteMatch = text.match(absolutePattern);
-  if (absoluteMatch && !time) {
-    let hours = parseInt(absoluteMatch[1]);
-    const minutes = absoluteMatch[2] ? parseInt(absoluteMatch[2]) : 0;
-    const meridiem = absoluteMatch[3]?.toLowerCase();
-    
-    if (meridiem === "pm" && hours < 12) hours += 12;
-    if (meridiem === "am" && hours === 12) hours = 0;
-    
-    time = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-    if (time < now) {
-      time.setDate(time.getDate() + 1); // If time has passed, assume tomorrow
-    }
-    remaining = text.replace(absolutePattern, "").trim();
-  }
-  
-  return { time, remaining };
+  return { time: null, remaining: text };
+}
+
+// Enhanced time extraction with recurrence support
+export function extractTimeWithRecurrence(text: string): ParsedTime | null {
+  return parseNaturalTime(text);
 }
 
 // Extract priority from text

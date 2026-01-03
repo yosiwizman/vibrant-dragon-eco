@@ -17,6 +17,10 @@ const DEFAULT: Preferences = {
   voiceSpeed: 1.0,
   autoListenAfterSpeech: true,
   wakeWord: "echo",
+  voiceFeedbackEnabled: true,
+  voiceFeedbackVolume: 0.5,
+  enableMultiStepConversations: true,
+  enableRAGKnowledge: true,
 };
 
 export function loadPreferences(): Preferences {

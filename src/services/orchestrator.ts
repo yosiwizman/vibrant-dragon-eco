@@ -3,6 +3,10 @@ import { searchWeb, getWeather, findNearbyPlaces, geocodeAddress } from "./searc
 import { getCurrentLocation } from "./location";
 import { getDailySummary, formatSummaryForVoice, getTasksReadout, getRemindersReadout, getNotesReadout, getCalendarReadout } from "./daily-summary";
 import { findRouteByVoiceCommand, APP_ROUTES } from "./voice-navigation";
+import { undoLastAction, recordAction } from "./action-history";
+import { createRecurringReminder, createRecurringTask, getRecurringItems, cancelRecurringSeries } from "./recurrence";
+import { searchKnowledge, addDocument, getKnowledgeContext } from "./rag-knowledge";
+import { parseNaturalTime, recurrenceToString } from "./smart-time-parser";
 
 export interface OrchestrationContext {
   userId: string;
@@ -29,6 +33,41 @@ export const AVAILABLE_TOOLS = [
     name: "get_current_time",
     description: "Get the current date, time, and timezone information",
     parameters: {},
+  },
+  {
+    name: "undo_last_action",
+    description: "Undo the last action (create, update, delete) performed within the last 5 minutes",
+    parameters: {},
+  },
+  {
+    name: "create_recurring_reminder",
+    description: "Create a reminder that repeats on a schedule",
+    parameters: { text: "string", due_time: "ISO datetime", recurrence: "daily|weekly|biweekly|monthly|yearly", interval: "number (optional, default 1)" },
+  },
+  {
+    name: "create_recurring_task",
+    description: "Create a task that repeats on a schedule",
+    parameters: { title: "string", due_date: "ISO datetime", recurrence: "daily|weekly|biweekly|monthly|yearly", interval: "number (optional, default 1)", priority: "low|medium|high|urgent" },
+  },
+  {
+    name: "get_recurring_items",
+    description: "Get all recurring tasks and reminders",
+    parameters: {},
+  },
+  {
+    name: "cancel_recurring_series",
+    description: "Cancel all future occurrences of a recurring task or reminder",
+    parameters: { item_type: "task|reminder", item_id: "string" },
+  },
+  {
+    name: "search_knowledge_base",
+    description: "Search the user's knowledge base and documents for relevant information",
+    parameters: { query: "string", category: "string (optional)" },
+  },
+  {
+    name: "add_to_knowledge_base",
+    description: "Add new information or a document to the knowledge base",
+    parameters: { title: "string", content: "string", category: "string (optional)", tags: "string[] (optional)" },
   },
   {
     name: "web_search",
@@ -1480,14 +1519,14 @@ VOICE INTERACTION GUIDELINES:
 7. For navigation requests, use navigate_to tool and confirm where you're going
 
 CAPABILITIES:
-- Navigate to any page in the app (tasks, reminders, notes, calendar, contacts, messages, settings, etc.)
+- Navigate to any page in the app (tasks, reminders, notes, calendar, contacts, messages, settings, knowledge base, etc.)
 - Read out tasks, reminders, notes, and calendar events
 - Provide daily summaries of all activities
 - Web searching for current information
 - Getting weather (current conditions and forecasts)
 - Finding nearby places (restaurants, gas stations, pharmacies, etc.)
-- Managing reminders and alarms
-- Creating and tracking tasks/to-dos
+- Managing reminders and alarms (including RECURRING reminders - daily, weekly, monthly)
+- Creating and tracking tasks/to-dos (including RECURRING tasks)
 - Taking notes
 - Managing calendar events
 - Rescheduling tasks to new dates
@@ -1495,6 +1534,25 @@ CAPABILITIES:
 - Managing contacts
 - Drafting emails and SMS messages
 - Storing and retrieving personal knowledge/preferences
+- UNDO last action (within 5 minutes)
+- Search and query the user's KNOWLEDGE BASE (RAG documents)
+- Add new information to the knowledge base
+
+RECURRING ITEMS:
+When user says "every day", "daily", "every week", "weekly", "every Monday", "every month", etc., use the recurring tools:
+- create_recurring_reminder for repeating reminders
+- create_recurring_task for repeating tasks
+- get_recurring_items to list all recurring items
+- cancel_recurring_series to stop a recurring series
+
+UNDO CAPABILITY:
+When user says "undo", "undo that", "cancel the last thing", "revert", use undo_last_action.
+Only works within 5 minutes of the original action.
+
+KNOWLEDGE BASE (RAG):
+When user asks about topics that might be in their knowledge base, use search_knowledge_base.
+When user wants to save information for later, use add_to_knowledge_base.
+The knowledge base contains documents the user has added, including technical guides and personal notes.
 
 NAVIGATION:
 When user says "open", "go to", "show me", "take me to" followed by a page name, use the navigate_to tool.
@@ -1552,6 +1610,222 @@ export function parseToolCalls(response: string): { tool: string; parameters: an
   return toolCalls;
 }
 
+// New tool execution functions
+export async function executeUndoLastAction(userId: string): Promise<ActionResult> {
+  const result = await undoLastAction(userId);
+  return {
+    tool: "undo_last_action",
+    success: result.success,
+    data: result.success ? {
+      message: result.message,
+      voiceText: result.message,
+    } : undefined,
+    error: result.success ? undefined : result.message,
+  };
+}
+
+export async function executeCreateRecurringReminder(
+  userId: string,
+  text: string,
+  dueTime: string,
+  recurrence: string,
+  interval: number = 1
+): Promise<ActionResult> {
+  try {
+    const recurrenceRule = {
+      frequency: recurrence as any,
+      interval,
+    };
+    
+    const result = await createRecurringReminder(
+      userId,
+      text,
+      new Date(dueTime),
+      recurrenceRule
+    );
+    
+    if (!result.success) {
+      return { tool: "create_recurring_reminder", success: false, error: result.error };
+    }
+    
+    const recurrenceText = recurrenceToString(recurrenceRule);
+    return {
+      tool: "create_recurring_reminder",
+      success: true,
+      data: {
+        reminder: result.data,
+        voiceText: `Created recurring reminder: "${text}", ${recurrenceText}`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "create_recurring_reminder", success: false, error: error.message };
+  }
+}
+
+export async function executeCreateRecurringTask(
+  userId: string,
+  title: string,
+  dueDate: string,
+  recurrence: string,
+  interval: number = 1,
+  priority: string = "medium"
+): Promise<ActionResult> {
+  try {
+    const recurrenceRule = {
+      frequency: recurrence as any,
+      interval,
+    };
+    
+    const result = await createRecurringTask(
+      userId,
+      title,
+      undefined,
+      new Date(dueDate),
+      recurrenceRule,
+      priority
+    );
+    
+    if (!result.success) {
+      return { tool: "create_recurring_task", success: false, error: result.error };
+    }
+    
+    const recurrenceText = recurrenceToString(recurrenceRule);
+    return {
+      tool: "create_recurring_task",
+      success: true,
+      data: {
+        task: result.data,
+        voiceText: `Created recurring task: "${title}", ${recurrenceText}`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "create_recurring_task", success: false, error: error.message };
+  }
+}
+
+export async function executeGetRecurringItems(userId: string): Promise<ActionResult> {
+  try {
+    const items = await getRecurringItems(userId);
+    
+    if (items.length === 0) {
+      return {
+        tool: "get_recurring_items",
+        success: true,
+        data: {
+          items: [],
+          voiceText: "You don't have any recurring tasks or reminders.",
+        },
+      };
+    }
+    
+    const tasks = items.filter(i => i.type === "task");
+    const reminders = items.filter(i => i.type === "reminder");
+    
+    let voiceText = `You have ${items.length} recurring item${items.length > 1 ? 's' : ''}. `;
+    if (tasks.length > 0) {
+      voiceText += `${tasks.length} recurring task${tasks.length > 1 ? 's' : ''}: ${tasks.slice(0, 3).map(t => t.title).join(", ")}. `;
+    }
+    if (reminders.length > 0) {
+      voiceText += `${reminders.length} recurring reminder${reminders.length > 1 ? 's' : ''}: ${reminders.slice(0, 3).map(r => r.title).join(", ")}.`;
+    }
+    
+    return {
+      tool: "get_recurring_items",
+      success: true,
+      data: { items, voiceText },
+    };
+  } catch (error: any) {
+    return { tool: "get_recurring_items", success: false, error: error.message };
+  }
+}
+
+export async function executeCancelRecurringSeries(
+  userId: string,
+  itemType: "task" | "reminder",
+  itemId: string
+): Promise<ActionResult> {
+  const result = await cancelRecurringSeries(userId, itemType, itemId);
+  return {
+    tool: "cancel_recurring_series",
+    success: result.success,
+    data: result.success ? {
+      voiceText: `Cancelled the recurring ${itemType} series.`,
+    } : undefined,
+    error: result.error,
+  };
+}
+
+export async function executeSearchKnowledgeBase(
+  userId: string,
+  query: string,
+  category?: string
+): Promise<ActionResult> {
+  try {
+    const results = await searchKnowledge(userId, query, { category, limit: 5 });
+    
+    if (results.length === 0) {
+      return {
+        tool: "search_knowledge_base",
+        success: true,
+        data: {
+          results: [],
+          voiceText: `I couldn't find anything in your knowledge base about "${query}".`,
+        },
+      };
+    }
+    
+    const topResult = results[0];
+    const voiceText = `Found ${results.length} result${results.length > 1 ? 's' : ''} about "${query}". The most relevant is from "${topResult.document.title}": ${topResult.chunk.content.substring(0, 200)}...`;
+    
+    return {
+      tool: "search_knowledge_base",
+      success: true,
+      data: {
+        results: results.map(r => ({
+          title: r.document.title,
+          content: r.chunk.content,
+          relevance: r.relevanceScore,
+        })),
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "search_knowledge_base", success: false, error: error.message };
+  }
+}
+
+export async function executeAddToKnowledgeBase(
+  userId: string,
+  title: string,
+  content: string,
+  category?: string,
+  tags?: string[]
+): Promise<ActionResult> {
+  try {
+    const result = await addDocument(userId, {
+      title,
+      content,
+      sourceType: "manual",
+      metadata: { category, tags },
+    });
+    
+    if (!result.success) {
+      return { tool: "add_to_knowledge_base", success: false, error: result.error };
+    }
+    
+    return {
+      tool: "add_to_knowledge_base",
+      success: true,
+      data: {
+        document: result.document,
+        voiceText: `Added "${title}" to your knowledge base.`,
+      },
+    };
+  } catch (error: any) {
+    return { tool: "add_to_knowledge_base", success: false, error: error.message };
+  }
+}
+
 // Execute a tool call
 export async function executeTool(
   userId: string,
@@ -1562,6 +1836,20 @@ export async function executeTool(
   switch (tool) {
     case "get_current_time":
       return executeGetCurrentTime();
+    case "undo_last_action":
+      return executeUndoLastAction(userId);
+    case "create_recurring_reminder":
+      return executeCreateRecurringReminder(userId, parameters.text, parameters.due_time, parameters.recurrence, parameters.interval);
+    case "create_recurring_task":
+      return executeCreateRecurringTask(userId, parameters.title, parameters.due_date, parameters.recurrence, parameters.interval, parameters.priority);
+    case "get_recurring_items":
+      return executeGetRecurringItems(userId);
+    case "cancel_recurring_series":
+      return executeCancelRecurringSeries(userId, parameters.item_type, parameters.item_id);
+    case "search_knowledge_base":
+      return executeSearchKnowledgeBase(userId, parameters.query, parameters.category);
+    case "add_to_knowledge_base":
+      return executeAddToKnowledgeBase(userId, parameters.title, parameters.content, parameters.category, parameters.tags);
     case "web_search":
       return executeWebSearch(parameters.query, userId);
     case "get_weather":

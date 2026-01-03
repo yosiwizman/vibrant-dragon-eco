@@ -354,6 +354,99 @@ export default function Settings() {
                     Higher = more sensitive to quiet speech
                   </p>
                 </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+                  <div>
+                    <Label className="text-white">Voice Feedback Sounds</Label>
+                    <p className="text-sm text-slate-400">
+                      Play audio cues when starting/stopping listening
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.voiceFeedbackEnabled}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, voiceFeedbackEnabled: checked })
+                    }
+                  />
+                </div>
+
+                {preferences.voiceFeedbackEnabled && (
+                  <div className="grid gap-3">
+                    <Label className="text-slate-300">
+                      Feedback Volume: {Math.round((preferences.voiceFeedbackVolume || 0.5) * 100)}%
+                    </Label>
+                    <Slider
+                      value={[preferences.voiceFeedbackVolume || 0.5]}
+                      onValueChange={([value]) =>
+                        setPreferences({ ...preferences, voiceFeedbackVolume: value })
+                      }
+                      min={0.1}
+                      max={1.0}
+                      step={0.1}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-fuchsia-400" />
+                  Advanced Features
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Enable advanced AI capabilities
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+                  <div>
+                    <Label className="text-white">Multi-Step Conversations</Label>
+                    <p className="text-sm text-slate-400">
+                      Allow Echo to ask follow-up questions for complex tasks
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.enableMultiStepConversations}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, enableMultiStepConversations: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+                  <div>
+                    <Label className="text-white">Knowledge Base (RAG)</Label>
+                    <p className="text-sm text-slate-400">
+                      Use your stored documents to enhance AI responses
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.enableRAGKnowledge}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, enableRAGKnowledge: checked })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-slate-300">Wake Word</Label>
+                  <Input
+                    className="bg-slate-800 border-slate-700 text-white"
+                    placeholder="echo"
+                    value={preferences.wakeWord || "echo"}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, wakeWord: e.target.value.toLowerCase() })
+                    }
+                  />
+                  <p className="text-xs text-slate-500">
+                    Say this word to activate voice (experimental)
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

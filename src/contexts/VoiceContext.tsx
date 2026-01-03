@@ -7,6 +7,9 @@ import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/
 import { getLocationContext, LocationContext } from "@/services/context";
 import { normalizeSpeechInput } from "@/services/conversation-manager";
 import { showError, showSuccess } from "@/utils/toast";
+import { useVoiceFeedback } from "@/components/VoiceFeedback";
+import { hasActiveFlow, processMultiStepResponse, getFlowState, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
+import { getKnowledgeContext, initializeRAGKnowledge } from "@/services/rag-knowledge";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -34,6 +37,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences } = usePreferences();
+  const { playFeedback } = useVoiceFeedback();
   
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,6 +56,13 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       if (loc) setUserLocation(loc);
     }).catch(() => {});
   }, []);
+
+  // Initialize RAG knowledge base
+  useEffect(() => {
+    if (user) {
+      initializeRAGKnowledge(user.id);
+    }
+  }, [user]);
 
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
@@ -210,6 +221,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     if (isListening) return;
 
     try {
+      playFeedback("start");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -228,6 +240,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       };
 
       mediaRecorderRef.current.onstop = async () => {
+        playFeedback("stop");
         const blob = new Blob(chunksRef.current, { type: mimeType });
         stream.getTracks().forEach((track) => track.stop());
         
@@ -237,10 +250,55 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             const text = transcription.text.trim();
             
             if (text) {
+              // Check for multi-step conversation
+              if (user && hasActiveFlow(user.id)) {
+                const flowResult = processMultiStepResponse(user.id, text);
+                if (flowResult.complete && flowResult.collectedData) {
+                  // Flow complete, process the collected data
+                  playFeedback("success");
+                  const response = await processVoiceCommand(
+                    `Create ${flowResult.state?.intent.replace(/_/g, " ")} with: ${JSON.stringify(flowResult.collectedData)}`
+                  );
+                  await speak(response);
+                } else if (flowResult.nextPrompt) {
+                  await speak(flowResult.nextPrompt);
+                }
+                return;
+              }
+
+              // Check for inline modifications
+              if (user) {
+                const modResult = handleInlineModification(user.id, text);
+                if (modResult.handled && modResult.message) {
+                  playFeedback("success");
+                  await speak(modResult.message);
+                  return;
+                }
+              }
+
+              // Check if user wants to start a multi-step flow
+              const multiStepIntent = detectMultiStepIntent(text);
+              if (multiStepIntent && user) {
+                const flowStart = startMultiStepFlow(user.id, multiStepIntent);
+                if (flowStart) {
+                  await speak(flowStart.prompt);
+                  return;
+                }
+              }
+
+              // Check for cancel/undo commands
+              if (/\b(cancel|stop|never\s*mind)\b/i.test(text) && user && hasActiveFlow(user.id)) {
+                cancelFlow(user.id);
+                await speak("Cancelled. What else can I help with?");
+                return;
+              }
+
               const response = await processVoiceCommand(text);
+              playFeedback("success");
               await speak(response);
             }
           } catch (error: any) {
+            playFeedback("error");
             showError(error.message || "Voice processing failed");
           }
         }

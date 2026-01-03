@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { usePreferences } from "@/state/preferences";
 
 interface VoiceFeedbackProps {
   type: "start" | "stop" | "success" | "error";
@@ -75,8 +76,12 @@ export default function VoiceFeedback({ type, enabled = true }: VoiceFeedbackPro
 // Hook for playing feedback sounds
 export function useVoiceFeedback() {
   const audioContextRef = useRef<AudioContext | null>(null);
+  const { preferences } = usePreferences();
 
   const playFeedback = (type: "start" | "stop" | "success" | "error") => {
+    // Check if feedback is enabled
+    if (!preferences.voiceFeedbackEnabled) return;
+
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -92,29 +97,31 @@ export function useVoiceFeedback() {
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
+    const volume = (preferences.voiceFeedbackVolume || 0.5) * 0.15; // Scale to reasonable level
+
     switch (type) {
       case "start":
         oscillator.frequency.setValueAtTime(400, ctx.currentTime);
         oscillator.frequency.linearRampToValueAtTime(600, ctx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+        gainNode.gain.setValueAtTime(volume, ctx.currentTime);
         gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
         break;
       case "stop":
         oscillator.frequency.setValueAtTime(600, ctx.currentTime);
         oscillator.frequency.linearRampToValueAtTime(400, ctx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+        gainNode.gain.setValueAtTime(volume, ctx.currentTime);
         gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
         break;
       case "success":
         oscillator.frequency.setValueAtTime(523, ctx.currentTime);
         oscillator.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
-        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+        gainNode.gain.setValueAtTime(volume, ctx.currentTime);
         gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
         break;
       case "error":
         oscillator.frequency.setValueAtTime(200, ctx.currentTime);
         oscillator.type = "sawtooth";
-        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+        gainNode.gain.setValueAtTime(volume, ctx.currentTime);
         gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
         break;
     }

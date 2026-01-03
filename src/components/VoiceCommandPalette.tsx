@@ -30,6 +30,7 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
       { phrase: "Go to contacts", description: "Go to contacts page" },
       { phrase: "Open messages", description: "Go to messages page" },
       { phrase: "Show settings", description: "Go to settings page" },
+      { phrase: "Open knowledge base", description: "Go to knowledge base" },
       { phrase: "Go home", description: "Go to dashboard" },
     ],
   },
@@ -51,9 +52,13 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
     color: "text-yellow-400",
     commands: [
       { phrase: "Remind me to [text] at [time]", description: "Create a reminder" },
+      { phrase: "Remind me every day at [time]", description: "Create recurring daily reminder" },
+      { phrase: "Remind me every Monday at [time]", description: "Create weekly reminder" },
       { phrase: "Read my reminders", description: "List pending reminders" },
       { phrase: "Dismiss [reminder]", description: "Dismiss a reminder" },
       { phrase: "What reminders are coming up?", description: "List upcoming reminders" },
+      { phrase: "Show recurring reminders", description: "List all recurring items" },
+      { phrase: "Cancel recurring [reminder]", description: "Stop a recurring reminder" },
     ],
   },
   {
@@ -86,6 +91,19 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
       { phrase: "Summarize my day", description: "Get daily summary" },
       { phrase: "Search for [query]", description: "Web search" },
       { phrase: "Find nearby [place]", description: "Find nearby places" },
+      { phrase: "Search knowledge base for [topic]", description: "Search your documents" },
+      { phrase: "What do you know about [topic]?", description: "Query knowledge base" },
+    ],
+  },
+  {
+    name: "Actions",
+    icon: Command,
+    color: "text-red-400",
+    commands: [
+      { phrase: "Undo", description: "Undo the last action" },
+      { phrase: "Undo that", description: "Undo the last action" },
+      { phrase: "Cancel", description: "Cancel current operation" },
+      { phrase: "Never mind", description: "Cancel and start over" },
     ],
   },
   {

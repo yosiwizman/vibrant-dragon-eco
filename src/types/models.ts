@@ -50,6 +50,10 @@ export interface Preferences {
   voiceSpeed: number;
   autoListenAfterSpeech: boolean;
   wakeWord: string;
+  voiceFeedbackEnabled: boolean;
+  voiceFeedbackVolume: number;
+  enableMultiStepConversations: boolean;
+  enableRAGKnowledge: boolean;
 }
 
 export const OPENAI_VOICES: { value: OpenAIVoice; label: string; description: string }[] = [

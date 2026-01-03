@@ -15,7 +15,7 @@ const commandCategories = [
       "Go to reminders",
       "Show me my calendar",
       "Take me to notes",
-      "Open settings",
+      "Open knowledge base",
     ],
   },
   {
@@ -37,9 +37,21 @@ const commandCategories = [
     commands: [
       "Add a task to buy groceries",
       "Remind me to call mom at 5pm",
-      "Mark my first task as done",
+      "Remind me every day at 9am",
       "Reschedule my task to tomorrow",
       "What tasks are overdue?",
+    ],
+  },
+  {
+    title: "Recurring Items",
+    icon: Clock,
+    color: "text-yellow-400",
+    commands: [
+      "Remind me every Monday at 9am",
+      "Create a daily task to exercise",
+      "Show my recurring reminders",
+      "Cancel recurring reminder",
+      "Every week remind me to review",
     ],
   },
   {
@@ -50,7 +62,7 @@ const commandCategories = [
       "Take a note about the meeting",
       "Schedule a meeting tomorrow at 2pm",
       "What meetings do I have today?",
-      "Create an event for Friday",
+      "Create an event for next Tuesday",
       "Note that I need to follow up",
     ],
   },
@@ -62,8 +74,20 @@ const commandCategories = [
       "Search for the latest news",
       "What's the weather like?",
       "Find nearby coffee shops",
-      "What time is it?",
-      "Search for React tutorials",
+      "Search knowledge base for RAG",
+      "What do you know about AI?",
+    ],
+  },
+  {
+    title: "Undo & Control",
+    icon: Bell,
+    color: "text-red-400",
+    commands: [
+      "Undo",
+      "Undo that",
+      "Cancel",
+      "Never mind",
+      "Stop",
     ],
   },
 ];

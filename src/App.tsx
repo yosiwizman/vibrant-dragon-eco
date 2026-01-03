@@ -15,6 +15,7 @@ import Tools from "./pages/Tools";
 import History from "./pages/History";
 import Debug from "./pages/Debug";
 import Knowledge from "./pages/Knowledge";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Integrations from "./pages/Integrations";
@@ -97,6 +98,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Knowledge />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/knowledge-base"
+              element={
+                <ProtectedRoute>
+                  <KnowledgeBase />
                 </ProtectedRoute>
               }
             />
