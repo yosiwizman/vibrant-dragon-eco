@@ -12,6 +12,7 @@ import ProductivityInsights from "./ProductivityInsights";
 import FocusModeWidget from "./FocusModeWidget";
 import SmartSuggestions from "./SmartSuggestions";
 import StreakTracker from "./StreakTracker";
+import ScheduleAnalysisWidget from "./ScheduleAnalysisWidget";
 import {
   CheckSquare,
   Bell,
@@ -217,9 +218,10 @@ export default function Dashboard() {
       <SmartSuggestions />
 
       {/* AI Usage Widget, Productivity, Focus Mode, and Streak */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <AIUsageWidget />
         <ProductivityInsights />
+        <ScheduleAnalysisWidget />
         <FocusModeWidget />
         <StreakTracker />
       </div>

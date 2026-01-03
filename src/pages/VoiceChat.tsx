@@ -17,6 +17,7 @@ import { generateMorningBriefing, configureVoiceNotifications } from "@/services
 import { supabase } from "@/integrations/supabase/client";
 import VoiceCommandExamples from "@/components/VoiceCommandExamples";
 import VoiceHistory, { saveVoiceInteraction } from "@/components/VoiceHistory";
+import QuietModeControl from "@/components/QuietModeControl";
 import type { Message } from "../types/models";
 
 type ConversationState = "idle" | "listening" | "processing" | "speaking";
@@ -605,6 +606,7 @@ export default function VoiceChat() {
                       <Volume2 className="mr-2 h-5 w-5" />
                       Daily Briefing
                     </Button>
+                    <QuietModeControl />
                   </>
                 ) : (
                   <Button

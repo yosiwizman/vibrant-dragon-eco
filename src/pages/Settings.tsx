@@ -28,7 +28,8 @@ import { isWakeWordSupported } from "@/services/wake-word-detection";
 import {
   Volume2, Key, Mic, Settings2, Brain, Search, MapPin, CloudSun,
   MessageSquare, Calendar, Shield, Zap, Clock, Globe, User, Bell,
-  Trash2, Database, History, Sparkles, AlertCircle, ExternalLink
+  Trash2, Database, History, Sparkles, AlertCircle, ExternalLink,
+  CalendarClock, EarOff
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -179,6 +180,10 @@ export default function Settings() {
             <TabsTrigger value="providers" className="data-[state=active]:bg-fuchsia-600 data-[state=active]:text-white">
               <Zap className="h-4 w-4 mr-2" />
               API Providers
+            </TabsTrigger>
+            <TabsTrigger value="scheduling" className="data-[state=active]:bg-fuchsia-600 data-[state=active]:text-white">
+              <CalendarClock className="h-4 w-4 mr-2" />
+              Scheduling
             </TabsTrigger>
             <TabsTrigger value="privacy" className="data-[state=active]:bg-fuchsia-600 data-[state=active]:text-white">
               <Shield className="h-4 w-4 mr-2" />
@@ -767,6 +772,145 @@ export default function Settings() {
                 ))}
               </div>
             </ScrollArea>
+          </TabsContent>
+
+          {/* Smart Scheduling Settings */}
+          <TabsContent value="scheduling" className="space-y-6">
+            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-fuchsia-400" />
+                  Smart Scheduling
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  AI-powered scheduling with conflict detection and pattern learning
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <div>
+                    <Label className="text-white">Enable Smart Scheduling</Label>
+                    <p className="text-sm text-slate-400">
+                      Automatically check for conflicts and suggest optimal times
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.enableSmartScheduling}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, enableSmartScheduling: checked })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label className="text-slate-300">
+                    Default Reminder Lead Time: {preferences.defaultReminderLeadTime} minutes
+                  </Label>
+                  <Slider
+                    value={[preferences.defaultReminderLeadTime]}
+                    onValueChange={([value]) =>
+                      setPreferences({ ...preferences, defaultReminderLeadTime: value })
+                    }
+                    min={5}
+                    max={60}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-slate-500">
+                    How early to remind you before scheduled events
+                  </p>
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <h4 className="text-sm font-medium text-white mb-2">What Smart Scheduling Does</h4>
+                  <ul className="space-y-2 text-sm text-slate-400">
+                    <li className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-400 mt-0.5 shrink-0" />
+                      <span>Detects scheduling conflicts before you create events</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Brain className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
+                      <span>Learns your routines and suggests optimal times</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Bell className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+                      <span>Creates automatic reminders for recurring activities</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Clock className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+                      <span>Warns about back-to-back meetings and insufficient time</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 p-4">
+                  <h4 className="text-sm font-medium text-fuchsia-300 mb-2">Voice Commands</h4>
+                  <ul className="space-y-1 text-sm text-slate-300">
+                    <li>"Schedule a meeting tomorrow at 2pm" - checks conflicts first</li>
+                    <li>"When should I do this task?" - suggests optimal times</li>
+                    <li>"Remember I pick up my daughter Wednesdays at 2pm" - creates pattern</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <EarOff className="h-5 w-5 text-purple-400" />
+                  Quiet / Listening Mode
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Let {preferences.assistantName || "Echo"} listen silently and summarize later
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label className="text-slate-300">Exit Phrase</Label>
+                  <Input
+                    className="bg-slate-900 border-slate-700 text-white"
+                    placeholder="Echo summarize"
+                    value={preferences.quietModeExitPhrase}
+                    onChange={(e) =>
+                      setPreferences({ ...preferences, quietModeExitPhrase: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-slate-500">
+                    Say this phrase to exit quiet mode and get a summary
+                  </p>
+                </div>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <h4 className="text-sm font-medium text-white mb-2">How Quiet Mode Works</h4>
+                  <ol className="space-y-2 text-sm text-slate-400 list-decimal list-inside">
+                    <li>Say "Go quiet" or "Listening mode" to enter</li>
+                    <li>{preferences.assistantName || "Echo"} will listen without interrupting</li>
+                    <li>Perfect for meetings, conversations, or lectures</li>
+                    <li>Say "{preferences.quietModeExitPhrase || "Echo summarize"}" to get a summary</li>
+                    <li>Receive bullet points and action items from the conversation</li>
+                  </ol>
+                </div>
+
+                <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-4">
+                  <h4 className="text-sm font-medium text-purple-300 mb-2">Entry Phrases</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {["Go quiet", "Listening mode", "Just listen", "Meeting mode", "Don't interrupt"].map((phrase) => (
+                      <Badge
+                        key={phrase}
+                        variant="outline"
+                        className="border-purple-500/50 text-purple-300"
+                      >
+                        "{phrase}"
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Privacy Settings */}

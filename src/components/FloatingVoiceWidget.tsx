@@ -23,7 +23,8 @@ import {
   Undo,
   Volume2,
   Sparkles,
-  Loader2
+  Loader2,
+  EarOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ const QUICK_COMMANDS: QuickCommand[] = [
   { icon: <FileText className="h-4 w-4" />, label: "Summary", command: "Give me a summary of my day", color: "text-orange-400" },
   { icon: <CloudSun className="h-4 w-4" />, label: "Weather", command: "What's the weather", color: "text-cyan-400" },
   { icon: <MapPin className="h-4 w-4" />, label: "Nearby", command: "Find nearby coffee shops", color: "text-pink-400" },
-  { icon: <Search className="h-4 w-4" />, label: "Search", command: "Search the web for latest news", color: "text-purple-400" },
+  { icon: <EarOff className="h-4 w-4" />, label: "Quiet", command: "Go quiet", color: "text-purple-400" },
   { icon: <Undo className="h-4 w-4" />, label: "Undo", command: "Undo the last action", color: "text-red-400" },
 ];
 
@@ -51,7 +52,7 @@ export default function FloatingVoiceWidget() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { isListening, isProcessing, isSpeaking, lastTranscript, processVoiceCommand, speak, stopSpeaking, startListening, stopListening } = useVoice();
+  const { isListening, isProcessing, isSpeaking, isQuietMode, lastTranscript, processVoiceCommand, speak, stopSpeaking, startListening, stopListening, exitQuietMode } = useVoice();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window !== "undefined") {
@@ -115,6 +116,7 @@ export default function FloatingVoiceWidget() {
   };
 
   const getStatusText = () => {
+    if (isQuietMode) return "Quiet Mode";
     if (isListening) return "Listening...";
     if (isProcessing) return "Thinking...";
     if (isSpeaking) return "Speaking...";
@@ -122,10 +124,23 @@ export default function FloatingVoiceWidget() {
   };
 
   const getStatusColor = () => {
+    if (isQuietMode) return "bg-purple-500";
     if (isListening) return "bg-red-500";
     if (isProcessing) return "bg-yellow-500";
     if (isSpeaking) return "bg-green-500";
     return "bg-fuchsia-500/20";
+  };
+
+  const handleExitQuietMode = async () => {
+    const result = await exitQuietMode();
+    if (result) {
+      let summaryText = result.summary;
+      if (result.bulletPoints.length > 0) {
+        summaryText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
+      }
+      setLastResponse(summaryText);
+      await speak(summaryText);
+    }
   };
 
   return (
@@ -235,8 +250,21 @@ export default function FloatingVoiceWidget() {
             </>
           )}
 
+          {/* Quiet Mode Exit Button */}
+          {isQuietMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mt-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+              onClick={handleExitQuietMode}
+            >
+              <EarOff className="h-4 w-4 mr-2" />
+              End & Summarize
+            </Button>
+          )}
+
           {/* Stop Speaking Button */}
-          {isSpeaking && (
+          {isSpeaking && !isQuietMode && (
             <Button
               size="sm"
               variant="outline"
