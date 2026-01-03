@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import NavBar from "@/components/NavBar";
 import Chat from "./pages/Chat";
+import VoiceChat from "./pages/VoiceChat";
 import Settings from "./pages/Settings";
 import Tools from "./pages/Tools";
 import History from "./pages/History";
@@ -25,6 +26,7 @@ const App = () => (
         <NavBar />
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/voice" element={<VoiceChat />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/tools" element={<Tools />} />

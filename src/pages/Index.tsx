@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield } from "lucide-react";
 
 const Index = () => {
   return (
@@ -10,55 +10,89 @@ const Index = () => {
         <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-8 backdrop-blur-lg shadow-xl">
           <div className="flex items-center gap-2 text-fuchsia-300">
             <Sparkles className="h-5 w-5" />
-            <span className="text-sm font-medium">Personal • Local-first</span>
+            <span className="text-sm font-medium">Personal • Voice-first • Private</span>
           </div>
           <h1 className="mt-3 text-4xl font-bold text-white md:text-5xl">
             Echo. Your private, always-ready copilot.
           </h1>
           <p className="mt-4 max-w-2xl text-slate-300">
-            Talk, search, and remember. Push-to-talk on web; headset triggers and
-            hands-free options on mobile. Your data stays yours.
+            Have natural conversations with your AI assistant. Just speak — Echo listens,
+            thinks, and responds. Like ChatGPT voice mode, but yours.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
+            <Link to="/voice">
+              <Button size="lg" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 shadow-lg shadow-fuchsia-500/25">
+                <Mic className="mr-2 h-5 w-5" /> Start Voice Conversation
+              </Button>
+            </Link>
             <Link to="/chat">
-              <Button className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                <Mic className="mr-2 h-4 w-4" /> Start talking
-              </Button>
-            </Link>
-            <Link to="/knowledge">
               <Button variant="secondary" className="border border-fuchsia-500/40 bg-fuchsia-500/20 text-white hover:bg-fuchsia-500/30">
-                Knowledge
-              </Button>
-            </Link>
-            <Link to="/tools">
-              <Button variant="outline" className="border-slate-500 text-white hover:bg-slate-700">
-                Tools
+                <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
               </Button>
             </Link>
             <Link to="/settings">
-              <Button variant="ghost" className="text-slate-300 hover:bg-slate-800 hover:text-white">
+              <Button variant="outline" className="border-slate-500 text-white hover:bg-slate-700">
                 Settings
               </Button>
             </Link>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4 text-sm text-slate-200">
-              Streaming chat with citations and a minimal composer for speed.
+            <CardContent className="p-4">
+              <Volume2 className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Natural Voice</h3>
+              <p className="text-sm text-slate-300">
+                OpenAI Whisper STT + TTS with 11 voice options. Speak naturally, hear clear responses.
+              </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4 text-sm text-slate-200">
-              Nearby places and web search with simple navigation handoff.
+            <CardContent className="p-4">
+              <Mic className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Conversation Mode</h3>
+              <p className="text-sm text-slate-300">
+                Hands-free continuous listening. Echo responds, then listens again automatically.
+              </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4 text-sm text-slate-200">
-              Private Mode keeps history local-only or disabled entirely.
+            <CardContent className="p-4">
+              <Brain className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Knowledge Base</h3>
+              <p className="text-sm text-slate-300">
+                Store facts, preferences, and context. Echo remembers what matters to you.
+              </p>
             </CardContent>
           </Card>
+          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+            <CardContent className="p-4">
+              <Shield className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Private & Local</h3>
+              <p className="text-sm text-slate-300">
+                Your API key, your data. Private Mode keeps everything local-only.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-8 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+          <h2 className="text-lg font-semibold text-white mb-3">Quick Setup</h2>
+          <ol className="space-y-2 text-sm text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">1</span>
+              <span>Go to <Link to="/settings" className="text-fuchsia-300 hover:underline">Settings</Link> and enter your OpenAI API key</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
+              <span>Choose your preferred voice (Nova, Alloy, Echo, etc.)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">3</span>
+              <span>Click "Start Voice Conversation" and start talking!</span>
+            </li>
+          </ol>
         </div>
       </div>
     </div>

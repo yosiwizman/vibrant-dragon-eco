@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Preferences } from "@/types/models";
+import type { Preferences } from "../types/models";
 
 const KEY = "echo:prefs";
 
@@ -9,6 +9,11 @@ const DEFAULT: Preferences = {
   pinEnabled: false,
   pinCode: undefined,
   authToken: undefined,
+  openaiApiKey: undefined,
+  openaiVoice: "nova",
+  conversationMode: true,
+  silenceThreshold: 0.01,
+  silenceTimeout: 1500,
 };
 
 export function loadPreferences(): Preferences {

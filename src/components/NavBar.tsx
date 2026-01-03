@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug } from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const linkBase =
@@ -9,6 +10,7 @@ const active =
 
 export default function NavBar() {
   const links = [
+    { to: "/voice", label: "Voice", icon: <Mic className="h-4 w-4" /> },
     { to: "/chat", label: "Chat", icon: <MessageSquareText className="h-4 w-4" /> },
     { to: "/tools", label: "Tools", icon: <Wrench className="h-4 w-4" /> },
     { to: "/knowledge", label: "Knowledge", icon: <BookOpenText className="h-4 w-4" /> },
@@ -42,8 +44,11 @@ export default function NavBar() {
           ))}
         </nav>
 
-        <NavLink to="/chat">
-          <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">Open Chat</Button>
+        <NavLink to="/voice">
+          <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+            <Mic className="mr-2 h-4 w-4" />
+            Start Voice
+          </Button>
         </NavLink>
       </div>
     </header>
