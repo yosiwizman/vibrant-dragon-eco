@@ -11,15 +11,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { openEmailClient, copyEmailToClipboard } from "@/services/email";
 import { openSMSApp, copySMSToClipboard, formatPhoneNumber } from "@/services/sms";
-import { 
-  Mail, 
-  MessageSquare, 
-  Trash2, 
-  Copy, 
+import {
+  Mail,
+  MessageSquare,
+  Trash2,
+  Copy,
   ExternalLink,
   Plus,
-  Clock
+  Clock,
+  Mic
 } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 import { format } from "date-fns";
 
 interface EmailDraft {
@@ -212,6 +214,10 @@ export default function Messages() {
             <p className="text-slate-400 mt-1">
               Email and SMS drafts
             </p>
+            <VoiceHint
+              commands={["Draft email to John about meeting", "Text Sarah I'm running late", "Send message to Mom"]}
+              className="mt-2"
+            />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

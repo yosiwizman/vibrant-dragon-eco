@@ -1,11 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle } from "lucide-react";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command } from "lucide-react";
+import { useCommandPalette } from "./VoiceCommandPalette";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import VoiceTutorial from "./VoiceTutorial";
+import { useCommandPalette } from "./VoiceCommandPalette";
 
 const linkBase =
   "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white transition";
@@ -16,6 +18,8 @@ export default function NavBar() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
+  const { open: openCommandPalette } = useCommandPalette();
+  const { open: openCommandPalette } = useCommandPalette();
 
   useEffect(() => {
     if (user) {
@@ -108,6 +112,16 @@ export default function NavBar() {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openCommandPalette}
+                className="text-slate-400 hover:text-white h-8 px-2 gap-1.5 hidden sm:flex"
+                title="Command Palette (⌘K)"
+              >
+                <Command className="h-3.5 w-3.5" />
+                <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

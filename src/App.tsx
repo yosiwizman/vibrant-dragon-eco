@@ -27,9 +27,17 @@ import Contacts from "./pages/Contacts";
 import Messages from "./pages/Messages";
 import MicButton from "@/components/MicButton";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
+import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
+import VoiceQuickActions from "@/components/VoiceQuickActions";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
+
+// Wrapper component for command palette
+function CommandPaletteWrapper() {
+  const { isOpen, close } = useCommandPalette();
+  return <VoiceCommandPalette open={isOpen} onClose={close} />;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -41,6 +49,7 @@ const App = () => (
           <VoiceProvider>
             <NavBar />
             <VoiceStatusIndicator />
+            <CommandPaletteWrapper />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -182,6 +191,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MicButton />
+            <VoiceQuickActions />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>

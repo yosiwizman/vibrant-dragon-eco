@@ -190,6 +190,21 @@ export const AVAILABLE_TOOLS = [
     description: "Get reminders due in the next few hours",
     parameters: { hours: "number (default: 24)" },
   },
+  {
+    name: "search_contacts",
+    description: "Search for a contact by name or phone",
+    parameters: { query: "string" },
+  },
+  {
+    name: "call_contact",
+    description: "Initiate a phone call to a contact",
+    parameters: { contact_name: "string" },
+  },
+  {
+    name: "send_message_to_contact",
+    description: "Draft a message to a contact",
+    parameters: { contact_name: "string", message: "string" },
+  },
 ];
 
 // Tool execution functions
@@ -1218,6 +1233,142 @@ export async function executeGetOverdueTasks(userId: string): Promise<ActionResu
   }
 }
 
+export async function executeSearchContacts(
+  userId: string,
+  query: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", userId)
+      .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+      .order("name", { ascending: true })
+      .limit(10);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        tool: "search_contacts",
+        success: true,
+        data: {
+          contacts: [],
+          voiceText: `I couldn't find any contacts matching "${query}".`,
+        },
+      };
+    }
+
+    const voiceText = `Found ${data.length} contact${data.length > 1 ? 's' : ''} matching "${query}". ${data.slice(0, 3).map((c, i) => `${i + 1}. ${c.name}`).join(". ")}`;
+
+    return {
+      tool: "search_contacts",
+      success: true,
+      data: {
+        contacts: data,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "search_contacts",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeCallContact(
+  userId: string,
+  contactName: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", userId)
+      .ilike("name", `%${contactName}%`)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return {
+        tool: "call_contact",
+        success: false,
+        error: `Contact "${contactName}" not found`,
+      };
+    }
+
+    return {
+      tool: "call_contact",
+      success: true,
+      data: {
+        contact: data,
+        phoneUrl: `tel:${data.phone}`,
+        voiceText: `Ready to call ${data.name} at ${data.phone}. Opening phone dialer.`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "call_contact",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeSendMessageToContact(
+  userId: string,
+  contactName: string,
+  message: string
+): Promise<ActionResult> {
+  try {
+    // Find the contact
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", userId)
+      .ilike("name", `%${contactName}%`)
+      .limit(1)
+      .single();
+
+    if (contactError || !contact) {
+      return {
+        tool: "send_message_to_contact",
+        success: false,
+        error: `Contact "${contactName}" not found`,
+      };
+    }
+
+    // Create SMS draft
+    const { data, error } = await supabase.from("sms_logs").insert({
+      user_id: userId,
+      direction: "outbound",
+      status: "draft",
+      to_number: contact.phone,
+      text: message,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "send_message_to_contact",
+      success: true,
+      data: {
+        draft: data,
+        contact,
+        voiceText: `Message draft created for ${contact.name}. You can review and send it from Messages.`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "send_message_to_contact",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 export async function executeGetUpcomingReminders(
   userId: string,
   hours: number = 24
@@ -1475,6 +1626,12 @@ export async function executeTool(
       return executeGetOverdueTasks(userId);
     case "get_upcoming_reminders":
       return executeGetUpcomingReminders(userId, parameters.hours);
+    case "search_contacts":
+      return executeSearchContacts(userId, parameters.query);
+    case "call_contact":
+      return executeCallContact(userId, parameters.contact_name);
+    case "send_message_to_contact":
+      return executeSendMessageToContact(userId, parameters.contact_name, parameters.message);
     default:
       return { tool, success: false, error: `Unknown tool: ${tool}` };
   }

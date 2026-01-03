@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Users, Phone, Search, Edit, User } from "lucide-react";
+import { Plus, Trash2, Users, Phone, Search, Edit, User, Mic } from "lucide-react";
+import VoiceHint from "@/components/VoiceHint";
 import { format } from "date-fns";
 
 interface Contact {
@@ -139,6 +140,10 @@ export default function Contacts() {
               Contacts
             </h1>
             <p className="text-slate-400 mt-1">{contacts.length} contacts</p>
+            <VoiceHint
+              commands={["Add contact John Doe", "Find contact Sarah", "Call John"]}
+              className="mt-2"
+            />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
