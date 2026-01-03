@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Bot, Mail, Lock, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
-import { showSuccess, showError } from "@/utils/toast";
+import { Bot, Mail, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
+import { showSuccess } from "@/utils/toast";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -53,11 +53,12 @@ export default function Login() {
         return;
       }
 
-      setMessage("✨ Magic link sent! Check your email and click the link to sign in. The link will expire in 1 hour.");
+      setMessage("✨ Magic link sent! Check your email and click the link to sign in.");
       showSuccess("Magic link sent to your email!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Magic link exception:", err);
-      setError(err.message || "An unexpected error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
     } finally {
       setIsMagicLinkLoading(false);
     }
@@ -106,9 +107,10 @@ export default function Login() {
           setMessage("Check your email for the confirmation link.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Signup exception:", err);
-      setError(err.message || "An unexpected error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +139,7 @@ export default function Login() {
         if (signInError.message.includes("Email not confirmed")) {
           setError("Email not confirmed. Try using Magic Link instead!");
         } else if (signInError.message.includes("Invalid login credentials")) {
-          setError("Invalid email or password. Try using Magic Link or sign up for a new account.");
+          setError("Invalid email or password.");
         } else {
           setError(signInError.message);
         }
@@ -148,9 +150,10 @@ export default function Login() {
         showSuccess("Signed in successfully!");
         navigate("/");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Sign in exception:", err);
-      setError(err.message || "An unexpected error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +170,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
             <div className="h-16 w-16 rounded-2xl bg-fuchsia-600/30 flex items-center justify-center ring-2 ring-fuchsia-400/40">
               <Bot className="h-8 w-8 text-fuchsia-300" />
@@ -178,9 +181,9 @@ export default function Login() {
             Sign in to access your personal AI assistant
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5">
           {/* Magic Link Section - Primary */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center gap-2 text-fuchsia-300">
               <Sparkles className="h-4 w-4" />
               <span className="text-sm font-medium">Recommended: Magic Link</span>
@@ -209,7 +212,7 @@ export default function Login() {
                 {isMagicLinkLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending magic link...
+                    Sending...
                   </>
                 ) : (
                   <>
@@ -284,7 +287,7 @@ export default function Login() {
                       Signing in...
                     </>
                   ) : (
-                    "Sign In with Password"
+                    "Sign In"
                   )}
                 </Button>
               </form>
@@ -351,22 +354,6 @@ export default function Login() {
               {message}
             </div>
           )}
-
-          {/* Helper for Supabase URL configuration */}
-          <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-            <p className="text-xs text-slate-400 mb-2">
-              <strong className="text-slate-300">⚙️ Supabase URL Configuration</strong>
-            </p>
-            <p className="text-xs text-slate-500 mb-2">
-              If magic link redirects to wrong URL, update these in Supabase Dashboard → Authentication → URL Configuration:
-            </p>
-            <div className="bg-slate-900 rounded p-2 text-xs font-mono text-fuchsia-300 break-all">
-              {window.location.origin}
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Set this as your <strong>Site URL</strong> and add <code className="text-fuchsia-300">{window.location.origin}/*</code> to <strong>Redirect URLs</strong>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
