@@ -165,6 +165,16 @@ export const AVAILABLE_TOOLS = [
     parameters: { category: "string", key: "string", value: "string" },
   },
   {
+    name: "save_memory",
+    description: "Save important information the user wants you to remember. Use when user says 'remember', 'save this', 'don't forget', etc.",
+    parameters: { category: "string (e.g., 'personal', 'preferences', 'contacts', 'health', 'work')", key: "string (what to remember)", value: "string (the information)" },
+  },
+  {
+    name: "get_memories",
+    description: "Retrieve saved memories/information about the user",
+    parameters: { category: "string (optional)", search: "string (optional)" },
+  },
+  {
     name: "navigate_to",
     description: "Navigate to a page in the app. Use this when user says 'open', 'go to', 'show me' followed by a page name.",
     parameters: { page: "string (e.g., 'tasks', 'reminders', 'notes', 'calendar', 'contacts', 'messages', 'settings', 'home')" },
@@ -818,6 +828,91 @@ export async function getKnowledge(
   } catch (error: any) {
     return {
       tool: "get_knowledge",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeSaveMemory(
+  userId: string,
+  category: string,
+  key: string,
+  value: string
+): Promise<ActionResult> {
+  try {
+    const { data, error } = await supabase.from("knowledge").insert({
+      user_id: userId,
+      category,
+      key,
+      value,
+    }).select().single();
+
+    if (error) throw error;
+
+    return {
+      tool: "save_memory",
+      success: true,
+      data: {
+        memory: data,
+        voiceText: `Got it! I'll remember that ${key} is ${value}.`,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "save_memory",
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+export async function executeGetMemories(
+  userId: string,
+  category?: string,
+  search?: string
+): Promise<ActionResult> {
+  try {
+    let query = supabase.from("knowledge").select("*").eq("user_id", userId);
+    
+    if (category) {
+      query = query.eq("category", category);
+    }
+    
+    if (search) {
+      query = query.or(`key.ilike.%${search}%,value.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(10);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return {
+        tool: "get_memories",
+        success: true,
+        data: {
+          memories: [],
+          voiceText: search
+            ? `I don't have any memories about "${search}".`
+            : "I don't have any saved memories yet.",
+        },
+      };
+    }
+
+    const voiceText = `I remember ${data.length} thing${data.length > 1 ? 's' : ''}. ${data.slice(0, 3).map(m => `${m.key}: ${m.value}`).join(". ")}`;
+
+    return {
+      tool: "get_memories",
+      success: true,
+      data: {
+        memories: data,
+        voiceText,
+      },
+    };
+  } catch (error: any) {
+    return {
+      tool: "get_memories",
       success: false,
       error: error.message,
     };
@@ -1605,7 +1700,8 @@ export async function executeCancelAppointment(
 }
 
 // Build system prompt with tools
-export function buildSystemPrompt(userLocation?: { lat: number; lng: number; city?: string }): string {
+export function buildSystemPrompt(userLocation?: { lat: number; lng: number; city?: string }, assistantName?: string, memoryContext?: string): string {
+  const name = assistantName || "Echo";
   const now = new Date();
   const timeInfo = {
     iso: now.toISOString(),
@@ -1638,7 +1734,7 @@ USER LOCATION:
 USER LOCATION: Not available. If the user asks for weather or nearby places without specifying a location, ask them for their location or use the get_weather/find_nearby tools which will request permission.`;
   }
 
-  return `You are Echo, a personal AI voice assistant. You are helpful, friendly, conversational, and proactive. You are designed for VOICE-FIRST interaction - keep responses concise and natural for spoken conversation.
+  return `You are ${name}, a personal AI voice assistant. You are helpful, friendly, conversational, and proactive. You are designed for VOICE-FIRST interaction - keep responses concise and natural for spoken conversation.
 
 CURRENT TIME & DATE:
 - Date: ${timeInfo.date}
@@ -1652,6 +1748,14 @@ Use this time context naturally in conversations. For example:
 - When creating reminders/events, understand relative times ("tomorrow", "next week", "in 2 hours")
 - Be aware of business hours, weekends, etc.
 ${locationContext}
+${memoryContext || ""}
+
+MEMORY COMMANDS:
+When the user says "remember", "save this", "don't forget", or similar phrases, use the save_memory tool to store the information.
+Examples:
+- "Remember that my favorite color is blue" → save_memory with category="preferences", key="favorite color", value="blue"
+- "Save this: my doctor's name is Dr. Smith" → save_memory with category="contacts", key="doctor's name", value="Dr. Smith"
+- "Don't forget I'm allergic to peanuts" → save_memory with category="health", key="allergy", value="peanuts"
 
 VOICE INTERACTION GUIDELINES:
 1. Keep responses SHORT and conversational - this is voice, not text
@@ -2033,6 +2137,10 @@ export async function executeTool(
       return getKnowledge(userId, parameters.category, parameters.search);
     case "add_knowledge":
       return addKnowledge(userId, parameters.category, parameters.key, parameters.value);
+    case "save_memory":
+      return executeSaveMemory(userId, parameters.category, parameters.key, parameters.value);
+    case "get_memories":
+      return executeGetMemories(userId, parameters.category, parameters.search);
     case "navigate_to":
       return executeNavigateTo(parameters.page);
     case "get_daily_summary":

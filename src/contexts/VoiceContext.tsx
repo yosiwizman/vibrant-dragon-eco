@@ -11,6 +11,9 @@ import { useVoiceFeedback } from "@/components/VoiceFeedback";
 import { hasActiveFlow, processMultiStepResponse, getFlowState, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
 import { getKnowledgeContext, initializeRAGKnowledge } from "@/services/rag-knowledge";
 import { logVoiceCommand, logAIError } from "@/services/ai-logging";
+import { getMemoryContext } from "@/services/memory";
+import { saveChatMessage, getChatContext } from "@/services/chat-history";
+import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } from "@/services/wake-word-detection";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -64,6 +67,28 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       initializeRAGKnowledge(user.id);
     }
   }, [user]);
+
+  // Wake word detection
+  useEffect(() => {
+    if (preferences.wakeWordEnabled && isWakeWordSupported() && !isListening && !isProcessing && !isSpeaking) {
+      startWakeWordDetection({
+        wakeWord: preferences.wakeWord || "echo",
+        onWakeWordDetected: () => {
+          showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
+          startListening();
+        },
+        onError: (error) => {
+          console.error("Wake word error:", error);
+        },
+      });
+    } else {
+      stopWakeWordDetection();
+    }
+
+    return () => {
+      stopWakeWordDetection();
+    };
+  }, [preferences.wakeWordEnabled, preferences.wakeWord, isListening, isProcessing, isSpeaking]);
 
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
@@ -123,11 +148,39 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     try {
       const normalizedText = normalizeSpeechInput(text);
       
-      const systemPrompt = buildSystemPrompt(userLocation ? {
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-        city: userLocation.city,
-      } : undefined);
+      // Get memory context if enabled
+      let memoryContext = "";
+      if (preferences.enableMemory) {
+        memoryContext = await getMemoryContext(user.id);
+      }
+
+      // Get chat history context if enabled
+      let chatHistory: { role: "user" | "assistant"; content: string }[] = [];
+      if (preferences.enableChatHistory) {
+        chatHistory = await getChatContext(user.id, Math.min(preferences.chatHistoryLimit || 10, 20));
+      }
+      
+      const systemPrompt = buildSystemPrompt(
+        userLocation ? {
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          city: userLocation.city,
+        } : undefined,
+        preferences.assistantName,
+        memoryContext
+      );
+
+      // Build messages with chat history
+      const messages = [
+        { role: "system" as const, content: systemPrompt },
+        ...chatHistory.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+        { role: "user" as const, content: normalizedText },
+      ];
+
+      // Save user message to chat history
+      if (preferences.enableChatHistory && !preferences.privateMode) {
+        saveChatMessage(user.id, "user", normalizedText);
+      }
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -137,10 +190,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: normalizedText },
-          ],
+          messages,
           max_tokens: 1024,
         }),
       });
@@ -209,6 +259,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       // Use voice text if available
       const voiceTextResult = toolResults.find(r => r.data?.voiceText);
       const finalResponse = voiceTextResult?.data?.voiceText || cleanResponse;
+
+      // Save assistant response to chat history
+      if (preferences.enableChatHistory && !preferences.privateMode) {
+        saveChatMessage(user.id, "assistant", finalResponse);
+      }
 
       setIsProcessing(false);
       return finalResponse;

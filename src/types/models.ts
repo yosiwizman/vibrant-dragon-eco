@@ -50,10 +50,35 @@ export interface Preferences {
   voiceSpeed: number;
   autoListenAfterSpeech: boolean;
   wakeWord: string;
+  wakeWordEnabled: boolean;
   voiceFeedbackEnabled: boolean;
   voiceFeedbackVolume: number;
   enableMultiStepConversations: boolean;
   enableRAGKnowledge: boolean;
+  enableMemory: boolean;
+  enableChatHistory: boolean;
+  assistantName: string;
+  chatHistoryLimit: number;
+}
+
+export interface Memory {
+  id: string;
+  userId: string;
+  category: string;
+  key: string;
+  value: string;
+  importance: "low" | "medium" | "high";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatHistoryEntry {
+  id: string;
+  userId: string;
+  role: Role;
+  content: string;
+  createdAt: string;
+  sessionId?: string;
 }
 
 export const OPENAI_VOICES: { value: OpenAIVoice; label: string; description: string }[] = [

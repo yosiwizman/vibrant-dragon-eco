@@ -5,7 +5,7 @@ const KEY = "echo:prefs";
 
 const DEFAULT: Preferences = {
   baseUrl: "",
-  privateMode: true,
+  privateMode: false,
   pinEnabled: false,
   pinCode: undefined,
   authToken: undefined,
@@ -17,10 +17,15 @@ const DEFAULT: Preferences = {
   voiceSpeed: 1.0,
   autoListenAfterSpeech: true,
   wakeWord: "echo",
+  wakeWordEnabled: false,
   voiceFeedbackEnabled: true,
   voiceFeedbackVolume: 0.5,
   enableMultiStepConversations: true,
   enableRAGKnowledge: true,
+  enableMemory: true,
+  enableChatHistory: true,
+  assistantName: "Echo",
+  chatHistoryLimit: 50,
 };
 
 export function loadPreferences(): Preferences {
