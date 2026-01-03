@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -49,7 +49,7 @@ const Index = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4">
+        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
           <Link to="/tasks">
             <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
@@ -66,11 +66,11 @@ const Index = () => {
               </CardContent>
             </Card>
           </Link>
-          <Link to="/notes">
+          <Link to="/knowledge">
             <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
                 <Brain className="h-6 w-6 text-purple-400" />
-                <span className="font-medium text-white">Notes</span>
+                <span className="font-medium text-white">Knowledge</span>
               </CardContent>
             </Card>
           </Link>
@@ -79,6 +79,22 @@ const Index = () => {
               <CardContent className="p-4 flex items-center gap-3">
                 <Clock className="h-6 w-6 text-blue-400" />
                 <span className="font-medium text-white">Calendar</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/notes">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <FileText className="h-6 w-6 text-orange-400" />
+                <span className="font-medium text-white">Notes</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/notifications">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Bell className="h-6 w-6 text-fuchsia-400" />
+                <span className="font-medium text-white">Notifications</span>
               </CardContent>
             </Card>
           </Link>

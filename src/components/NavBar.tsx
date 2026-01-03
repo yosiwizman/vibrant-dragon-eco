@@ -1,8 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle } from "lucide-react";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const linkBase =
   "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white transition";
@@ -11,6 +13,46 @@ const active =
 
 export default function NavBar() {
   const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      loadUnreadCount();
+      
+      // Subscribe to notifications changes
+      const channel = supabase
+        .channel('notifications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            loadUnreadCount();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  const loadUnreadCount = async () => {
+    if (!user) return;
+    
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    setUnreadCount(count || 0);
+  };
 
   const links = [
     { to: "/voice", label: "Voice", icon: <Mic className="h-4 w-4" /> },
@@ -45,6 +87,19 @@ export default function NavBar() {
                 <span className="hidden md:inline">{l.label}</span>
               </NavLink>
             ))}
+            <NavLink
+              to="/notifications"
+              className={({ isActive }) =>
+                `${linkBase} flex items-center gap-2 relative ${isActive ? active : "hover:bg-slate-800"}`
+              }
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-fuchsia-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </NavLink>
           </nav>
         )}
 

@@ -6,7 +6,7 @@ export interface Citation {
 }
 
 export interface ToolCall {
-  type: "search" | "nearby";
+  type: "search" | "nearby" | "orchestrator";
   input: string;
   outputMeta?: Record<string, unknown>;
 }

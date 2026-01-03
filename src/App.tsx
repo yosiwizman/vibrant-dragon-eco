@@ -21,6 +21,7 @@ import Tasks from "./pages/Tasks";
 import Reminders from "./pages/Reminders";
 import Notes from "./pages/Notes";
 import Calendar from "./pages/Calendar";
+import Notifications from "./pages/Notifications";
 import MicButton from "@/components/MicButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -145,6 +146,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Calendar />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
                 </ProtectedRoute>
               }
             />
