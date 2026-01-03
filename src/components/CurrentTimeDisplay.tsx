@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock, MapPin, Sun, Moon, Sunrise, Sunset } from "lucide-react";
+import { Clock, Sun, Moon, Sunrise, Sunset } from "lucide-react";
 import { getTimeContext, TimeContext } from "@/services/context";
 
 export default function CurrentTimeDisplay() {
@@ -28,7 +28,7 @@ export default function CurrentTimeDisplay() {
   };
 
   return (
-    <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -42,16 +42,16 @@ export default function CurrentTimeDisplay() {
           </div>
           <div className="flex items-center gap-2">
             {getTimeIcon()}
-            <span className="text-sm text-slate-400 capitalize">{time.timeOfDay}</span>
+            <span className="text-sm text-slate-300 capitalize">{time.timeOfDay}</span>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+        <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
           <span>{time.timezone}</span>
           {time.isWeekend && (
-            <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400">Weekend</span>
+            <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">Weekend</span>
           )}
-          {time.isBusinessHours && (
-            <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">Business Hours</span>
+          {time.isBusinessHours && !time.isWeekend && (
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">Business Hours</span>
           )}
         </div>
       </CardContent>

@@ -34,9 +34,9 @@ export default function AIUsageWidget() {
 
   if (loading) {
     return (
-      <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur animate-pulse">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur animate-pulse">
         <CardContent className="p-4">
-          <div className="h-24 bg-slate-800 rounded" />
+          <div className="h-24 bg-slate-700/50 rounded" />
         </CardContent>
       </Card>
     );
@@ -44,49 +44,43 @@ export default function AIUsageWidget() {
 
   return (
     <Link to="/ai-logs">
-      <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur hover:bg-slate-800/70 transition-colors cursor-pointer">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-5 w-5 text-fuchsia-400" />
+            <div className="p-1.5 rounded-lg bg-fuchsia-500/10">
+              <Brain className="h-4 w-4 text-fuchsia-400" />
+            </div>
             <h3 className="text-sm font-semibold text-white">AI Usage (7 days)</h3>
           </div>
           
           <div className="grid grid-cols-4 gap-2">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <Mic className="h-4 w-4 text-fuchsia-400" />
-              </div>
+            <div className="text-center p-2 rounded-lg bg-slate-900/50">
+              <Mic className="h-4 w-4 text-fuchsia-400 mx-auto mb-1" />
               <p className="text-lg font-bold text-white">{stats.voiceCommands}</p>
-              <p className="text-[10px] text-slate-400">Voice</p>
+              <p className="text-[10px] text-slate-500">Voice</p>
             </div>
             
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <MessageSquare className="h-4 w-4 text-blue-400" />
-              </div>
+            <div className="text-center p-2 rounded-lg bg-slate-900/50">
+              <MessageSquare className="h-4 w-4 text-blue-400 mx-auto mb-1" />
               <p className="text-lg font-bold text-white">{stats.chatMessages}</p>
-              <p className="text-[10px] text-slate-400">Chat</p>
+              <p className="text-[10px] text-slate-500">Chat</p>
             </div>
             
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <Zap className="h-4 w-4 text-green-400" />
-              </div>
+            <div className="text-center p-2 rounded-lg bg-slate-900/50">
+              <Zap className="h-4 w-4 text-green-400 mx-auto mb-1" />
               <p className="text-lg font-bold text-white">{stats.toolCalls}</p>
-              <p className="text-[10px] text-slate-400">Tools</p>
+              <p className="text-[10px] text-slate-500">Tools</p>
             </div>
             
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <AlertCircle className="h-4 w-4 text-red-400" />
-              </div>
+            <div className="text-center p-2 rounded-lg bg-slate-900/50">
+              <AlertCircle className="h-4 w-4 text-red-400 mx-auto mb-1" />
               <p className="text-lg font-bold text-white">{stats.errors}</p>
-              <p className="text-[10px] text-slate-400">Errors</p>
+              <p className="text-[10px] text-slate-500">Errors</p>
             </div>
           </div>
           
           <p className="text-xs text-slate-500 text-center mt-3">
-            {stats.totalInteractions} total interactions
+            {stats.totalInteractions} total interactions • Click to view logs
           </p>
         </CardContent>
       </Card>

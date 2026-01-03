@@ -7,13 +7,12 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  Plus, 
   Bell, 
   CheckSquare, 
   FileText, 
   Calendar,
-  Clock,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 
 export default function QuickActions() {
@@ -40,7 +39,6 @@ export default function QuickActions() {
           break;
           
         case "reminder":
-          // Default to 1 hour from now
           const dueTime = new Date();
           dueTime.setHours(dueTime.getHours() + 1);
           await supabase.from("reminders").insert({
@@ -64,7 +62,6 @@ export default function QuickActions() {
           break;
           
         case "event":
-          // Default to tomorrow at 10am
           const startTime = new Date();
           startTime.setDate(startTime.getDate() + 1);
           startTime.setHours(10, 0, 0, 0);
@@ -90,10 +87,10 @@ export default function QuickActions() {
   };
 
   const actions = [
-    { type: "task" as const, icon: <CheckSquare className="h-4 w-4" />, label: "Task", color: "text-green-400" },
-    { type: "reminder" as const, icon: <Bell className="h-4 w-4" />, label: "Reminder", color: "text-yellow-400" },
-    { type: "note" as const, icon: <FileText className="h-4 w-4" />, label: "Note", color: "text-purple-400" },
-    { type: "event" as const, icon: <Calendar className="h-4 w-4" />, label: "Event", color: "text-blue-400" },
+    { type: "task" as const, icon: CheckSquare, label: "Task", color: "text-green-400", bgColor: "bg-green-500/10 hover:bg-green-500/20" },
+    { type: "reminder" as const, icon: Bell, label: "Reminder", color: "text-yellow-400", bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20" },
+    { type: "note" as const, icon: FileText, label: "Note", color: "text-purple-400", bgColor: "bg-purple-500/10 hover:bg-purple-500/20" },
+    { type: "event" as const, icon: Calendar, label: "Event", color: "text-blue-400", bgColor: "bg-blue-500/10 hover:bg-blue-500/20" },
   ];
 
   const getPlaceholder = () => {
@@ -105,8 +102,10 @@ export default function QuickActions() {
     }
   };
 
+  const currentAction = actions.find(a => a.type === actionType);
+
   return (
-    <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
       <CardContent className="p-4">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <Zap className="h-4 w-4 text-fuchsia-400" />
@@ -120,25 +119,25 @@ export default function QuickActions() {
             }}>
               <DialogTrigger asChild>
                 <Button
-                  variant="outline"
-                  className="flex flex-col items-center gap-1 h-auto py-3 border-slate-700 bg-slate-800/50 hover:bg-slate-700"
+                  variant="ghost"
+                  className={`flex flex-col items-center gap-1.5 h-auto py-3 px-2 border border-slate-700 ${action.bgColor}`}
                   onClick={() => setActionType(action.type)}
                 >
-                  <span className={action.color}>{action.icon}</span>
+                  <action.icon className={`h-5 w-5 ${action.color}`} />
                   <span className="text-xs text-slate-300">{action.label}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-slate-900 border-slate-700">
                 <DialogHeader>
                   <DialogTitle className="text-white flex items-center gap-2">
-                    <span className={action.color}>{action.icon}</span>
+                    {currentAction && <currentAction.icon className={`h-5 w-5 ${currentAction.color}`} />}
                     Quick {action.label}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <Input
                     placeholder={getPlaceholder()}
-                    className="bg-slate-800 border-slate-700 text-white"
+                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleQuickAction()}
@@ -148,7 +147,7 @@ export default function QuickActions() {
                     <Button 
                       variant="outline" 
                       onClick={() => setIsOpen(false)}
-                      className="border-slate-600 text-slate-300"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-800"
                     >
                       Cancel
                     </Button>
@@ -157,7 +156,14 @@ export default function QuickActions() {
                       disabled={isSubmitting || !inputValue.trim()}
                       className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
                     >
-                      {isSubmitting ? "..." : "Create"}
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        "Create"
+                      )}
                     </Button>
                   </div>
                 </div>

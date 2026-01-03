@@ -11,9 +11,7 @@ import RecentActivity from "./RecentActivity";
 import {
   CheckSquare,
   Bell,
-  FileText,
   Calendar,
-  Users,
   TrendingUp,
   Clock,
   AlertCircle
@@ -62,7 +60,6 @@ export default function Dashboard() {
       const weekEnd = new Date(todayStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      // Fetch all stats in parallel
       const [
         pendingTasksRes,
         completedTasksRes,
@@ -97,7 +94,6 @@ export default function Dashboard() {
         unreadNotifications: notificationsRes.count || 0,
       });
 
-      // Combine upcoming items
       const items: UpcomingItem[] = [];
       
       if (upcomingRemindersRes.data) {
@@ -128,7 +124,6 @@ export default function Dashboard() {
         })));
       }
 
-      // Sort by time
       items.sort((a, b) => {
         if (!a.time) return 1;
         if (!b.time) return -1;
@@ -162,11 +157,11 @@ export default function Dashboard() {
 
   if (loading || !stats) {
     return (
-      <div className="grid gap-4 md:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="border-fuchsia-500/20 bg-black/30 backdrop-blur animate-pulse">
+      <div className="grid gap-4 md:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="border-slate-700 bg-slate-800/50 backdrop-blur animate-pulse">
             <CardContent className="p-4">
-              <div className="h-16 bg-slate-800 rounded" />
+              <div className="h-24 bg-slate-700/50 rounded" />
             </CardContent>
           </Card>
         ))}
@@ -175,14 +170,14 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    { label: "Pending Tasks", value: stats.pendingTasks, icon: <CheckSquare className="h-5 w-5" />, color: "text-green-400" },
-    { label: "Reminders", value: stats.upcomingReminders, icon: <Bell className="h-5 w-5" />, color: "text-yellow-400" },
-    { label: "Today's Events", value: stats.todayEvents, icon: <Calendar className="h-5 w-5" />, color: "text-blue-400" },
-    { label: "Unread", value: stats.unreadNotifications, icon: <AlertCircle className="h-5 w-5" />, color: "text-fuchsia-400" },
+    { label: "Pending Tasks", value: stats.pendingTasks, icon: CheckSquare, color: "text-green-400", bgColor: "bg-green-500/10" },
+    { label: "Reminders", value: stats.upcomingReminders, icon: Bell, color: "text-yellow-400", bgColor: "bg-yellow-500/10" },
+    { label: "Today's Events", value: stats.todayEvents, icon: Calendar, color: "text-blue-400", bgColor: "bg-blue-500/10" },
+    { label: "Unread", value: stats.unreadNotifications, icon: AlertCircle, color: "text-fuchsia-400", bgColor: "bg-fuchsia-500/10" },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Time, Location, and Weather Context */}
       <div className="grid gap-4 md:grid-cols-3">
         <CurrentTimeDisplay />
@@ -197,14 +192,16 @@ export default function Dashboard() {
         </div>
         <div className="md:col-span-4 grid gap-4 grid-cols-2 md:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+            <Card key={stat.label} className="border-slate-700 bg-slate-800/50 backdrop-blur">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-2xl font-bold text-white">{stat.value}</p>
                     <p className="text-xs text-slate-400">{stat.label}</p>
                   </div>
-                  <div className={stat.color}>{stat.icon}</div>
+                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -212,7 +209,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* AI Usage Widget */}
+      {/* AI Usage Widget and Recent Activity */}
       <div className="grid gap-4 md:grid-cols-3">
         <AIUsageWidget />
         <div className="md:col-span-2">
@@ -221,40 +218,37 @@ export default function Dashboard() {
       </div>
 
       {/* Upcoming Items */}
-      <div className="grid gap-4 md:grid-cols-1">
-        
-        {upcomingItems.length > 0 && (
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-fuchsia-400" />
-                Coming Up
-              </h3>
-              <div className="space-y-2">
-                {upcomingItems.map((item) => (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-slate-800/50"
-                  >
-                    {getItemIcon(item.type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{item.title}</p>
-                      <p className="text-xs text-slate-400">{formatItemTime(item.time)}</p>
-                    </div>
-                    {item.priority && (
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        item.priority === "urgent" ? "bg-red-500/20 text-red-300" : "bg-orange-500/20 text-orange-300"
-                      }`}>
-                        {item.priority}
-                      </span>
-                    )}
+      {upcomingItems.length > 0 && (
+        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-fuchsia-400" />
+              Coming Up
+            </h3>
+            <div className="space-y-2">
+              {upcomingItems.map((item) => (
+                <div
+                  key={`${item.type}-${item.id}`}
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-900/50 border border-slate-700/50"
+                >
+                  {getItemIcon(item.type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{item.title}</p>
+                    <p className="text-xs text-slate-500">{formatItemTime(item.time)}</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  {item.priority && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      item.priority === "urgent" ? "bg-red-500/20 text-red-400" : "bg-orange-500/20 text-orange-400"
+                    }`}>
+                      {item.priority}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
