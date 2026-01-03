@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VoiceProvider } from "@/contexts/VoiceContext";
+import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
+import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
+import OnboardingTour from "@/components/OnboardingTour";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import NavBar from "@/components/NavBar";
@@ -46,6 +49,12 @@ function CommandPaletteWrapper() {
   return <VoiceCommandPalette open={isOpen} onClose={close} />;
 }
 
+// Wrapper component for global keyboard shortcuts
+function GlobalShortcutsWrapper() {
+  useGlobalShortcuts();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -57,6 +66,9 @@ const App = () => (
             <NavBar />
             <VoiceStatusIndicator />
             <CommandPaletteWrapper />
+            <GlobalShortcutsWrapper />
+            <KeyboardShortcutsHelp />
+            <OnboardingTour />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route
