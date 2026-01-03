@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command } from "lucide-react";
-import { useCommandPalette } from "./VoiceCommandPalette";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,147 +8,197 @@ import { supabase } from "@/integrations/supabase/client";
 import VoiceTutorial from "./VoiceTutorial";
 import { useCommandPalette } from "./VoiceCommandPalette";
 
-const linkBase =
-  "px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white transition";
-const active =
-  "bg-fuchsia-600/30 text-white";
-
 export default function NavBar() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
   const { open: openCommandPalette } = useCommandPalette();
-  const { open: openCommandPalette } = useCommandPalette();
 
   useEffect(() => {
-    if (user) {
-      loadUnreadCount();
-      
-      // Subscribe to notifications changes
-      const channel = supabase
-        .channel('notifications-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            loadUnreadCount();
-          }
-        )
-        .subscribe();
+    if (!user) return;
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
+      setUnreadCount(count || 0);
+    };
+
+    fetchUnread();
+
+    const channel = supabase
+      .channel("notifications-count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => fetchUnread()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  const loadUnreadCount = async () => {
-    if (!user) return;
-    
-    const { count } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
-
-    setUnreadCount(count || 0);
-  };
-
-  const links = [
-    { to: "/voice", label: "Voice", icon: <Mic className="h-4 w-4" /> },
-    { to: "/chat", label: "Chat", icon: <MessageSquareText className="h-4 w-4" /> },
-    { to: "/messages", label: "Messages", icon: <MessageSquareText className="h-4 w-4" /> },
-    { to: "/integrations", label: "Apps", icon: <Puzzle className="h-4 w-4" /> },
-    { to: "/tools", label: "Tools", icon: <Wrench className="h-4 w-4" /> },
-    { to: "/settings", label: "Settings", icon: <Cog className="h-4 w-4" /> },
-  ];
-
   return (
-    <header className="w-full border-b border-fuchsia-500/20 bg-slate-950/90 backdrop-blur-lg">
-      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-        <NavLink to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-fuchsia-600/30 flex items-center justify-center ring-1 ring-fuchsia-400/40">
-            <Bot className="h-4 w-4 text-fuchsia-300" />
-          </div>
-          <span className="font-semibold tracking-wide text-white">Echo</span>
+    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur-lg">
+      <div className="flex items-center gap-1 overflow-x-auto">
+        <NavLink
+          to="/"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Bot className="h-4 w-4" />
+          <span className="hidden sm:inline">Echo</span>
         </NavLink>
 
-        {user && (
-          <nav className="flex items-center gap-1">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                className={({ isActive }) =>
-                  `${linkBase} flex items-center gap-2 ${isActive ? active : "hover:bg-slate-800"}`
-                }
-              >
-                {l.icon}
-                <span className="hidden md:inline">{l.label}</span>
-              </NavLink>
-            ))}
-            <NavLink
-              to="/notifications"
-              className={({ isActive }) =>
-                `${linkBase} flex items-center gap-2 relative ${isActive ? active : "hover:bg-slate-800"}`
-              }
-            >
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-fuchsia-500 text-[10px] font-bold text-white flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </NavLink>
-          </nav>
-        )}
+        <NavLink
+          to="/chat"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <MessageSquareText className="h-4 w-4" />
+          <span className="hidden sm:inline">Chat</span>
+        </NavLink>
 
-        <div className="flex items-center gap-2">
-          {user ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={openCommandPalette}
-                className="text-slate-400 hover:text-white h-8 px-2 gap-1.5 hidden sm:flex"
-                title="Command Palette (⌘K)"
-              >
-                <Command className="h-3.5 w-3.5" />
-                <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowTutorial(true)}
-                className="text-slate-400 hover:text-white h-8 w-8"
-                title="Voice Commands Help"
-              >
-                <HelpCircle className="h-4 w-4" />
-              </Button>
-              <NavLink to="/voice">
-                <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                  <Mic className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Start Voice</span>
-                </Button>
-              </NavLink>
-              <UserMenu />
-            </>
-          ) : (
-            <NavLink to="/login">
+        <NavLink
+          to="/tools"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Wrench className="h-4 w-4" />
+          <span className="hidden sm:inline">Tools</span>
+        </NavLink>
+
+        <NavLink
+          to="/knowledge"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <BookOpenText className="h-4 w-4" />
+          <span className="hidden sm:inline">Knowledge</span>
+        </NavLink>
+
+        <NavLink
+          to="/history"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <History className="h-4 w-4" />
+          <span className="hidden sm:inline">History</span>
+        </NavLink>
+
+        <NavLink
+          to="/integrations"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Puzzle className="h-4 w-4" />
+          <span className="hidden sm:inline">Integrations</span>
+        </NavLink>
+
+        <NavLink
+          to="/notifications"
+          className={({ isActive }) =>
+            `relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Bell className="h-4 w-4" />
+          <span className="hidden sm:inline">Notifications</span>
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </NavLink>
+
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Cog className="h-4 w-4" />
+          <span className="hidden sm:inline">Settings</span>
+        </NavLink>
+
+        <NavLink
+          to="/debug"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Bug className="h-4 w-4" />
+          <span className="hidden sm:inline">Debug</span>
+        </NavLink>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {user ? (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openCommandPalette}
+              className="text-slate-400 hover:text-white h-8 px-2 gap-1.5 hidden sm:flex"
+              title="Command Palette (⌘K)"
+            >
+              <Command className="h-3.5 w-3.5" />
+              <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowTutorial(true)}
+              className="text-slate-400 hover:text-white h-8 w-8"
+              title="Voice Commands Help"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <NavLink to="/voice">
               <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                Sign In
+                <Mic className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Start Voice</span>
               </Button>
             </NavLink>
-          )}
-        </div>
-        
-        <VoiceTutorial open={showTutorial} onClose={() => setShowTutorial(false)} />
+            <UserMenu />
+          </>
+        ) : (
+          <NavLink to="/login">
+            <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+              Sign In
+            </Button>
+          </NavLink>
+        )}
       </div>
-    </header>
+      
+      <VoiceTutorial open={showTutorial} onClose={() => setShowTutorial(false)} />
+    </nav>
   );
 }

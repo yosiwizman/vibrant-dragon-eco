@@ -133,67 +133,6 @@ export default function VoiceChat() {
     }
   };
 
-  // Configure voice notifications
-  useEffect(() => {
-    if (preferences.openaiApiKey) {
-      configureVoiceNotifications({
-        apiKey: preferences.openaiApiKey,
-        voice: preferences.openaiVoice,
-        enabled: true,
-      });
-    }
-  }, [preferences.openaiApiKey, preferences.openaiVoice]);
-
-  // Morning briefing function
-  const playMorningBriefing = async () => {
-    if (!preferences.openaiApiKey || !user) {
-      showError("Please set your OpenAI API key in Settings");
-      return;
-    }
-
-    setConversationState("processing");
-    try {
-      const briefing = await generateMorningBriefing(user.id, supabase);
-      
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: briefing,
-        createdAt: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      setConversationState("speaking");
-      const speechBlob = await synthesizeSpeech(briefing, preferences.openaiApiKey, preferences.openaiVoice);
-      const audio = new Audio();
-      audioRef.current = audio;
-      audio.src = URL.createObjectURL(speechBlob);
-      
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(audio.src);
-          audioRef.current = null;
-          resolve();
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(audio.src);
-          audioRef.current = null;
-          reject(new Error("Audio playback failed"));
-        };
-        audio.play().catch(reject);
-      });
-
-      if (isConversationActive && preferences.conversationMode) {
-        startListening();
-      } else {
-        setConversationState("idle");
-      }
-    } catch (err: any) {
-      showError(err.message || "Failed to generate briefing");
-      setConversationState("idle");
-    }
-  };
-
   // Handle pending navigation after speaking
   useEffect(() => {
     if (pendingNavigation && conversationState === "idle") {
@@ -378,14 +317,6 @@ export default function VoiceChat() {
           console.error("Speech synthesis error:", err);
         }
       }
-
-      // Save to voice history
-      saveVoiceInteraction({
-        userText: userText,
-        assistantText: cleanResponse,
-        timestamp: Date.now(),
-        toolsUsed: toolResults.map(r => r.tool),
-      });
 
       // Save to voice history
       saveVoiceInteraction({
@@ -675,16 +606,6 @@ export default function VoiceChat() {
                       Daily Briefing
                     </Button>
                   </>
-                      size="lg"
-                      onClick={playMorningBriefing}
-                      variant="outline"
-                      className="border-blue-500/50 text-blue-300 hover:bg-blue-500/20"
-                      disabled={conversationState !== "idle"}
-                    >
-                      <Volume2 className="mr-2 h-5 w-5" />
-                      Daily Briefing
-                    </Button>
-                  </>
                 ) : (
                   <Button
                     size="lg"
@@ -722,7 +643,7 @@ export default function VoiceChat() {
         
         {/* Voice History */}
         {messages.length === 0 && (
-          <VoiceHistory maxItems={3} showClear={false} />
+          <VoiceHistory maxItems={3} showClear={false} className="mt-4" />
         )}
       </div>
     </div>
