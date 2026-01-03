@@ -46,10 +46,16 @@ export default function FloatingVoiceWidget() {
   const { user } = useAuth();
   const { isListening, isProcessing, isSpeaking, processVoiceCommand, speak, stopSpeaking } = useVoice();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
+  // Hidden by default - users can use command palette (⌘K) instead
+  const [isVisible, setIsVisible] = useState(false);
 
   // Don't show on login page or when not authenticated
   if (location.pathname === "/login" || !user) {
+    return null;
+  }
+
+  // Widget is hidden by default
+  if (!isVisible) {
     return null;
   }
 
@@ -61,18 +67,6 @@ export default function FloatingVoiceWidget() {
       console.error("Quick command failed:", error);
     }
   };
-
-  if (!isVisible) {
-    return (
-      <Button
-        size="sm"
-        className="fixed bottom-24 left-4 z-40 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-full shadow-lg"
-        onClick={() => setIsVisible(true)}
-      >
-        <Volume2 className="h-4 w-4" />
-      </Button>
-    );
-  }
 
   return (
     <div className="fixed bottom-24 left-4 z-40">

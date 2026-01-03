@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command, Brain, Calendar, Activity } from "lucide-react";
+import { Bot, MessageSquareText, Mic, Settings, Bell, HelpCircle, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,6 @@ export default function NavBar() {
   const [showTutorial, setShowTutorial] = useState(false);
   const { open: openCommandPalette } = useCommandPalette();
 
-  // All hooks must be called before any conditional returns
   useEffect(() => {
     if (!user) return;
 
@@ -44,14 +43,15 @@ export default function NavBar() {
     };
   }, [user]);
 
-  // Hide navbar completely on login page or when not authenticated
+  // Hide navbar on login page or when not authenticated
   if (location.pathname === "/login" || !user) {
     return null;
   }
 
   return (
-    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur-lg">
-      <div className="flex items-center gap-1 overflow-x-auto">
+    <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/95 px-4 backdrop-blur-lg">
+      {/* Left side - Logo and primary nav */}
+      <div className="flex items-center gap-1">
         <NavLink
           to="/"
           className={({ isActive }) =>
@@ -60,8 +60,8 @@ export default function NavBar() {
             }`
           }
         >
-          <Bot className="h-4 w-4" />
-          <span className="hidden sm:inline">Echo</span>
+          <Bot className="h-5 w-5" />
+          <span className="font-semibold">Echo</span>
         </NavLink>
 
         <NavLink
@@ -77,90 +77,6 @@ export default function NavBar() {
         </NavLink>
 
         <NavLink
-          to="/tools"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Wrench className="h-4 w-4" />
-          <span className="hidden sm:inline">Tools</span>
-        </NavLink>
-
-        <NavLink
-          to="/knowledge"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <BookOpenText className="h-4 w-4" />
-          <span className="hidden sm:inline">Knowledge</span>
-        </NavLink>
-
-        <NavLink
-          to="/knowledge-base"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Brain className="h-4 w-4" />
-          <span className="hidden sm:inline">RAG</span>
-        </NavLink>
-
-        <NavLink
-          to="/history"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <History className="h-4 w-4" />
-          <span className="hidden sm:inline">History</span>
-        </NavLink>
-
-        <NavLink
-          to="/integrations"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Puzzle className="h-4 w-4" />
-          <span className="hidden sm:inline">Integrations</span>
-        </NavLink>
-
-        <NavLink
-          to="/appointments"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Calendar className="h-4 w-4" />
-          <span className="hidden sm:inline">Appointments</span>
-        </NavLink>
-
-        <NavLink
-          to="/ai-logs"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Activity className="h-4 w-4" />
-          <span className="hidden sm:inline">AI Logs</span>
-        </NavLink>
-
-        <NavLink
           to="/notifications"
           className={({ isActive }) =>
             `relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -169,7 +85,7 @@ export default function NavBar() {
           }
         >
           <Bell className="h-4 w-4" />
-          <span className="hidden sm:inline">Notifications</span>
+          <span className="hidden sm:inline">Alerts</span>
           {unreadCount > 0 && (
             <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -185,23 +101,12 @@ export default function NavBar() {
             }`
           }
         >
-          <Cog className="h-4 w-4" />
+          <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">Settings</span>
-        </NavLink>
-
-        <NavLink
-          to="/debug"
-          className={({ isActive }) =>
-            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <Bug className="h-4 w-4" />
-          <span className="hidden sm:inline">Debug</span>
         </NavLink>
       </div>
 
+      {/* Right side - Actions */}
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
@@ -213,6 +118,7 @@ export default function NavBar() {
           <Command className="h-3.5 w-3.5" />
           <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
         </Button>
+        
         <Button
           variant="ghost"
           size="icon"
@@ -222,12 +128,14 @@ export default function NavBar() {
         >
           <HelpCircle className="h-4 w-4" />
         </Button>
+        
         <NavLink to="/voice">
           <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
             <Mic className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Start Voice</span>
+            <span className="hidden sm:inline">Voice</span>
           </Button>
         </NavLink>
+        
         <UserMenu />
       </div>
       

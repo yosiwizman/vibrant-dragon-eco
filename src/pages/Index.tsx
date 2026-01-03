@@ -1,11 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun, RefreshCw, Undo, Calendar, Activity, Phone, Edit } from "lucide-react";
+import { 
+  Mic, Sparkles, MessageSquareText, Brain, Shield, Puzzle, Bell, 
+  CheckSquare, Clock, FileText, Users, Send, Calendar, Activity, 
+  Phone, Edit, Settings, Wrench, History, BookOpenText
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
-import RecurringItemsWidget from "@/components/RecurringItemsWidget";
 
 const Index = () => {
   const { user } = useAuth();
@@ -17,311 +20,139 @@ const Index = () => {
     return "Good evening";
   };
 
+  const quickAccessItems = [
+    { to: "/tasks", icon: CheckSquare, label: "Tasks", color: "text-green-400" },
+    { to: "/reminders", icon: Bell, label: "Reminders", color: "text-yellow-400" },
+    { to: "/notes", icon: FileText, label: "Notes", color: "text-orange-400" },
+    { to: "/calendar", icon: Clock, label: "Calendar", color: "text-blue-400" },
+    { to: "/contacts", icon: Users, label: "Contacts", color: "text-cyan-400" },
+    { to: "/messages", icon: Send, label: "Messages", color: "text-emerald-400" },
+    { to: "/appointments", icon: Calendar, label: "Appointments", color: "text-teal-400" },
+    { to: "/documents", icon: FileText, label: "Documents", color: "text-indigo-400" },
+  ];
+
+  const toolsItems = [
+    { to: "/knowledge", icon: BookOpenText, label: "Knowledge", color: "text-purple-400" },
+    { to: "/knowledge-base", icon: Brain, label: "RAG Docs", color: "text-violet-400" },
+    { to: "/tools", icon: Wrench, label: "Tools", color: "text-fuchsia-400" },
+    { to: "/integrations", icon: Puzzle, label: "Integrations", color: "text-pink-400" },
+    { to: "/ai-logs", icon: Activity, label: "AI Logs", color: "text-lime-400" },
+    { to: "/history", icon: History, label: "History", color: "text-amber-400" },
+    { to: "/drafts", icon: Edit, label: "Drafts", color: "text-rose-400" },
+    { to: "/booking-tasks", icon: Phone, label: "Bookings", color: "text-red-400" },
+  ];
+
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
       <WelcomeModal />
-      <div className="mx-auto max-w-5xl p-6">
-        <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-8 backdrop-blur-lg shadow-xl">
+      <div className="mx-auto max-w-5xl p-4 md:p-6">
+        {/* Hero Section */}
+        <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-6 md:p-8 backdrop-blur-lg shadow-xl">
           <div className="flex items-center gap-2 text-fuchsia-300">
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-4 w-4" />
             <span className="text-sm font-medium">Personal • Voice-first • Private</span>
           </div>
-          <h1 className="mt-3 text-4xl font-bold text-white md:text-5xl">
+          <h1 className="mt-3 text-3xl md:text-4xl font-bold text-white">
             {getGreeting()}{user?.email ? `, ${user.email.split("@")[0]}` : ""}!
           </h1>
-          <p className="mt-4 max-w-2xl text-slate-300">
+          <p className="mt-3 max-w-2xl text-slate-300 text-sm md:text-base">
             Have natural conversations with your AI assistant. Just speak — Echo listens,
-            thinks, and responds. Like ChatGPT voice mode, but yours.
+            thinks, and responds.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <Link to="/voice">
               <Button size="lg" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 shadow-lg shadow-fuchsia-500/25">
-                <Mic className="mr-2 h-5 w-5" /> Start Voice Conversation
+                <Mic className="mr-2 h-5 w-5" /> Start Voice
               </Button>
             </Link>
             <Link to="/chat">
-              <Button size="lg" className="border border-fuchsia-500/40 bg-fuchsia-500/20 text-white hover:bg-fuchsia-500/30">
+              <Button size="lg" variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20">
                 <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
-              </Button>
-            </Link>
-            <Link to="/integrations">
-              <Button size="lg" className="border border-slate-600 bg-slate-800 text-white hover:bg-slate-700">
-                <Puzzle className="mr-2 h-4 w-4" /> Browse Apps
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Dashboard Stats */}
+        {/* Dashboard Stats - Live Data */}
         <div className="mt-6">
           <Dashboard />
         </div>
 
-        {/* Recurring Items Widget */}
-        <div className="mt-6">
-          <RecurringItemsWidget />
-        </div>
-
-        {/* Quick Actions Grid */}
+        {/* Quick Access Grid */}
         <div className="mt-6">
           <h2 className="text-lg font-semibold text-white mb-3">Quick Access</h2>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            <Link to="/tasks">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <CheckSquare className="h-8 w-8 text-green-400" />
-                  <span className="font-medium text-white text-sm">Tasks</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/reminders">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Bell className="h-8 w-8 text-yellow-400" />
-                  <span className="font-medium text-white text-sm">Reminders</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/notes">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <FileText className="h-8 w-8 text-orange-400" />
-                  <span className="font-medium text-white text-sm">Notes</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/calendar">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Clock className="h-8 w-8 text-blue-400" />
-                  <span className="font-medium text-white text-sm">Calendar</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/contacts">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Users className="h-8 w-8 text-cyan-400" />
-                  <span className="font-medium text-white text-sm">Contacts</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/messages">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Send className="h-8 w-8 text-emerald-400" />
-                  <span className="font-medium text-white text-sm">Messages</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/knowledge">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Brain className="h-8 w-8 text-purple-400" />
-                  <span className="font-medium text-white text-sm">Knowledge</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/knowledge-base">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <FileText className="h-8 w-8 text-indigo-400" />
-                  <span className="font-medium text-white text-sm">RAG Docs</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/appointments">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Calendar className="h-8 w-8 text-teal-400" />
-                  <span className="font-medium text-white text-sm">Appointments</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/ai-logs">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Activity className="h-8 w-8 text-lime-400" />
-                  <span className="font-medium text-white text-sm">AI Logs</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/tools">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Search className="h-8 w-8 text-fuchsia-400" />
-                  <span className="font-medium text-white text-sm">Tools</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/notifications">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Bell className="h-8 w-8 text-red-400" />
-                  <span className="font-medium text-white text-sm">Alerts</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/drafts">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Edit className="h-8 w-8 text-amber-400" />
-                  <span className="font-medium text-white text-sm">Drafts</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/booking-tasks">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Phone className="h-8 w-8 text-rose-400" />
-                  <span className="font-medium text-white text-sm">Bookings</span>
-                </CardContent>
-              </Card>
-            </Link>
-            <Link to="/settings">
-              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                  <Shield className="h-8 w-8 text-slate-400" />
-                  <span className="font-medium text-white text-sm">Settings</span>
-                </CardContent>
-              </Card>
-            </Link>
+          <div className="grid gap-3 grid-cols-4 sm:grid-cols-4 md:grid-cols-8">
+            {quickAccessItems.map((item) => (
+              <Link key={item.to} to={item.to}>
+                <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/50 transition-colors cursor-pointer h-full">
+                  <CardContent className="p-3 flex flex-col items-center gap-1.5 text-center">
+                    <item.icon className={`h-6 w-6 ${item.color}`} />
+                    <span className="font-medium text-white text-xs">{item.label}</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <Volume2 className="h-6 w-6 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Voice Chat</h3>
-              <p className="text-xs text-slate-300">
-                Natural conversations with OpenAI voices
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <Search className="h-6 w-6 text-blue-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Web Search</h3>
-              <p className="text-xs text-slate-300">
-                Search the web instantly
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <CloudSun className="h-6 w-6 text-yellow-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Weather</h3>
-              <p className="text-xs text-slate-300">
-                Current conditions & forecasts
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <MapPin className="h-6 w-6 text-green-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Nearby Places</h3>
-              <p className="text-xs text-slate-300">
-                Find restaurants, gas, pharmacies
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <Mail className="h-6 w-6 text-cyan-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Email & SMS</h3>
-              <p className="text-xs text-slate-300">
-                Draft messages hands-free
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
-            <CardContent className="p-4">
-              <Shield className="h-6 w-6 text-slate-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1 text-sm">Private</h3>
-              <p className="text-xs text-slate-300">
-                Your keys, your data
-              </p>
-            </CardContent>
-          </Card>
+        {/* Tools & More Grid */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold text-white mb-3">Tools & More</h2>
+          <div className="grid gap-3 grid-cols-4 sm:grid-cols-4 md:grid-cols-8">
+            {toolsItems.map((item) => (
+              <Link key={item.to} to={item.to}>
+                <Card className="border-slate-700/50 bg-black/20 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                  <CardContent className="p-3 flex flex-col items-center gap-1.5 text-center">
+                    <item.icon className={`h-6 w-6 ${item.color}`} />
+                    <span className="font-medium text-slate-300 text-xs">{item.label}</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Voice Commands Section */}
-        <div className="mt-8 rounded-xl border border-fuchsia-500/30 bg-black/40 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Mic className="h-5 w-5 text-fuchsia-400" />
+        {/* Voice Commands Quick Reference */}
+        <div className="mt-6 rounded-xl border border-slate-700/50 bg-black/30 p-5">
+          <h2 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+            <Mic className="h-4 w-4 text-fuchsia-400" />
             Voice Commands
+            <span className="text-xs text-slate-500 font-normal ml-2">Press ⌘K for full list</span>
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3 text-sm">
             <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Navigation</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>"Open my tasks"</li>
-                <li>"Go to calendar"</li>
-                <li>"Show me reminders"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Create</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
+              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Create</h3>
+              <ul className="space-y-1 text-slate-400 text-xs">
                 <li>"Add task buy groceries"</li>
                 <li>"Remind me to call mom at 5pm"</li>
                 <li>"Take a note about the meeting"</li>
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Read & Summarize</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
+              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Read & Search</h3>
+              <ul className="space-y-1 text-slate-400 text-xs">
                 <li>"Read my tasks"</li>
-                <li>"Summarize my day"</li>
-                <li>"What's on my calendar?"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Search & Info</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
                 <li>"What's the weather?"</li>
                 <li>"Find nearby coffee shops"</li>
-                <li>"Search for React tutorials"</li>
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Manage</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>"Mark first task done"</li>
-                <li>"Reschedule task to tomorrow"</li>
-                <li>"Dismiss reminder"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Recurring</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>"Remind me every day at 9am"</li>
-                <li>"Create weekly task"</li>
-                <li>"Show recurring items"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Undo & Knowledge</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>"Undo" / "Undo that"</li>
-                <li>"Search knowledge for RAG"</li>
-                <li>"What do you know about AI?"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Quick Tips</h3>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>Tap the mic button anywhere</li>
-                <li>Press ⌘K for command palette</li>
-                <li>Tap while speaking to interrupt</li>
+              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Navigate</h3>
+              <ul className="space-y-1 text-slate-400 text-xs">
+                <li>"Open my tasks"</li>
+                <li>"Go to calendar"</li>
+                <li>"Show me reminders"</li>
               </ul>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
-          <h2 className="text-lg font-semibold text-white mb-3">Quick Setup</h2>
+        {/* Setup Reminder - Only show if no API key */}
+        <div className="mt-6 rounded-xl border border-slate-700/50 bg-slate-800/30 p-5">
+          <h2 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
+            <Settings className="h-4 w-4 text-slate-400" />
+            Quick Setup
+          </h2>
           <ol className="space-y-2 text-sm text-slate-300">
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">1</span>
@@ -329,15 +160,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
-              <span>Choose your preferred voice (Nova, Alloy, Echo, etc.)</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">3</span>
-              <span>Browse <Link to="/integrations" className="text-fuchsia-300 hover:underline">Integrations</Link> to connect your apps</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">4</span>
-              <span>Click "Start Voice Conversation" or tap the floating mic button!</span>
+              <span>Choose your preferred voice and click "Start Voice"</span>
             </li>
           </ol>
         </div>
