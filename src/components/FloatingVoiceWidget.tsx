@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useVoice } from "@/contexts/VoiceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -40,9 +42,16 @@ const QUICK_COMMANDS: QuickCommand[] = [
 ];
 
 export default function FloatingVoiceWidget() {
+  const location = useLocation();
+  const { user } = useAuth();
   const { isListening, isProcessing, isSpeaking, processVoiceCommand, speak, stopSpeaking } = useVoice();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+
+  // Don't show on login page or when not authenticated
+  if (location.pathname === "/login" || !user) {
+    return null;
+  }
 
   const handleQuickCommand = async (command: string) => {
     try {

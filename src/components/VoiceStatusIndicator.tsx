@@ -1,8 +1,17 @@
+import { useLocation } from "react-router-dom";
 import { useVoice } from "@/contexts/VoiceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Mic, Loader2, Volume2 } from "lucide-react";
 
 export default function VoiceStatusIndicator() {
+  const location = useLocation();
+  const { user } = useAuth();
   const { isListening, isProcessing, isSpeaking, lastTranscript } = useVoice();
+
+  // Don't show on login page or when not authenticated
+  if (location.pathname === "/login" || !user) {
+    return null;
+  }
 
   if (!isListening && !isProcessing && !isSpeaking) {
     return null;

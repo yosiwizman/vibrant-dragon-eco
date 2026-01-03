@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command, Brain, Calendar, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
@@ -10,9 +10,15 @@ import { useCommandPalette } from "./VoiceCommandPalette";
 
 export default function NavBar() {
   const { user } = useAuth();
+  const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
   const { open: openCommandPalette } = useCommandPalette();
+
+  // Hide navbar completely on login page
+  if (location.pathname === "/login") {
+    return null;
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -41,6 +47,11 @@ export default function NavBar() {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // If not authenticated, don't show navbar
+  if (!user) {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 backdrop-blur-lg">
@@ -196,42 +207,32 @@ export default function NavBar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {user ? (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openCommandPalette}
-              className="text-slate-400 hover:text-white h-8 px-2 gap-1.5 hidden sm:flex"
-              title="Command Palette (⌘K)"
-            >
-              <Command className="h-3.5 w-3.5" />
-              <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowTutorial(true)}
-              className="text-slate-400 hover:text-white h-8 w-8"
-              title="Voice Commands Help"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            <NavLink to="/voice">
-              <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                <Mic className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Start Voice</span>
-              </Button>
-            </NavLink>
-            <UserMenu />
-          </>
-        ) : (
-          <NavLink to="/login">
-            <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-              Sign In
-            </Button>
-          </NavLink>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={openCommandPalette}
+          className="text-slate-400 hover:text-white h-8 px-2 gap-1.5 hidden sm:flex"
+          title="Command Palette (⌘K)"
+        >
+          <Command className="h-3.5 w-3.5" />
+          <kbd className="text-[10px] px-1 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</kbd>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowTutorial(true)}
+          className="text-slate-400 hover:text-white h-8 w-8"
+          title="Voice Commands Help"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+        <NavLink to="/voice">
+          <Button size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+            <Mic className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Start Voice</span>
+          </Button>
+        </NavLink>
+        <UserMenu />
       </div>
       
       <VoiceTutorial open={showTutorial} onClose={() => setShowTutorial(false)} />

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useVoice } from "@/contexts/VoiceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   CheckSquare, Bell, FileText, Calendar, 
   CloudSun, Search, Navigation, Volume2 
@@ -18,6 +20,8 @@ const QUICK_SUGGESTIONS = [
 ];
 
 export default function VoiceQuickActions() {
+  const location = useLocation();
+  const { user } = useAuth();
   const { isListening } = useVoice();
   const [visible, setVisible] = useState(false);
 
@@ -30,6 +34,11 @@ export default function VoiceQuickActions() {
       setVisible(false);
     }
   }, [isListening]);
+
+  // Don't show on login page or when not authenticated
+  if (location.pathname === "/login" || !user) {
+    return null;
+  }
 
   if (!visible) return null;
 

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Mic, MessageSquare, X, Send, Loader2, Volume2, MicOff } from "lucide-react";
+import { Mic, MessageSquare, X, Send, Loader2, Volume2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,8 +19,8 @@ export default function MicButton() {
   const [quickInput, setQuickInput] = useState("");
   const [isTextProcessing, setIsTextProcessing] = useState(false);
 
-  // Don't show on voice or chat pages
-  if (location.pathname === "/voice" || location.pathname === "/chat") {
+  // Don't show on voice, chat, or login pages, or when not authenticated
+  if (location.pathname === "/voice" || location.pathname === "/chat" || location.pathname === "/login" || !user) {
     return null;
   }
 
@@ -63,8 +63,9 @@ export default function MicButton() {
 
       setQuickInput("");
       setIsExpanded(false);
-    } catch (error: any) {
-      showError(error.message || "Failed to process");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to process";
+      showError(errorMessage);
     } finally {
       setIsTextProcessing(false);
     }

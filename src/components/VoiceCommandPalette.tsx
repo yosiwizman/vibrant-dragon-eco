@@ -281,6 +281,10 @@ export function useCommandPalette() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't open on login page
+      if (window.location.pathname === "/login") {
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setIsOpen(prev => !prev);
@@ -293,8 +297,20 @@ export function useCommandPalette() {
 
   return {
     isOpen,
-    open: () => setIsOpen(true),
+    open: () => {
+      // Don't open on login page
+      if (window.location.pathname === "/login") {
+        return;
+      }
+      setIsOpen(true);
+    },
     close: () => setIsOpen(false),
-    toggle: () => setIsOpen(prev => !prev),
+    toggle: () => {
+      // Don't toggle on login page
+      if (window.location.pathname === "/login") {
+        return;
+      }
+      setIsOpen(prev => !prev);
+    },
   };
 }
