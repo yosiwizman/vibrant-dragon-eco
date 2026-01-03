@@ -9,6 +9,9 @@ import LocationDisplay from "./LocationDisplay";
 import WeatherWidget from "./WeatherWidget";
 import RecentActivity from "./RecentActivity";
 import ProductivityInsights from "./ProductivityInsights";
+import FocusModeWidget from "./FocusModeWidget";
+import SmartSuggestions from "./SmartSuggestions";
+import StreakTracker from "./StreakTracker";
 import {
   CheckSquare,
   Bell,
@@ -210,14 +213,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* AI Usage Widget, Productivity, and Recent Activity */}
+      {/* Smart Suggestions */}
+      <SmartSuggestions />
+
+      {/* AI Usage Widget, Productivity, Focus Mode, and Streak */}
       <div className="grid gap-4 md:grid-cols-4">
         <AIUsageWidget />
         <ProductivityInsights />
-        <div className="md:col-span-2">
-          <RecentActivity />
-        </div>
+        <FocusModeWidget />
+        <StreakTracker />
       </div>
+
+      {/* Recent Activity */}
+      <RecentActivity />
 
       {/* Upcoming Items */}
       {upcomingItems.length > 0 && (
