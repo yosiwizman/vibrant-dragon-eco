@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -36,16 +36,52 @@ const Index = () => {
               </Button>
             </Link>
             <Link to="/chat">
-              <Button variant="secondary" className="border border-fuchsia-500/40 bg-fuchsia-500/20 text-white hover:bg-fuchsia-500/30">
+              <Button size="lg" className="border border-fuchsia-500/40 bg-fuchsia-500/20 text-white hover:bg-fuchsia-500/30">
                 <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
               </Button>
             </Link>
             <Link to="/integrations">
-              <Button variant="outline" className="border-slate-500 text-white hover:bg-slate-700">
+              <Button size="lg" className="border border-slate-600 bg-slate-800 text-white hover:bg-slate-700">
                 <Puzzle className="mr-2 h-4 w-4" /> Browse Apps
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4">
+          <Link to="/tasks">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <CheckSquare className="h-6 w-6 text-green-400" />
+                <span className="font-medium text-white">Tasks</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/reminders">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Bell className="h-6 w-6 text-yellow-400" />
+                <span className="font-medium text-white">Reminders</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/notes">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Brain className="h-6 w-6 text-purple-400" />
+                <span className="font-medium text-white">Notes</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link to="/calendar">
+            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Clock className="h-6 w-6 text-blue-400" />
+                <span className="font-medium text-white">Calendar</span>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -60,28 +96,28 @@ const Index = () => {
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Mic className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Conversation Mode</h3>
+              <Search className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Web Search</h3>
               <p className="text-sm text-slate-300">
-                Hands-free continuous listening. Echo responds, then listens again automatically.
+                Search the web, get summaries, and find information instantly through voice.
               </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Brain className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Knowledge Base</h3>
+              <Mail className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Email & SMS</h3>
               <p className="text-sm text-slate-300">
-                Store facts, preferences, and context. Echo remembers what matters to you.
+                Send emails and texts, get summaries, and manage communications hands-free.
               </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Puzzle className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Integrations</h3>
+              <Shield className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Private & Secure</h3>
               <p className="text-sm text-slate-300">
-                Connect Gmail, Calendar, Notion, and more. Extend Echo's capabilities.
+                Your API key, your data. Everything stays private and under your control.
               </p>
             </CardContent>
           </Card>

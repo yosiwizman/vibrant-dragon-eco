@@ -17,6 +17,10 @@ import Knowledge from "./pages/Knowledge";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Integrations from "./pages/Integrations";
+import Tasks from "./pages/Tasks";
+import Reminders from "./pages/Reminders";
+import Notes from "./pages/Notes";
+import Calendar from "./pages/Calendar";
 import MicButton from "@/components/MicButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -109,6 +113,38 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Integrations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <Tasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reminders"
+              element={
+                <ProtectedRoute>
+                  <Reminders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notes"
+              element={
+                <ProtectedRoute>
+                  <Notes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <Calendar />
                 </ProtectedRoute>
               }
             />
