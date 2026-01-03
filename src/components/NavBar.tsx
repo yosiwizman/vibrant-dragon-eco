@@ -15,11 +15,7 @@ export default function NavBar() {
   const [showTutorial, setShowTutorial] = useState(false);
   const { open: openCommandPalette } = useCommandPalette();
 
-  // Hide navbar completely on login page
-  if (location.pathname === "/login") {
-    return null;
-  }
-
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     if (!user) return;
 
@@ -48,8 +44,8 @@ export default function NavBar() {
     };
   }, [user]);
 
-  // If not authenticated, don't show navbar
-  if (!user) {
+  // Hide navbar completely on login page or when not authenticated
+  if (location.pathname === "/login" || !user) {
     return null;
   }
 
