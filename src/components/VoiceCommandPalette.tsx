@@ -3,10 +3,10 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Mic, Search, Navigation, CheckSquare, Bell, FileText, 
+import {
+  Mic, Search, Navigation, CheckSquare, Bell, FileText,
   Calendar, CloudSun, MapPin, Volume2, Clock, Users,
-  Command, Keyboard
+  Command, Keyboard, CalendarClock, EarOff
 } from "lucide-react";
 import { useVoice } from "@/contexts/VoiceContext";
 
@@ -93,6 +93,32 @@ const COMMAND_CATEGORIES: CommandCategory[] = [
       { phrase: "Find nearby [place]", description: "Find nearby places" },
       { phrase: "Search knowledge base for [topic]", description: "Search your documents" },
       { phrase: "What do you know about [topic]?", description: "Query knowledge base" },
+    ],
+  },
+  {
+    name: "Smart Scheduling",
+    icon: CalendarClock,
+    color: "text-teal-400",
+    commands: [
+      { phrase: "Schedule meeting at 2pm", description: "Create event with conflict check" },
+      { phrase: "When should I do this task?", description: "Get optimal time suggestions" },
+      { phrase: "Check my schedule", description: "Analyze today's schedule" },
+      { phrase: "What's my next free slot?", description: "Find available time" },
+      { phrase: "Remember I pick up my daughter Wednesdays at 2pm", description: "Create pattern-based reminder" },
+      { phrase: "Learn my patterns", description: "Analyze your scheduling habits" },
+    ],
+  },
+  {
+    name: "Quiet Mode",
+    icon: EarOff,
+    color: "text-purple-400",
+    commands: [
+      { phrase: "Go quiet", description: "Enter listening mode" },
+      { phrase: "Listening mode", description: "Start silent listening" },
+      { phrase: "Meeting mode", description: "Listen without interrupting" },
+      { phrase: "Echo summarize", description: "Exit quiet mode and get summary" },
+      { phrase: "What did you hear?", description: "Get conversation summary" },
+      { phrase: "End listening mode", description: "Stop listening and summarize" },
     ],
   },
   {
