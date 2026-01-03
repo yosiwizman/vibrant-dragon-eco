@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun, RefreshCw, Undo } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
+import RecurringItemsWidget from "@/components/RecurringItemsWidget";
 
 const Index = () => {
   const { user } = useAuth();
@@ -54,6 +55,11 @@ const Index = () => {
         {/* Dashboard Stats */}
         <div className="mt-6">
           <Dashboard />
+        </div>
+
+        {/* Recurring Items Widget */}
+        <div className="mt-6">
+          <RecurringItemsWidget />
         </div>
 
         {/* Quick Actions Grid */}
@@ -113,6 +119,14 @@ const Index = () => {
                 <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
                   <Brain className="h-8 w-8 text-purple-400" />
                   <span className="font-medium text-white text-sm">Knowledge</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/knowledge-base">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <FileText className="h-8 w-8 text-indigo-400" />
+                  <span className="font-medium text-white text-sm">RAG Docs</span>
                 </CardContent>
               </Card>
             </Link>
@@ -248,10 +262,26 @@ const Index = () => {
               </ul>
             </div>
             <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Recurring</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Remind me every day at 9am"</li>
+                <li>"Create weekly task"</li>
+                <li>"Show recurring items"</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Undo & Knowledge</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                <li>"Undo" / "Undo that"</li>
+                <li>"Search knowledge for RAG"</li>
+                <li>"What do you know about AI?"</li>
+              </ul>
+            </div>
+            <div>
               <h3 className="text-sm font-medium text-fuchsia-300 mb-2">Quick Tips</h3>
               <ul className="space-y-1 text-sm text-slate-400">
                 <li>Tap the mic button anywhere</li>
-                <li>Double-tap for full voice chat</li>
+                <li>Press ⌘K for command palette</li>
                 <li>Tap while speaking to interrupt</li>
               </ul>
             </div>

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command } from "lucide-react";
+import { Bot, MessageSquareText, Wrench, BookOpenText, History, Settings as Cog, Bug, Mic, Puzzle, Bell, HelpCircle, Command, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserMenu from "./UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -91,6 +91,18 @@ export default function NavBar() {
         >
           <BookOpenText className="h-4 w-4" />
           <span className="hidden sm:inline">Knowledge</span>
+        </NavLink>
+
+        <NavLink
+          to="/knowledge-base"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive ? "bg-fuchsia-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`
+          }
+        >
+          <Brain className="h-4 w-4" />
+          <span className="hidden sm:inline">RAG</span>
         </NavLink>
 
         <NavLink
