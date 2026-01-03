@@ -716,11 +716,58 @@ export async function executeDraftSMS(
 }
 
 // Build system prompt with tools
-export function buildSystemPrompt(): string {
-  return `You are Echo, a personal AI assistant. You help the user with various tasks including:
-- Web searching for information
-- Getting weather information
-- Finding nearby places
+export function buildSystemPrompt(userLocation?: { lat: number; lng: number; city?: string }): string {
+  const now = new Date();
+  const timeInfo = {
+    iso: now.toISOString(),
+    local: now.toLocaleString(),
+    date: now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+    time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long" }),
+    hour: now.getHours(),
+  };
+
+  const getTimeOfDay = () => {
+    const hour = timeInfo.hour;
+    if (hour < 6) return "night";
+    if (hour < 12) return "morning";
+    if (hour < 17) return "afternoon";
+    if (hour < 21) return "evening";
+    return "night";
+  };
+
+  let locationContext = "";
+  if (userLocation) {
+    locationContext = `
+USER LOCATION:
+- Coordinates: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}
+- City: ${userLocation.city || "Unknown"}
+- You can use this for weather, nearby places, and local context without asking.`;
+  } else {
+    locationContext = `
+USER LOCATION: Not available. If the user asks for weather or nearby places without specifying a location, ask them for their location or use the get_weather/find_nearby tools which will request permission.`;
+  }
+
+  return `You are Echo, a personal AI assistant. You are helpful, friendly, and proactive.
+
+CURRENT TIME & DATE:
+- Date: ${timeInfo.date}
+- Time: ${timeInfo.time} (${timeInfo.timezone})
+- Day: ${timeInfo.dayOfWeek}
+- Time of day: ${getTimeOfDay()}
+- ISO: ${timeInfo.iso}
+
+Use this time context naturally in conversations. For example:
+- Greet appropriately ("Good morning!", "Good evening!")
+- When creating reminders/events, understand relative times ("tomorrow", "next week", "in 2 hours")
+- Be aware of business hours, weekends, etc.
+${locationContext}
+
+CAPABILITIES:
+- Web searching for current information
+- Getting weather (current conditions and forecasts)
+- Finding nearby places (restaurants, gas stations, pharmacies, etc.)
 - Managing reminders and alarms
 - Creating and tracking tasks/to-dos
 - Taking notes
@@ -730,10 +777,11 @@ export function buildSystemPrompt(): string {
 - Drafting emails and SMS messages
 - Storing and retrieving personal knowledge/preferences
 
-You have access to the following tools:
+AVAILABLE TOOLS:
 ${AVAILABLE_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n")}
 
-When the user asks you to do something that requires a tool, respond with a JSON block like this:
+TOOL USAGE:
+When you need to use a tool, respond with a JSON block:
 \`\`\`json
 {
   "tool": "tool_name",
@@ -741,10 +789,14 @@ When the user asks you to do something that requires a tool, respond with a JSON
 }
 \`\`\`
 
-After using a tool, provide a natural language response summarizing what you did.
-
-Be helpful, concise, and proactive. If the user mentions a time, date, or deadline, offer to create a reminder or calendar event.
-Current date/time: ${new Date().toISOString()}`;
+GUIDELINES:
+1. Be proactive - if the user mentions a time/date, offer to create a reminder or event
+2. Use location context when available for weather and nearby searches
+3. For relative times ("tomorrow at 3pm"), calculate the actual ISO datetime
+4. Keep responses concise but helpful
+5. After using a tool, summarize what you did in natural language
+6. If multiple tools are needed, use them one at a time
+7. For drafting emails/SMS, create the draft and let the user know they can find it in Messages`;
 }
 
 // Parse tool calls from AI response

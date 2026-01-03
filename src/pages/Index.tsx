@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle, Bell, CheckSquare, Clock, Search, Mail, FileText, Users, Send, MapPin, CloudSun } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dashboard from "@/components/Dashboard";
 
@@ -54,108 +54,145 @@ const Index = () => {
           <Dashboard />
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-6 grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
-          <Link to="/tasks">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <CheckSquare className="h-6 w-6 text-green-400" />
-                <span className="font-medium text-white">Tasks</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/reminders">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Bell className="h-6 w-6 text-yellow-400" />
-                <span className="font-medium text-white">Reminders</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/knowledge">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Brain className="h-6 w-6 text-purple-400" />
-                <span className="font-medium text-white">Knowledge</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/calendar">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Clock className="h-6 w-6 text-blue-400" />
-                <span className="font-medium text-white">Calendar</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/notes">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <FileText className="h-6 w-6 text-orange-400" />
-                <span className="font-medium text-white">Notes</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/notifications">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Bell className="h-6 w-6 text-fuchsia-400" />
-                <span className="font-medium text-white">Notifications</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/contacts">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Users className="h-6 w-6 text-cyan-400" />
-                <span className="font-medium text-white">Contacts</span>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/messages">
-            <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Send className="h-6 w-6 text-emerald-400" />
-                <span className="font-medium text-white">Messages</span>
-              </CardContent>
-            </Card>
-          </Link>
+        {/* Quick Actions Grid */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold text-white mb-3">Quick Access</h2>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <Link to="/tasks">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <CheckSquare className="h-8 w-8 text-green-400" />
+                  <span className="font-medium text-white text-sm">Tasks</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/reminders">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Bell className="h-8 w-8 text-yellow-400" />
+                  <span className="font-medium text-white text-sm">Reminders</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/notes">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <FileText className="h-8 w-8 text-orange-400" />
+                  <span className="font-medium text-white text-sm">Notes</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/calendar">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Clock className="h-8 w-8 text-blue-400" />
+                  <span className="font-medium text-white text-sm">Calendar</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/contacts">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Users className="h-8 w-8 text-cyan-400" />
+                  <span className="font-medium text-white text-sm">Contacts</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/messages">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Send className="h-8 w-8 text-emerald-400" />
+                  <span className="font-medium text-white text-sm">Messages</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/knowledge">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Brain className="h-8 w-8 text-purple-400" />
+                  <span className="font-medium text-white text-sm">Knowledge</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/tools">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Search className="h-8 w-8 text-fuchsia-400" />
+                  <span className="font-medium text-white text-sm">Tools</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/notifications">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Bell className="h-8 w-8 text-red-400" />
+                  <span className="font-medium text-white text-sm">Alerts</span>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/settings">
+              <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+                  <Shield className="h-8 w-8 text-slate-400" />
+                  <span className="font-medium text-white text-sm">Settings</span>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Volume2 className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Natural Voice</h3>
-              <p className="text-sm text-slate-300">
-                OpenAI Whisper STT + TTS with 11 voice options. Speak naturally, hear clear responses.
+              <Volume2 className="h-6 w-6 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Voice Chat</h3>
+              <p className="text-xs text-slate-300">
+                Natural conversations with OpenAI voices
               </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Search className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Web Search</h3>
-              <p className="text-sm text-slate-300">
-                Search the web, get summaries, and find information instantly through voice.
+              <Search className="h-6 w-6 text-blue-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Web Search</h3>
+              <p className="text-xs text-slate-300">
+                Search the web instantly
               </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Mail className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Email & SMS</h3>
-              <p className="text-sm text-slate-300">
-                Send emails and texts, get summaries, and manage communications hands-free.
+              <CloudSun className="h-6 w-6 text-yellow-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Weather</h3>
+              <p className="text-xs text-slate-300">
+                Current conditions & forecasts
               </p>
             </CardContent>
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Shield className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Private & Secure</h3>
-              <p className="text-sm text-slate-300">
-                Your API key, your data. Everything stays private and under your control.
+              <MapPin className="h-6 w-6 text-green-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Nearby Places</h3>
+              <p className="text-xs text-slate-300">
+                Find restaurants, gas, pharmacies
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+            <CardContent className="p-4">
+              <Mail className="h-6 w-6 text-cyan-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Email & SMS</h3>
+              <p className="text-xs text-slate-300">
+                Draft messages hands-free
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
+            <CardContent className="p-4">
+              <Shield className="h-6 w-6 text-slate-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1 text-sm">Private</h3>
+              <p className="text-xs text-slate-300">
+                Your keys, your data
               </p>
             </CardContent>
           </Card>

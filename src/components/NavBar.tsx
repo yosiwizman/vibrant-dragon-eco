@@ -57,8 +57,8 @@ export default function NavBar() {
   const links = [
     { to: "/voice", label: "Voice", icon: <Mic className="h-4 w-4" /> },
     { to: "/chat", label: "Chat", icon: <MessageSquareText className="h-4 w-4" /> },
+    { to: "/messages", label: "Messages", icon: <MessageSquareText className="h-4 w-4" /> },
     { to: "/integrations", label: "Apps", icon: <Puzzle className="h-4 w-4" /> },
-    { to: "/knowledge", label: "Knowledge", icon: <BookOpenText className="h-4 w-4" /> },
     { to: "/tools", label: "Tools", icon: <Wrench className="h-4 w-4" /> },
     { to: "/settings", label: "Settings", icon: <Cog className="h-4 w-4" /> },
   ];
