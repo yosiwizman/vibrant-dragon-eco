@@ -1,9 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield } from "lucide-react";
+import { Mic, Sparkles, MessageSquareText, Volume2, Brain, Shield, Puzzle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
       <div className="mx-auto max-w-5xl p-6">
@@ -13,7 +23,7 @@ const Index = () => {
             <span className="text-sm font-medium">Personal • Voice-first • Private</span>
           </div>
           <h1 className="mt-3 text-4xl font-bold text-white md:text-5xl">
-            Echo. Your private, always-ready copilot.
+            {getGreeting()}{user?.email ? `, ${user.email.split("@")[0]}` : ""}!
           </h1>
           <p className="mt-4 max-w-2xl text-slate-300">
             Have natural conversations with your AI assistant. Just speak — Echo listens,
@@ -30,9 +40,9 @@ const Index = () => {
                 <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
               </Button>
             </Link>
-            <Link to="/settings">
+            <Link to="/integrations">
               <Button variant="outline" className="border-slate-500 text-white hover:bg-slate-700">
-                Settings
+                <Puzzle className="mr-2 h-4 w-4" /> Browse Apps
               </Button>
             </Link>
           </div>
@@ -68,10 +78,10 @@ const Index = () => {
           </Card>
           <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur">
             <CardContent className="p-4">
-              <Shield className="h-8 w-8 text-fuchsia-400 mb-2" />
-              <h3 className="font-semibold text-white mb-1">Private & Local</h3>
+              <Puzzle className="h-8 w-8 text-fuchsia-400 mb-2" />
+              <h3 className="font-semibold text-white mb-1">Integrations</h3>
               <p className="text-sm text-slate-300">
-                Your API key, your data. Private Mode keeps everything local-only.
+                Connect Gmail, Calendar, Notion, and more. Extend Echo's capabilities.
               </p>
             </CardContent>
           </Card>
@@ -90,6 +100,10 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">3</span>
+              <span>Browse <Link to="/integrations" className="text-fuchsia-300 hover:underline">Integrations</Link> to connect your apps</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">4</span>
               <span>Click "Start Voice Conversation" and start talking!</span>
             </li>
           </ol>
