@@ -164,40 +164,6 @@ const Index = () => {
           <Dashboard />
         </div>
 
-        {/* Quick Access Grid - Mobile Friendly */}
-        <div className="mt-4">
-          <h2 className="text-base font-semibold text-white mb-3">Quick Access</h2>
-          <div className="grid gap-2 grid-cols-4 md:grid-cols-8">
-            {quickAccessItems.map((item) => (
-              <Link key={item.to} to={item.to}>
-                <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/50 transition-colors cursor-pointer">
-                  <CardContent className="p-2 md:p-3 flex flex-col items-center gap-1 text-center">
-                    <item.icon className={`h-5 w-5 md:h-6 md:w-6 ${item.color}`} />
-                    <span className="font-medium text-white text-[10px] md:text-xs leading-tight">{item.label}</span>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Tools & More Grid - Mobile Friendly */}
-        <div className="mt-4">
-          <h2 className="text-base font-semibold text-white mb-3">Tools & More</h2>
-          <div className="grid gap-2 grid-cols-4 md:grid-cols-8">
-            {toolsItems.map((item) => (
-              <Link key={item.to} to={item.to}>
-                <Card className="border-slate-700/50 bg-black/20 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
-                  <CardContent className="p-2 md:p-3 flex flex-col items-center gap-1 text-center">
-                    <item.icon className={`h-5 w-5 md:h-6 md:w-6 ${item.color}`} />
-                    <span className="font-medium text-slate-300 text-[10px] md:text-xs leading-tight">{item.label}</span>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-
         {/* Voice Commands Quick Reference - Collapsible on Mobile */}
         <details className="mt-4 rounded-xl border border-slate-700/50 bg-black/30">
           <summary className="p-4 cursor-pointer text-base font-semibold text-white flex items-center gap-2">
