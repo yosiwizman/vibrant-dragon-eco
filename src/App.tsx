@@ -42,7 +42,7 @@ import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
 import ListeningModeIndicator from "@/components/ListeningModeIndicator";
 import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import FanMenu from "@/components/FanMenu";
+import QuickAccessPanel from "@/components/QuickAccessPanel";
 
 const queryClient = new QueryClient();
 
@@ -278,7 +278,7 @@ const App = () => (
             <MicButton />
             <FloatingVoiceWidget />
             <ListeningModeIndicator />
-            <FanMenu />
+            <QuickAccessPanel />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>
