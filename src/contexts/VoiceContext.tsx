@@ -22,6 +22,7 @@ interface VoiceContextType {
   isProcessing: boolean;
   isSpeaking: boolean;
   isQuietMode: boolean;
+  isConversationMode: boolean;
   lastTranscript: string;
   currentTranscript: string;
   lastResponse: string;
@@ -32,6 +33,8 @@ interface VoiceContextType {
   processVoiceCommand: (text: string) => Promise<string>;
   enterQuietMode: (context?: string) => void;
   exitQuietMode: () => Promise<{ summary: string; bulletPoints: string[]; actionItems: string[] } | null>;
+  startConversationMode: () => Promise<void>;
+  stopConversationMode: () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | null>(null);
@@ -55,6 +58,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isQuietMode, setIsQuietMode] = useState(false);
+  const [isConversationMode, setIsConversationMode] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [lastResponse, setLastResponse] = useState("");
@@ -65,6 +69,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const conversationModeRef = useRef(false);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const silenceStartRef = useRef<number | null>(null);
+
+  // Sync ref with state
+  useEffect(() => {
+    conversationModeRef.current = isConversationMode;
+  }, [isConversationMode]);
 
   // Get location on mount
   useEffect(() => {
@@ -82,12 +95,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   // Wake word detection
   useEffect(() => {
-    if (preferences.wakeWordEnabled && isWakeWordSupported() && !isListening && !isProcessing && !isSpeaking) {
+    if (preferences.wakeWordEnabled && isWakeWordSupported() && !isListening && !isProcessing && !isSpeaking && !isConversationMode) {
       startWakeWordDetection({
         wakeWord: preferences.wakeWord || "echo",
         onWakeWordDetected: () => {
           showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
-          startListening();
+          startConversationMode();
         },
         onError: (error) => {
           console.error("Wake word error:", error);
@@ -100,7 +113,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     return () => {
       stopWakeWordDetection();
     };
-  }, [preferences.wakeWordEnabled, preferences.wakeWord, isListening, isProcessing, isSpeaking]);
+  }, [preferences.wakeWordEnabled, preferences.wakeWord, isListening, isProcessing, isSpeaking, isConversationMode]);
 
   const stopSpeaking = useCallback(() => {
     if (currentAudioRef.current) {
@@ -339,7 +352,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
 
-  const startListening = useCallback(async () => {
+  // Internal function to start listening (used by conversation mode)
+  const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
     if (isListening) return;
 
     if (!openaiApiKey) {
@@ -348,7 +362,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      playFeedback("start");
+      if (!isConversation) {
+        playFeedback("start");
+      }
       setCurrentTranscript("");
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -361,6 +377,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       
       streamRef.current = stream;
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Set up audio analysis for silence detection in conversation mode
+      if (isConversation) {
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 2048;
+        source.connect(analyserRef.current);
+        silenceStartRef.current = null;
+      }
       
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -378,7 +403,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        playFeedback("stop");
+        if (!isConversation) {
+          playFeedback("stop");
+        }
         const blob = new Blob(chunksRef.current, { type: mimeType });
         
         // Clean up stream
@@ -400,6 +427,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             setCurrentTranscript(transcriptText);
             
             if (transcriptText) {
+              // Check for exit phrases in conversation mode
+              if (conversationModeRef.current && /\b(goodbye|bye|stop|exit|end conversation|that's all|thank you|thanks)\b/i.test(transcriptText)) {
+                setIsProcessing(false);
+                await speak("Goodbye! Let me know if you need anything else.");
+                stopConversationMode();
+                return;
+              }
+
               // Check for quiet mode entry/exit
               if (isEnterPhrase(transcriptText) && user) {
                 const contextMatch = transcriptText.match(/for\s+(.+?)(?:\s*$|,)/i);
@@ -434,6 +469,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 addTranscript(user.id, transcriptText);
                 setIsProcessing(false);
                 // Don't respond, just keep listening
+                if (conversationModeRef.current) {
+                  setTimeout(() => startListeningInternal(true), 500);
+                }
                 return;
               }
 
@@ -447,9 +485,17 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                     `Create ${flowResult.state?.intent.replace(/_/g, " ")} with: ${JSON.stringify(flowResult.collectedData)}`
                   );
                   await speak(response);
+                  // Continue conversation mode
+                  if (conversationModeRef.current) {
+                    setTimeout(() => startListeningInternal(true), 500);
+                  }
                 } else if (flowResult.nextPrompt) {
                   setIsProcessing(false);
                   await speak(flowResult.nextPrompt);
+                  // Continue conversation mode
+                  if (conversationModeRef.current) {
+                    setTimeout(() => startListeningInternal(true), 500);
+                  }
                 }
                 return;
               }
@@ -461,6 +507,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                   playFeedback("success");
                   setIsProcessing(false);
                   await speak(modResult.message);
+                  // Continue conversation mode
+                  if (conversationModeRef.current) {
+                    setTimeout(() => startListeningInternal(true), 500);
+                  }
                   return;
                 }
               }
@@ -472,6 +522,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 if (flowStart) {
                   setIsProcessing(false);
                   await speak(flowStart.prompt);
+                  // Continue conversation mode
+                  if (conversationModeRef.current) {
+                    setTimeout(() => startListeningInternal(true), 500);
+                  }
                   return;
                 }
               }
@@ -481,6 +535,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
                 cancelFlow(user.id);
                 setIsProcessing(false);
                 await speak("Cancelled. What else can I help with?");
+                // Continue conversation mode
+                if (conversationModeRef.current) {
+                  setTimeout(() => startListeningInternal(true), 500);
+                }
                 return;
               }
 
@@ -493,8 +551,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               }
               
               await speak(response);
+              
+              // Continue conversation mode after speaking
+              if (conversationModeRef.current) {
+                console.log("Continuing conversation mode...");
+                setTimeout(() => startListeningInternal(true), 500);
+              }
             } else {
               setIsProcessing(false);
+              // If no speech detected but in conversation mode, keep listening
+              if (conversationModeRef.current) {
+                setTimeout(() => startListeningInternal(true), 500);
+              }
             }
           } catch (error: any) {
             playFeedback("error");
@@ -506,21 +574,82 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             if (user) {
               logAIError(user.id, error.message || "Voice processing failed", { transcript: transcriptText });
             }
+            
+            // Continue conversation mode even after error
+            if (conversationModeRef.current) {
+              await speak("Sorry, I had trouble with that. Please try again.");
+              setTimeout(() => startListeningInternal(true), 500);
+            }
           }
         } else {
           setIsProcessing(false);
+          // If no audio but in conversation mode, keep listening
+          if (conversationModeRef.current) {
+            setTimeout(() => startListeningInternal(true), 500);
+          }
         }
       };
 
       mediaRecorderRef.current.start(100);
       setIsListening(true);
+      
+      // In conversation mode, use silence detection to auto-stop
+      if (isConversation && analyserRef.current) {
+        const checkSilence = () => {
+          if (!analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== "recording") {
+            return;
+          }
+          
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(dataArray);
+          
+          // Calculate average volume
+          const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          
+          // Threshold for silence (adjust as needed)
+          const silenceThreshold = 10;
+          const silenceDuration = 2000; // 2 seconds of silence to stop
+          
+          if (average < silenceThreshold) {
+            if (silenceStartRef.current === null) {
+              silenceStartRef.current = Date.now();
+            } else if (Date.now() - silenceStartRef.current > silenceDuration) {
+              // Silence detected for long enough, stop recording
+              console.log("Silence detected, stopping recording");
+              if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                mediaRecorderRef.current.stop();
+              }
+              return;
+            }
+          } else {
+            // Reset silence timer when sound is detected
+            silenceStartRef.current = null;
+          }
+          
+          // Continue checking
+          if (conversationModeRef.current) {
+            silenceTimeoutRef.current = setTimeout(checkSilence, 100);
+          }
+        };
+        
+        // Start checking after a brief delay to allow user to start speaking
+        silenceTimeoutRef.current = setTimeout(checkSilence, 1000);
+      }
     } catch (error: any) {
       console.error("Failed to start recording:", error);
       showError(error.message || "Failed to start recording. Please check microphone permissions.");
     }
   }, [isListening, openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode, preferences.quietModeExitPhrase]);
 
+  const startListening = useCallback(async () => {
+    await startListeningInternal(false);
+  }, [startListeningInternal]);
+
   const stopListening = useCallback(() => {
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
@@ -532,8 +661,38 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    analyserRef.current = null;
+    silenceStartRef.current = null;
     setIsListening(false);
   }, []);
+
+  const startConversationMode = useCallback(async () => {
+    if (isConversationMode) return;
+    
+    console.log("Starting conversation mode");
+    setIsConversationMode(true);
+    conversationModeRef.current = true;
+    
+    // Play a greeting
+    await speak(`Hi! I'm ${preferences.assistantName || "Echo"}. How can I help you?`);
+    
+    // Start listening
+    await startListeningInternal(true);
+  }, [isConversationMode, speak, startListeningInternal, preferences.assistantName]);
+
+  const stopConversationMode = useCallback(() => {
+    console.log("Stopping conversation mode");
+    conversationModeRef.current = false;
+    setIsConversationMode(false);
+    
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    
+    stopListening();
+    stopSpeaking();
+  }, [stopListening, stopSpeaking]);
 
   const enterQuietMode = useCallback((context?: string) => {
     if (!user) return;
@@ -575,6 +734,16 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+      stopConversationMode();
+    };
+  }, []);
+
   return (
     <VoiceContext.Provider
       value={{
@@ -582,6 +751,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         isProcessing,
         isSpeaking,
         isQuietMode,
+        isConversationMode,
         lastTranscript,
         currentTranscript,
         lastResponse,
@@ -592,6 +762,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         processVoiceCommand,
         enterQuietMode,
         exitQuietMode,
+        startConversationMode,
+        stopConversationMode,
       }}
     >
       {children}

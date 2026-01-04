@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Mic,
+  MicOff,
   X,
   ChevronUp,
   ChevronDown,
@@ -25,7 +26,10 @@ import {
   Volume2,
   Sparkles,
   Loader2,
-  EarOff
+  EarOff,
+  MessageCircle,
+  Phone,
+  PhoneOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +62,8 @@ export default function FloatingVoiceWidget() {
     isListening, 
     isProcessing, 
     isSpeaking, 
-    isQuietMode, 
+    isQuietMode,
+    isConversationMode,
     lastTranscript, 
     currentTranscript,
     lastResponse: contextLastResponse,
@@ -67,7 +72,9 @@ export default function FloatingVoiceWidget() {
     stopSpeaking, 
     startListening, 
     stopListening, 
-    exitQuietMode 
+    exitQuietMode,
+    startConversationMode,
+    stopConversationMode
   } = useVoice();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -128,15 +135,25 @@ export default function FloatingVoiceWidget() {
   };
 
   const handleMicClick = async () => {
-    if (isListening) {
+    if (isConversationMode) {
+      // Stop conversation mode
+      stopConversationMode();
+    } else if (isListening) {
       stopListening();
     } else if (!isProcessing && !isSpeaking) {
-      await startListening();
+      // Start conversation mode instead of single recording
+      await startConversationMode();
     }
   };
 
   const getStatusText = () => {
     if (isQuietMode) return "Quiet Mode";
+    if (isConversationMode) {
+      if (isListening) return "Listening...";
+      if (isProcessing) return "Thinking...";
+      if (isSpeaking) return "Speaking...";
+      return "Conversation Mode";
+    }
     if (isListening) return "Listening...";
     if (isProcessing) return "Thinking...";
     if (isSpeaking) return "Speaking...";
@@ -145,6 +162,7 @@ export default function FloatingVoiceWidget() {
 
   const getStatusColor = () => {
     if (isQuietMode) return "bg-purple-500";
+    if (isConversationMode) return "bg-green-500";
     if (isListening) return "bg-red-500";
     if (isProcessing) return "bg-yellow-500";
     if (isSpeaking) return "bg-green-500";
@@ -170,7 +188,8 @@ export default function FloatingVoiceWidget() {
     <div className="fixed bottom-24 left-4 z-40">
       <Card className={cn(
         "border-fuchsia-500/30 bg-black/90 backdrop-blur-lg shadow-xl transition-all duration-300",
-        isExpanded ? "w-80" : "w-auto"
+        isExpanded ? "w-80" : "w-auto",
+        isConversationMode && "border-green-500/50"
       )}>
         <CardContent className="p-3">
           {/* Header */}
@@ -182,12 +201,14 @@ export default function FloatingVoiceWidget() {
                 className={cn(
                   "p-2 rounded-full transition-all",
                   getStatusColor(),
-                  (isListening || isProcessing || isSpeaking) && "animate-pulse",
+                  (isListening || isProcessing || isSpeaking || isConversationMode) && "animate-pulse",
                   !isProcessing && "hover:scale-110 cursor-pointer"
                 )}
               >
                 {isProcessing ? (
                   <Loader2 className="h-4 w-4 text-white animate-spin" />
+                ) : isConversationMode ? (
+                  <PhoneOff className="h-4 w-4 text-white" />
                 ) : (
                   <Mic className={cn(
                     "h-4 w-4",
@@ -196,12 +217,20 @@ export default function FloatingVoiceWidget() {
                 )}
               </button>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-white">
+                <span className={cn(
+                  "text-xs font-medium",
+                  isConversationMode ? "text-green-400" : "text-white"
+                )}>
                   {getStatusText()}
                 </span>
                 {(isListening || isProcessing) && displayTranscript && (
                   <span className="text-[10px] text-slate-400 truncate max-w-[150px]">
                     "{displayTranscript}"
+                  </span>
+                )}
+                {isConversationMode && !isListening && !isProcessing && !isSpeaking && (
+                  <span className="text-[10px] text-green-400/70">
+                    Say "goodbye" to end
                   </span>
                 )}
               </div>
@@ -226,8 +255,29 @@ export default function FloatingVoiceWidget() {
             </div>
           </div>
 
+          {/* Conversation Mode Indicator */}
+          {isConversationMode && (
+            <div className="mt-2 p-2 rounded-lg bg-green-600/20 border border-green-500/30">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-xs text-green-300">
+                  {isListening ? "I'm listening..." : 
+                   isProcessing ? "Processing..." : 
+                   isSpeaking ? "Speaking..." : 
+                   "Ready to listen"}
+                </p>
+              </div>
+              {displayTranscript && (
+                <p className="text-xs text-white mt-1">
+                  <span className="text-green-300">You: </span>
+                  "{displayTranscript}"
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Live Transcript Display (when listening/processing) */}
-          {(isListening || isProcessing) && displayTranscript && !isExpanded && (
+          {!isConversationMode && (isListening || isProcessing) && displayTranscript && !isExpanded && (
             <div className="mt-2 p-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30">
               <p className="text-xs text-white">
                 <span className="text-fuchsia-300">You: </span>
@@ -237,14 +287,14 @@ export default function FloatingVoiceWidget() {
           )}
 
           {/* Last Response Preview */}
-          {displayResponse && !isExpanded && !isListening && !isProcessing && (
+          {displayResponse && !isExpanded && !isListening && !isProcessing && !isConversationMode && (
             <div className="mt-2 p-2 rounded-lg bg-slate-800/50 border border-slate-700">
               <p className="text-xs text-slate-300 line-clamp-2">{displayResponse}</p>
             </div>
           )}
 
           {/* Quick Commands Grid */}
-          {isExpanded && (
+          {isExpanded && !isConversationMode && (
             <>
               {/* Live Transcript in Expanded View */}
               {(isListening || isProcessing) && displayTranscript && (
@@ -286,13 +336,26 @@ export default function FloatingVoiceWidget() {
 
               {/* Tip */}
               <p className="text-[10px] text-slate-500 text-center mt-2">
-                Click mic to speak • Press ⌘K for more commands
+                Click mic for conversation mode • Press ⌘K for more commands
               </p>
             </>
           )}
 
+          {/* Conversation Mode Controls */}
+          {isConversationMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mt-2 border-red-500/50 text-red-400 hover:bg-red-500/20"
+              onClick={stopConversationMode}
+            >
+              <PhoneOff className="h-4 w-4 mr-2" />
+              End Conversation
+            </Button>
+          )}
+
           {/* Quiet Mode Exit Button */}
-          {isQuietMode && (
+          {isQuietMode && !isConversationMode && (
             <Button
               size="sm"
               variant="outline"
@@ -305,7 +368,7 @@ export default function FloatingVoiceWidget() {
           )}
 
           {/* Stop Speaking Button */}
-          {isSpeaking && !isQuietMode && (
+          {isSpeaking && !isQuietMode && !isConversationMode && (
             <Button
               size="sm"
               variant="outline"

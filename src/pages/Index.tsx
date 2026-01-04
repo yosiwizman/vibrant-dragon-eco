@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   Mic, Sparkles, MessageSquareText, Brain, Shield, Puzzle, Bell,
   CheckSquare, Clock, FileText, Users, Send, Calendar, Activity,
-  Phone, Edit, Settings, Wrench, History, BookOpenText, EarOff
+  Phone, Edit, Settings, Wrench, History, BookOpenText, EarOff, PhoneOff
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
@@ -18,7 +18,14 @@ import ChatTips from "@/components/ChatTips";
 const Index = () => {
   const { user } = useAuth();
   const { hasKey: hasOpenAIKey } = useOpenAIKey();
-  const { isListening, isProcessing, isSpeaking, startListening, stopListening } = useVoice();
+  const { 
+    isListening, 
+    isProcessing, 
+    isSpeaking, 
+    isConversationMode,
+    startConversationMode, 
+    stopConversationMode 
+  } = useVoice();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -28,10 +35,10 @@ const Index = () => {
   };
 
   const handleVoiceToggle = async () => {
-    if (isListening) {
-      stopListening();
+    if (isConversationMode) {
+      stopConversationMode();
     } else {
-      await startListening();
+      await startConversationMode();
     }
   };
 
@@ -57,7 +64,25 @@ const Index = () => {
     { to: "/drafts", icon: Edit, label: "Drafts", color: "text-rose-400" },
   ];
 
-  const isVoiceActive = isListening || isProcessing || isSpeaking;
+  const isVoiceActive = isListening || isProcessing || isSpeaking || isConversationMode;
+
+  const getButtonText = () => {
+    if (!hasOpenAIKey) return "Add API Key First";
+    if (isConversationMode) {
+      if (isListening) return "Listening...";
+      if (isProcessing) return "Thinking...";
+      if (isSpeaking) return "Speaking...";
+      return "End Conversation";
+    }
+    return "Start Voice";
+  };
+
+  const getButtonIcon = () => {
+    if (isConversationMode) {
+      return <PhoneOff className="mr-2 h-5 w-5" />;
+    }
+    return <Mic className="mr-2 h-5 w-5" />;
+  };
 
   return (
     <div className="min-h-[calc(100vh-56px)] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
@@ -81,15 +106,17 @@ const Index = () => {
               size="lg"
               onClick={handleVoiceToggle}
               disabled={!hasOpenAIKey}
-              className={`shadow-lg shadow-fuchsia-500/25 ${
-                isListening
-                  ? "bg-red-600 hover:bg-red-500 animate-pulse"
-                  : "bg-fuchsia-600 hover:bg-fuchsia-500"
+              className={`shadow-lg transition-all ${
+                isConversationMode
+                  ? "bg-green-600 hover:bg-green-500 shadow-green-500/25 ring-2 ring-green-400/50"
+                  : isListening
+                  ? "bg-red-600 hover:bg-red-500 animate-pulse shadow-red-500/25"
+                  : "bg-fuchsia-600 hover:bg-fuchsia-500 shadow-fuchsia-500/25"
               } ${!hasOpenAIKey ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={!hasOpenAIKey ? "Add your OpenAI API key in Settings first" : undefined}
+              title={!hasOpenAIKey ? "Add your OpenAI API key in Settings first" : isConversationMode ? "Click to end conversation" : "Click to start a voice conversation"}
             >
-              <Mic className="mr-2 h-5 w-5" />
-              {isListening ? "Stop Listening" : hasOpenAIKey ? "Start Voice" : "Add API Key First"}
+              {getButtonIcon()}
+              {getButtonText()}
             </Button>
             <Link to="/chat">
               <Button size="lg" variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20">
@@ -97,6 +124,24 @@ const Index = () => {
               </Button>
             </Link>
           </div>
+          
+          {/* Conversation Mode Status */}
+          {isConversationMode && (
+            <div className="mt-4 p-3 rounded-xl bg-green-900/30 border border-green-500/30">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-sm text-green-300 font-medium">
+                  {isListening ? "I'm listening..." : 
+                   isProcessing ? "Processing your request..." : 
+                   isSpeaking ? "Speaking..." : 
+                   "Ready to listen"}
+                </span>
+              </div>
+              <p className="text-xs text-green-400/70 mt-1">
+                Say "goodbye", "bye", or "stop" to end the conversation
+              </p>
+            </div>
+          )}
         </div>
 
         {/* API Key Status - Shows if not configured */}
@@ -117,8 +162,8 @@ const Index = () => {
         {!isVoiceActive && (
           <div className="mt-4">
             <ChatTips onPromptClick={async (prompt) => {
-              // Start listening and process the prompt
-              await startListening();
+              // Start conversation mode
+              await startConversationMode();
             }} />
           </div>
         )}
@@ -195,11 +240,11 @@ const Index = () => {
               </ul>
             </div>
             <div>
-              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Quiet Mode</h3>
+              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Conversation</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
-                <li>"Go quiet" / "Listening mode"</li>
-                <li>"Echo summarize"</li>
-                <li>"What did you hear?"</li>
+                <li>Click mic to start talking</li>
+                <li>Say "goodbye" to end</li>
+                <li>Natural back-and-forth chat</li>
               </ul>
             </div>
           </div>
@@ -218,7 +263,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
-              <span>Choose your preferred voice and click "Start Voice"</span>
+              <span>Choose your preferred voice and click "Start Voice" for a continuous conversation</span>
             </li>
           </ol>
         </div>
