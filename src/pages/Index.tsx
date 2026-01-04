@@ -13,7 +13,6 @@ import APIKeyStatus from "@/components/APIKeyStatus";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
 import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
-import ChatTips from "@/components/ChatTips";
 
 const Index = () => {
   const { user } = useAuth();
@@ -155,16 +154,6 @@ const Index = () => {
         {isVoiceActive && (
           <div className="mt-4">
             <VoiceTranscriptDisplay showResponse={true} />
-          </div>
-        )}
-
-        {/* Quick Voice Commands - Shows when not actively using voice */}
-        {!isVoiceActive && (
-          <div className="mt-4">
-            <ChatTips onPromptClick={async (prompt) => {
-              // Start conversation mode
-              await startConversationMode();
-            }} />
           </div>
         )}
 
