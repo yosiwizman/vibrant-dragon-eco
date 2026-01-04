@@ -13,6 +13,8 @@ import APIKeyStatus from "@/components/APIKeyStatus";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
 import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
+import WeatherWidget from "@/components/WeatherWidget";
+import LocationDisplay from "@/components/LocationDisplay";
 
 const Index = () => {
   const { user } = useAuth();
@@ -156,6 +158,12 @@ const Index = () => {
             <VoiceTranscriptDisplay showResponse={true} />
           </div>
         )}
+
+        {/* Location & Weather */}
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <WeatherWidget />
+          <LocationDisplay />
+        </div>
 
         {/* Dashboard Stats - Live Data */}
         <div className="mt-6">
