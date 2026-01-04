@@ -41,7 +41,6 @@ import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
 import ListeningModeIndicator from "@/components/ListeningModeIndicator";
 import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
-import VoiceQuickActions from "@/components/VoiceQuickActions";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -276,7 +275,6 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MicButton />
-            <VoiceQuickActions />
             <FloatingVoiceWidget />
             <ListeningModeIndicator />
           </VoiceProvider>
