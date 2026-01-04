@@ -38,17 +38,17 @@ export default function FanMenu() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // Calculate fan positions (radial layout)
+  // Calculate fan positions (radial layout) - expanding LEFT and UP
   const getItemPosition = (index: number, total: number) => {
     const radius = 140; // Distance from center
-    const startAngle = -90; // Start from top
+    const startAngle = 90; // Start from left (90 degrees)
     const angleSpread = 180; // Spread across 180 degrees (half circle)
     const angle = startAngle + (angleSpread / (total - 1)) * index;
     const radian = (angle * Math.PI) / 180;
     
     return {
-      x: Math.cos(radian) * radius,
-      y: Math.sin(radian) * radius,
+      x: Math.cos(radian) * radius, // This will be negative (left)
+      y: Math.sin(radian) * radius, // This will be negative (up)
     };
   };
 
