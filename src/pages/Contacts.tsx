@@ -278,6 +278,16 @@ export default function Contacts() {
                       >
                         <Phone className="h-4 w-4" />
                       </Button>
+                      {contact.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => (window.location.href = `mailto:${contact.email}`)}
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

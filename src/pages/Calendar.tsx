@@ -139,6 +139,21 @@ export default function Calendar() {
     setIsDialogOpen(false);
   };
 
+  const openNewEvent = (date: Date) => {
+    setEditingEvent(null);
+    setNewTitle("");
+    setNewDescription("");
+    setNewLocation("");
+    const start = new Date(date);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(10, 0, 0, 0);
+    // Use local datetime-local format (YYYY-MM-DDTHH:MM)
+    setNewStartTime(start.toISOString().slice(0, 16));
+    setNewEndTime(end.toISOString().slice(0, 16));
+    setIsDialogOpen(true);
+  };
+
   const days = eachDayOfInterval({
     start: startOfMonth(currentMonth),
     end: endOfMonth(currentMonth),
@@ -167,7 +182,7 @@ export default function Calendar() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+              <Button className="bg-fuchsia-600 text-white hover:bg-fuchsia-500" onClick={() => openNewEvent(selectedDate || new Date())}>
                 <Plus className="h-4 w-4 mr-2" /> New Event
               </Button>
             </DialogTrigger>
@@ -294,9 +309,22 @@ export default function Calendar() {
           {/* Selected Day Events */}
           <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg">
             <CardHeader>
-              <CardTitle className="text-white">
-                {selectedDate ? format(selectedDate, "EEEE, MMMM d") : "Select a day"}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">
+                  {selectedDate ? format(selectedDate, "EEEE, MMMM d") : "Select a day"}
+                </CardTitle>
+                {selectedDate && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-600 text-slate-300"
+                    onClick={() => openNewEvent(selectedDate)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {selectedDate ? (
