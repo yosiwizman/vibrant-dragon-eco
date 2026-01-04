@@ -5,13 +5,10 @@ import { useLocation } from "react-router-dom";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePreferences } from "@/state/preferences";
-import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Mic,
-  MicOff,
   X,
   ChevronUp,
   ChevronDown,
@@ -19,17 +16,12 @@ import {
   Bell,
   FileText,
   Calendar,
-  Search,
   CloudSun,
   MapPin,
   Undo,
-  Volume2,
   Sparkles,
   Loader2,
-  EarOff,
-  MessageCircle,
-  Phone,
-  PhoneOff
+  EarOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,24 +49,16 @@ export default function FloatingVoiceWidget() {
   const location = useLocation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const { 
     isListening, 
     isProcessing, 
     isSpeaking, 
     isQuietMode,
     isConversationMode,
-    lastTranscript, 
-    currentTranscript,
     lastResponse: contextLastResponse,
     processVoiceCommand, 
     speak, 
-    stopSpeaking, 
-    startListening, 
-    stopListening, 
-    exitQuietMode,
-    startConversationMode,
-    stopConversationMode
+    exitQuietMode
   } = useVoice();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -87,23 +71,21 @@ export default function FloatingVoiceWidget() {
   });
   const [localLastResponse, setLocalLastResponse] = useState<string | null>(null);
 
-  // Use context response or local response
   const displayResponse = contextLastResponse || localLastResponse;
 
-  // Persist visibility preference
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(isVisible));
   }, [isVisible]);
 
-  // Don't show on login page, voice page, or when not authenticated
-  if (location.pathname === "/login" || location.pathname === "/voice" || !user) {
+  // Don't show on login page, voice page, chat page, or when not authenticated
+  if (location.pathname === "/login" || location.pathname === "/voice" || location.pathname === "/chat" || !user) {
     return null;
   }
 
-  // Show toggle button when widget is hidden
+  // Show toggle button when widget is hidden - positioned on right side above mic
   if (!isVisible) {
     return (
-      <div className="fixed bottom-24 left-4 z-40">
+      <div className="fixed bottom-24 right-6 z-40">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -114,8 +96,8 @@ export default function FloatingVoiceWidget() {
               <Sparkles className="h-5 w-5 text-white" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="bg-slate-900 border-slate-700">
-            <p className="text-white">Show Quick Commands</p>
+          <TooltipContent side="left" className="bg-slate-900 border-slate-700">
+            <p className="text-white">Quick Commands</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -134,39 +116,18 @@ export default function FloatingVoiceWidget() {
     }
   };
 
-  const handleMicClick = async () => {
-    if (isConversationMode) {
-      // Stop conversation mode
-      stopConversationMode();
-    } else if (isListening) {
-      stopListening();
-    } else if (!isProcessing && !isSpeaking) {
-      // Start conversation mode instead of single recording
-      await startConversationMode();
-    }
-  };
-
   const getStatusText = () => {
     if (isQuietMode) return "Quiet Mode";
     if (isConversationMode) {
       if (isListening) return "Listening...";
       if (isProcessing) return "Thinking...";
       if (isSpeaking) return "Speaking...";
-      return "Conversation Mode";
+      return "Conversation";
     }
     if (isListening) return "Listening...";
     if (isProcessing) return "Thinking...";
     if (isSpeaking) return "Speaking...";
     return preferences.assistantName || "Echo";
-  };
-
-  const getStatusColor = () => {
-    if (isQuietMode) return "bg-purple-500";
-    if (isConversationMode) return "bg-green-500";
-    if (isListening) return "bg-red-500";
-    if (isProcessing) return "bg-yellow-500";
-    if (isSpeaking) return "bg-green-500";
-    return "bg-fuchsia-500/20";
   };
 
   const handleExitQuietMode = async () => {
@@ -181,59 +142,20 @@ export default function FloatingVoiceWidget() {
     }
   };
 
-  // Get the transcript to display (prefer current over last)
-  const displayTranscript = currentTranscript || lastTranscript;
-
   return (
-    <div className="fixed bottom-24 left-4 z-40">
+    <div className="fixed bottom-24 right-6 z-40">
       <Card className={cn(
         "border-fuchsia-500/30 bg-black/90 backdrop-blur-lg shadow-xl transition-all duration-300",
-        isExpanded ? "w-80" : "w-auto",
-        isConversationMode && "border-green-500/50"
+        isExpanded ? "w-72" : "w-auto"
       )}>
         <CardContent className="p-3">
           {/* Header */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleMicClick}
-                disabled={isProcessing}
-                className={cn(
-                  "p-2 rounded-full transition-all",
-                  getStatusColor(),
-                  (isListening || isProcessing || isSpeaking || isConversationMode) && "animate-pulse",
-                  !isProcessing && "hover:scale-110 cursor-pointer"
-                )}
-              >
-                {isProcessing ? (
-                  <Loader2 className="h-4 w-4 text-white animate-spin" />
-                ) : isConversationMode ? (
-                  <PhoneOff className="h-4 w-4 text-white" />
-                ) : (
-                  <Mic className={cn(
-                    "h-4 w-4",
-                    isListening || isProcessing || isSpeaking ? "text-white" : "text-fuchsia-400"
-                  )} />
-                )}
-              </button>
-              <div className="flex flex-col">
-                <span className={cn(
-                  "text-xs font-medium",
-                  isConversationMode ? "text-green-400" : "text-white"
-                )}>
-                  {getStatusText()}
-                </span>
-                {(isListening || isProcessing) && displayTranscript && (
-                  <span className="text-[10px] text-slate-400 truncate max-w-[150px]">
-                    "{displayTranscript}"
-                  </span>
-                )}
-                {isConversationMode && !isListening && !isProcessing && !isSpeaking && (
-                  <span className="text-[10px] text-green-400/70">
-                    Say "goodbye" to end
-                  </span>
-                )}
-              </div>
+              <Sparkles className="h-4 w-4 text-fuchsia-400" />
+              <span className="text-xs font-medium text-white">
+                {getStatusText()}
+              </span>
             </div>
             <div className="flex items-center gap-1">
               <Button
@@ -255,55 +177,16 @@ export default function FloatingVoiceWidget() {
             </div>
           </div>
 
-          {/* Conversation Mode Indicator */}
-          {isConversationMode && (
-            <div className="mt-2 p-2 rounded-lg bg-green-600/20 border border-green-500/30">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-xs text-green-300">
-                  {isListening ? "I'm listening..." : 
-                   isProcessing ? "Processing..." : 
-                   isSpeaking ? "Speaking..." : 
-                   "Ready to listen"}
-                </p>
-              </div>
-              {displayTranscript && (
-                <p className="text-xs text-white mt-1">
-                  <span className="text-green-300">You: </span>
-                  "{displayTranscript}"
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Live Transcript Display (when listening/processing) */}
-          {!isConversationMode && (isListening || isProcessing) && displayTranscript && !isExpanded && (
-            <div className="mt-2 p-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30">
-              <p className="text-xs text-white">
-                <span className="text-fuchsia-300">You: </span>
-                "{displayTranscript}"
-              </p>
-            </div>
-          )}
-
           {/* Last Response Preview */}
-          {displayResponse && !isExpanded && !isListening && !isProcessing && !isConversationMode && (
+          {displayResponse && !isExpanded && !isListening && !isProcessing && (
             <div className="mt-2 p-2 rounded-lg bg-slate-800/50 border border-slate-700">
               <p className="text-xs text-slate-300 line-clamp-2">{displayResponse}</p>
             </div>
           )}
 
           {/* Quick Commands Grid */}
-          {isExpanded && !isConversationMode && (
+          {isExpanded && (
             <>
-              {/* Live Transcript in Expanded View */}
-              {(isListening || isProcessing) && displayTranscript && (
-                <div className="mt-3 p-2 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30">
-                  <p className="text-xs text-slate-400 mb-1">You said:</p>
-                  <p className="text-sm text-white">"{displayTranscript}"</p>
-                </div>
-              )}
-
               <div className="grid grid-cols-4 gap-1.5 pt-3 mt-3 border-t border-slate-700">
                 {QUICK_COMMANDS.map((cmd) => (
                   <Tooltip key={cmd.label}>
@@ -336,26 +219,13 @@ export default function FloatingVoiceWidget() {
 
               {/* Tip */}
               <p className="text-[10px] text-slate-500 text-center mt-2">
-                Click mic for conversation mode • Press ⌘K for more commands
+                Click mic below to talk • ⌘K for commands
               </p>
             </>
           )}
 
-          {/* Conversation Mode Controls */}
-          {isConversationMode && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full mt-2 border-red-500/50 text-red-400 hover:bg-red-500/20"
-              onClick={stopConversationMode}
-            >
-              <PhoneOff className="h-4 w-4 mr-2" />
-              End Conversation
-            </Button>
-          )}
-
           {/* Quiet Mode Exit Button */}
-          {isQuietMode && !isConversationMode && (
+          {isQuietMode && (
             <Button
               size="sm"
               variant="outline"
@@ -364,19 +234,6 @@ export default function FloatingVoiceWidget() {
             >
               <EarOff className="h-4 w-4 mr-2" />
               End & Summarize
-            </Button>
-          )}
-
-          {/* Stop Speaking Button */}
-          {isSpeaking && !isQuietMode && !isConversationMode && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full mt-2 border-red-500/50 text-red-400 hover:bg-red-500/20"
-              onClick={stopSpeaking}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Stop Speaking
             </Button>
           )}
         </CardContent>

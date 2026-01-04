@@ -1,39 +1,25 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Mic, MessageSquare, X, Send, Loader2, Volume2, PhoneOff } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Mic, Loader2, Volume2, PhoneOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePreferences } from "@/state/preferences";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { useVoice } from "@/contexts/VoiceContext";
-import { showError, showSuccess } from "@/utils/toast";
 
 export default function MicButton() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { preferences } = usePreferences();
-  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
+  const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const {
     isListening, 
     isProcessing, 
     isSpeaking,
     isConversationMode,
     currentTranscript,
-    lastResponse,
-    startListening, 
-    stopListening, 
-    processVoiceCommand, 
-    speak, 
-    stopSpeaking,
     startConversationMode,
-    stopConversationMode
+    stopConversationMode,
+    stopSpeaking
   } = useVoice();
-  
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [quickInput, setQuickInput] = useState("");
-  const [isTextProcessing, setIsTextProcessing] = useState(false);
 
   // Don't show on voice, chat, or login pages, or when not authenticated
   if (location.pathname === "/voice" || location.pathname === "/chat" || location.pathname === "/login" || !user) {
@@ -42,60 +28,16 @@ export default function MicButton() {
 
   const handleMicClick = async () => {
     if (isConversationMode) {
-      // Stop conversation mode
       stopConversationMode();
     } else if (isSpeaking) {
       stopSpeaking();
     } else if (!isProcessing) {
-      // Start conversation mode instead of single recording
       await startConversationMode();
     }
   };
 
   const handleMicLongPress = () => {
     navigate("/voice");
-  };
-
-  const handleChatClick = () => {
-    setIsExpanded(!isExpanded);
-  };
-
-  const handleQuickSend = async () => {
-    if (!quickInput.trim() || !user || !openaiApiKey) {
-      if (!openaiApiKey) {
-        showError("Please set your OpenAI API key in Settings");
-      }
-      return;
-    }
-
-    setIsTextProcessing(true);
-
-    try {
-      const response = await processVoiceCommand(quickInput);
-      showSuccess("Done!");
-      
-      if (response && response.length < 200) {
-        await speak(response);
-      }
-
-      setQuickInput("");
-      setIsExpanded(false);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to process";
-      showError(errorMessage);
-    } finally {
-      setIsTextProcessing(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleQuickSend();
-    }
-    if (e.key === "Escape") {
-      setIsExpanded(false);
-    }
   };
 
   const getMicState = () => {
@@ -147,69 +89,17 @@ export default function MicButton() {
         </div>
       )}
 
-      {/* Quick Input */}
-      {isExpanded && (
-        <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900/95 border border-slate-700 backdrop-blur-lg shadow-2xl animate-in slide-in-from-bottom-2">
-          <Input
-            value={quickInput}
-            onChange={(e) => setQuickInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Quick command..."
-            className="w-56 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 rounded-xl h-9 text-sm"
-            disabled={isTextProcessing}
-            autoFocus
-          />
-          <Button
-            size="icon"
-            onClick={handleQuickSend}
-            disabled={isTextProcessing || !quickInput.trim()}
-            className="rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 h-9 w-9"
-          >
-            {isTextProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setIsExpanded(false)}
-            className="rounded-xl text-slate-400 hover:text-white h-9 w-9"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        {/* Chat Button */}
-        <button
-          onClick={handleChatClick}
-          className={`h-11 w-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
-            isExpanded 
-              ? "bg-slate-700 text-white" 
-              : "bg-slate-800/90 text-slate-300 hover:bg-slate-700 hover:text-white"
-          }`}
-          aria-label="Quick message"
-          title="Quick message"
-        >
-          <MessageSquare className="h-5 w-5" />
-        </button>
-
-        {/* Mic Button */}
-        <button
-          onClick={handleMicClick}
-          onDoubleClick={handleMicLongPress}
-          disabled={isProcessing && !isConversationMode}
-          className={`h-14 w-14 rounded-full flex items-center justify-center shadow-2xl transition-all ${micState.color} text-white hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
-          aria-label={micState.label}
-          title={isConversationMode ? "Click to end conversation" : "Click to start conversation (double-tap for voice chat page)"}
-        >
-          <MicIcon className={`h-6 w-6 ${isProcessing && !isConversationMode ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+      {/* Mic Button Only - No message button */}
+      <button
+        onClick={handleMicClick}
+        onDoubleClick={handleMicLongPress}
+        disabled={isProcessing && !isConversationMode}
+        className={`h-14 w-14 rounded-full flex items-center justify-center shadow-2xl transition-all ${micState.color} text-white hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+        aria-label={micState.label}
+        title={isConversationMode ? "Click to end conversation" : "Click to start conversation (double-tap for voice chat page)"}
+      >
+        <MicIcon className={`h-6 w-6 ${isProcessing && !isConversationMode ? 'animate-spin' : ''}`} />
+      </button>
     </div>
   );
 }
