@@ -91,9 +91,9 @@ export default function QuickAccessPanel() {
     <Sheet open={open} onOpenChange={setOpen}>
       {/* Floating trigger button */}
       <div
-        className="fixed right-4 md:right-5 z-50"
+        className="fixed right-3 md:right-5 z-50"
         style={{
-          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isMobile ? "84px" : "96px"})`,
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${isMobile ? "80px" : "96px"})`,
         }}
       >
         <SheetTrigger asChild>
