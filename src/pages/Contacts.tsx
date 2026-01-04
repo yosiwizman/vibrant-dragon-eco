@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Users, Phone, Search, Edit, User, Mic } from "lucide-react";
+import { Plus, Trash2, Users, Phone, Search, Edit, User, Mic, Mail } from "lucide-react";
 import VoiceHint from "@/components/VoiceHint";
 import { format } from "date-fns";
 
@@ -15,6 +15,7 @@ interface Contact {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   notes?: string;
   created_at: string;
 }
@@ -28,6 +29,7 @@ export default function Contacts() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function Contacts() {
         .update({
           name: newName.trim(),
           phone: newPhone.trim(),
+          email: newEmail.trim() || null,
           notes: newNotes.trim() || null,
         })
         .eq("id", editingContact.id);
@@ -79,6 +82,7 @@ export default function Contacts() {
         user_id: user.id,
         name: newName.trim(),
         phone: newPhone.trim(),
+        email: newEmail.trim() || null,
         notes: newNotes.trim() || null,
       });
 
@@ -96,6 +100,7 @@ export default function Contacts() {
   const resetForm = () => {
     setNewName("");
     setNewPhone("");
+    setNewEmail("");
     setNewNotes("");
     setEditingContact(null);
     setIsDialogOpen(false);
@@ -105,6 +110,7 @@ export default function Contacts() {
     setEditingContact(contact);
     setNewName(contact.name);
     setNewPhone(contact.phone);
+    setNewEmail(contact.email || "");
     setNewNotes(contact.notes || "");
     setIsDialogOpen(true);
   };
@@ -122,7 +128,8 @@ export default function Contacts() {
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phone.includes(searchQuery)
+    contact.phone.includes(searchQuery) ||
+    (contact.email ? contact.email.toLowerCase().includes(searchQuery.toLowerCase()) : false)
   );
 
   const callContact = (phone: string) => {
@@ -174,6 +181,15 @@ export default function Contacts() {
                     className="bg-slate-800 border-slate-700 text-white"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400">Email (optional)</label>
+                  <Input
+                    placeholder="john@example.com"
+                    className="bg-slate-800 border-slate-700 text-white"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
                   />
                 </div>
                 <div>
@@ -243,6 +259,12 @@ export default function Contacts() {
                         <Phone className="h-3 w-3" />
                         {contact.phone}
                       </p>
+                      {contact.email && (
+                        <p className="text-sm text-slate-400 flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {contact.email}
+                        </p>
+                      )}
                       {contact.notes && (
                         <p className="text-xs text-slate-500 mt-1 truncate">{contact.notes}</p>
                       )}

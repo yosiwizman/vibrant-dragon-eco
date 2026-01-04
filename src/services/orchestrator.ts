@@ -333,7 +333,7 @@ export const AVAILABLE_TOOLS = [
   {
     name: "update_contact",
     description: "Update a contact's information",
-    parameters: { contact_id: "string (optional)", contact_name: "string (optional)", new_name: "string (optional)", new_phone: "string (optional)", new_notes: "string (optional)" },
+    parameters: { contact_id: "string (optional)", contact_name: "string (optional)", new_name: "string (optional)", new_phone: "string (optional)", new_email: "string (optional)", new_notes: "string (optional)" },
     category: "contacts",
   },
   {
@@ -1556,6 +1556,7 @@ export async function createContact(
       user_id: userId,
       name,
       phone,
+      email: email || null,
       notes: notes || null,
     }).select().single();
 
@@ -1583,6 +1584,7 @@ export async function executeUpdateContact(
   contactName?: string,
   newName?: string,
   newPhone?: string,
+  newEmail?: string,
   newNotes?: string
 ): Promise<ActionResult> {
   try {
@@ -1604,6 +1606,7 @@ export async function executeUpdateContact(
     const updates: any = {};
     if (newName) updates.name = newName;
     if (newPhone) updates.phone = newPhone;
+    if (newEmail) updates.email = newEmail;
     if (newNotes !== undefined) updates.notes = newNotes;
 
     const { data, error } = await supabase
@@ -1764,7 +1767,7 @@ export async function getContacts(userId: string, search?: string, limit?: numbe
     let query = supabase.from("contacts").select("*").eq("user_id", userId);
     
     if (search) {
-      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
     }
     
     query = query.order("name", { ascending: true });
@@ -2539,7 +2542,7 @@ export async function executeSearchContacts(
       .from("contacts")
       .select("*")
       .eq("user_id", userId)
-      .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+      .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
       .order("name", { ascending: true })
       .limit(10);
 
@@ -3826,7 +3829,7 @@ export async function executeTool(
         result = await executeSearchContacts(userId, parameters.query);
         break;
       case "update_contact":
-        result = await executeUpdateContact(userId, parameters.contact_id, parameters.contact_name, parameters.new_name, parameters.new_phone, parameters.new_notes);
+        result = await executeUpdateContact(userId, parameters.contact_id, parameters.contact_name, parameters.new_name, parameters.new_phone, parameters.new_email, parameters.new_notes);
         break;
       case "delete_contact":
         result = await executeDeleteContact(userId, parameters.contact_id, parameters.contact_name);
