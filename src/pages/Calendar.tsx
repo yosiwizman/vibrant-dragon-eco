@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Mic } from "lucide-react";
+import { Plus, Trash2, Calendar as CalendarIcon, Clock, MapPin, ChevronLeft, ChevronRight, Mic, Edit } from "lucide-react";
 import VoiceHint from "@/components/VoiceHint";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from "date-fns";
 
@@ -33,6 +33,7 @@ export default function Calendar() {
   const [newStartTime, setNewStartTime] = useState("");
   const [newEndTime, setNewEndTime] = useState("");
   const [newLocation, setNewLocation] = useState("");
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
     if (user) loadEvents();
@@ -93,12 +94,48 @@ export default function Calendar() {
     }
   };
 
+  const startEditEvent = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setNewTitle(event.title);
+    setNewDescription(event.description || "");
+    setNewStartTime(event.start_time.slice(0, 16));
+    setNewEndTime(event.end_time ? event.end_time.slice(0, 16) : "");
+    setNewLocation(event.location || "");
+    setIsDialogOpen(true);
+  };
+
+  const updateEvent = async () => {
+    if (!editingEvent) return;
+
+    const updates = {
+      title: newTitle.trim(),
+      description: newDescription.trim() || null,
+      start_time: new Date(newStartTime).toISOString(),
+      end_time: newEndTime ? new Date(newEndTime).toISOString() : null,
+      location: newLocation.trim() || null,
+    };
+
+    const { error } = await supabase
+      .from("calendar_events")
+      .update(updates)
+      .eq("id", editingEvent.id);
+
+    if (error) {
+      showError("Failed to update event");
+    } else {
+      await loadEvents();
+      resetForm();
+      showSuccess("Event updated!");
+    }
+  };
+
   const resetForm = () => {
     setNewTitle("");
     setNewDescription("");
     setNewStartTime("");
     setNewEndTime("");
     setNewLocation("");
+    setEditingEvent(null);
     setIsDialogOpen(false);
   };
 
@@ -136,7 +173,7 @@ export default function Calendar() {
             </DialogTrigger>
             <DialogContent className="bg-slate-900 border-slate-700">
               <DialogHeader>
-                <DialogTitle className="text-white">New Event</DialogTitle>
+                <DialogTitle className="text-white">{editingEvent ? "Edit Event" : "New Event"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <Input
@@ -181,8 +218,8 @@ export default function Calendar() {
                   <Button variant="outline" onClick={resetForm} className="border-slate-600 text-slate-300">
                     Cancel
                   </Button>
-                  <Button onClick={createEvent} className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                    Create
+                  <Button onClick={editingEvent ? updateEvent : createEvent} className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+                    {editingEvent ? "Update" : "Create"}
                   </Button>
                 </div>
               </div>
@@ -272,14 +309,24 @@ export default function Calendar() {
                       >
                         <div className="flex items-start justify-between">
                           <h4 className="font-medium text-white">{event.title}</h4>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteEvent(event.id)}
-                            className="text-slate-400 hover:text-red-400 -mt-1 -mr-1"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 -mt-1 -mr-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditEvent(event)}
+                              className="text-slate-400 hover:text-fuchsia-400"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteEvent(event.id)}
+                              className="text-slate-400 hover:text-red-400"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
                           <Clock className="h-3 w-3" />
