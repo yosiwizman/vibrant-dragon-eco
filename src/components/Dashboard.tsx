@@ -182,58 +182,38 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Time, Location, and Weather Context */}
-      <div className="grid gap-4 md:grid-cols-3">
+    <div className="space-y-3">
+      {/* Context Row: Time, Location, Weather */}
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
         <CurrentTimeDisplay />
         <LocationDisplay />
         <WeatherWidget />
       </div>
 
-      {/* Quick Actions and Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <div className="md:col-span-1">
-          <QuickActions />
-        </div>
-        <div className="md:col-span-4 grid gap-4 grid-cols-2 md:grid-cols-4">
-          {statCards.map((stat) => (
-            <Card key={stat.label} className="border-slate-700 bg-slate-800/50 backdrop-blur">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
-                    <p className="text-xs text-slate-400">{stat.label}</p>
-                  </div>
-                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                  </div>
+      {/* Stats Row */}
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        {statCards.map((stat) => (
+          <Card key={stat.label} className="border-slate-700 bg-slate-800/50 backdrop-blur">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xl md:text-2xl font-bold text-white">{stat.value}</p>
+                  <p className="text-[10px] md:text-xs text-slate-400">{stat.label}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <div className={`p-1.5 md:p-2 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-
-      {/* Smart Suggestions */}
-      <SmartSuggestions />
-
-      {/* AI Usage Widget, Productivity, Focus Mode, and Streak */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <AIUsageWidget />
-        <ProductivityInsights />
-        <ScheduleAnalysisWidget />
-        <FocusModeWidget />
-        <StreakTracker />
-      </div>
-
-      {/* Recent Activity */}
-      <RecentActivity />
 
       {/* Upcoming Items */}
       {upcomingItems.length > 0 && (
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <CardContent className="p-3 md:p-4">
+            <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-fuchsia-400" />
               Coming Up
             </h3>
@@ -241,15 +221,15 @@ export default function Dashboard() {
               {upcomingItems.map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
-                  className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-900/50 border border-slate-700/50"
+                  className="flex items-center gap-2 md:gap-3 p-2 rounded-lg bg-slate-900/50 border border-slate-700/50"
                 >
                   {getItemIcon(item.type)}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{item.title}</p>
-                    <p className="text-xs text-slate-500">{formatItemTime(item.time)}</p>
+                    <p className="text-xs md:text-sm text-white truncate">{item.title}</p>
+                    <p className="text-[10px] md:text-xs text-slate-500">{formatItemTime(item.time)}</p>
                   </div>
                   {item.priority && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    <span className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full font-medium ${
                       item.priority === "urgent" ? "bg-red-500/20 text-red-400" : "bg-orange-500/20 text-orange-400"
                     }`}>
                       {item.priority}

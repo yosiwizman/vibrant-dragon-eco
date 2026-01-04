@@ -159,27 +159,21 @@ const Index = () => {
           </div>
         )}
 
-        {/* Location & Weather */}
-        <div className="mt-6 grid gap-3 md:grid-cols-2">
-          <WeatherWidget />
-          <LocationDisplay />
-        </div>
-
         {/* Dashboard Stats - Live Data */}
-        <div className="mt-6">
+        <div className="mt-4">
           <Dashboard />
         </div>
 
-        {/* Quick Access Grid */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-white mb-3">Quick Access</h2>
-          <div className="grid gap-3 grid-cols-4 sm:grid-cols-4 md:grid-cols-8">
+        {/* Quick Access Grid - Mobile Friendly */}
+        <div className="mt-4">
+          <h2 className="text-base font-semibold text-white mb-3">Quick Access</h2>
+          <div className="grid gap-2 grid-cols-4 md:grid-cols-8">
             {quickAccessItems.map((item) => (
               <Link key={item.to} to={item.to}>
-                <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/50 transition-colors cursor-pointer h-full">
-                  <CardContent className="p-3 flex flex-col items-center gap-1.5 text-center">
-                    <item.icon className={`h-6 w-6 ${item.color}`} />
-                    <span className="font-medium text-white text-xs">{item.label}</span>
+                <Card className="border-fuchsia-500/20 bg-black/30 backdrop-blur hover:bg-black/50 transition-colors cursor-pointer">
+                  <CardContent className="p-2 md:p-3 flex flex-col items-center gap-1 text-center">
+                    <item.icon className={`h-5 w-5 md:h-6 md:w-6 ${item.color}`} />
+                    <span className="font-medium text-white text-[10px] md:text-xs leading-tight">{item.label}</span>
                   </CardContent>
                 </Card>
               </Link>
@@ -187,16 +181,16 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tools & More Grid */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-white mb-3">Tools & More</h2>
-          <div className="grid gap-3 grid-cols-4 sm:grid-cols-4 md:grid-cols-8">
+        {/* Tools & More Grid - Mobile Friendly */}
+        <div className="mt-4">
+          <h2 className="text-base font-semibold text-white mb-3">Tools & More</h2>
+          <div className="grid gap-2 grid-cols-4 md:grid-cols-8">
             {toolsItems.map((item) => (
               <Link key={item.to} to={item.to}>
-                <Card className="border-slate-700/50 bg-black/20 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer h-full">
-                  <CardContent className="p-3 flex flex-col items-center gap-1.5 text-center">
-                    <item.icon className={`h-6 w-6 ${item.color}`} />
-                    <span className="font-medium text-slate-300 text-xs">{item.label}</span>
+                <Card className="border-slate-700/50 bg-black/20 backdrop-blur hover:bg-black/40 transition-colors cursor-pointer">
+                  <CardContent className="p-2 md:p-3 flex flex-col items-center gap-1 text-center">
+                    <item.icon className={`h-5 w-5 md:h-6 md:w-6 ${item.color}`} />
+                    <span className="font-medium text-slate-300 text-[10px] md:text-xs leading-tight">{item.label}</span>
                   </CardContent>
                 </Card>
               </Link>
@@ -204,20 +198,20 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Voice Commands Quick Reference */}
-        <div className="mt-6 rounded-xl border border-slate-700/50 bg-black/30 p-5">
-          <h2 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+        {/* Voice Commands Quick Reference - Collapsible on Mobile */}
+        <details className="mt-4 rounded-xl border border-slate-700/50 bg-black/30">
+          <summary className="p-4 cursor-pointer text-base font-semibold text-white flex items-center gap-2">
             <Mic className="h-4 w-4 text-fuchsia-400" />
             Voice Commands
-            <span className="text-xs text-slate-500 font-normal ml-2">Press ⌘K for full list</span>
-          </h2>
-          <div className="grid gap-4 md:grid-cols-4 text-sm">
+            <span className="text-xs text-slate-500 font-normal ml-auto">Press ⌘K for full list</span>
+          </summary>
+          <div className="px-4 pb-4 grid gap-3 md:grid-cols-4 text-sm">
             <div>
               <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Create</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
                 <li>"Add task buy groceries"</li>
-                <li>"Remind me to call mom at 5pm"</li>
-                <li>"Take a note about the meeting"</li>
+                <li>"Remind me at 5pm"</li>
+                <li>"Take a note"</li>
               </ul>
             </div>
             <div>
@@ -225,45 +219,47 @@ const Index = () => {
               <ul className="space-y-1 text-slate-400 text-xs">
                 <li>"Read my tasks"</li>
                 <li>"What's the weather?"</li>
-                <li>"Find nearby coffee shops"</li>
+                <li>"Find coffee shops"</li>
               </ul>
             </div>
             <div>
               <h3 className="text-xs font-medium text-purple-300 mb-1.5">Smart Scheduling</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
                 <li>"Schedule meeting at 2pm"</li>
-                <li>"When should I do this task?"</li>
+                <li>"When should I do this?"</li>
                 <li>"Check my schedule"</li>
               </ul>
             </div>
             <div>
               <h3 className="text-xs font-medium text-purple-300 mb-1.5">Conversation</h3>
               <ul className="space-y-1 text-slate-400 text-xs">
-                <li>Click mic to start talking</li>
+                <li>Click mic to start</li>
                 <li>Say "goodbye" to end</li>
-                <li>Natural back-and-forth chat</li>
+                <li>Natural chat</li>
               </ul>
             </div>
           </div>
-        </div>
+        </details>
 
         {/* Setup Reminder - Only show if no API key */}
-        <div className="mt-6 rounded-xl border border-slate-700/50 bg-slate-800/30 p-5">
+        {!hasOpenAIKey && (
+        <div className="mt-4 rounded-xl border border-slate-700/50 bg-slate-800/30 p-4">
           <h2 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
             <Settings className="h-4 w-4 text-slate-400" />
             Quick Setup
           </h2>
-          <ol className="space-y-2 text-sm text-slate-300">
+          <ol className="space-y-2 text-xs md:text-sm text-slate-300">
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">1</span>
-              <span>Go to <Link to="/settings" className="text-fuchsia-300 hover:underline">Settings</Link> and enter your OpenAI API key</span>
+              <span>Go to <Link to="/settings" className="text-fuchsia-300 hover:underline">Settings</Link> and add your OpenAI API key</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
-              <span>Choose your preferred voice and click "Start Voice" for a continuous conversation</span>
+              <span>Click "Start Voice" for conversation mode</span>
             </li>
           </ol>
         </div>
+        )}
       </div>
     </div>
   );
