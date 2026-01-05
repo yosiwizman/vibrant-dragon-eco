@@ -99,10 +99,10 @@ export default function QuickAccessPanel() {
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="rounded-full w-12 h-12 md:w-14 md:h-14 shadow-2xl bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500"
+            className="hidden md:flex rounded-full w-14 h-14 shadow-lg bg-gradient-to-br from-purple-400 to-indigo-400 hover:from-purple-300 hover:to-indigo-300"
             aria-label="Open quick access"
           >
-            <Sparkles className={`${isMobile ? "h-5 w-5" : "h-6 w-6"} text-white`} />
+            <Sparkles className="h-6 w-6 text-white" />
           </Button>
         </SheetTrigger>
       </div>
