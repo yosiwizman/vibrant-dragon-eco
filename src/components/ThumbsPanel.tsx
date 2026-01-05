@@ -107,8 +107,8 @@ export default function ThumbsPanel() {
           <SheetTitle className="text-slate-700">Quick Access</SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="apps" className="mt-4 flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 bg-white/50">
+        <Tabs defaultValue="apps" className="mt-4 flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 bg-white/50 flex-shrink-0">
             <TabsTrigger value="apps" className="data-[state=active]:bg-white">
               <LinkIcon className="h-4 w-4 mr-2" />
               Apps
@@ -119,12 +119,12 @@ export default function ThumbsPanel() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="apps" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4 space-y-4">
+          <TabsContent value="apps" className="flex-1 min-h-0 overflow-y-auto scrollbar-hide touch-pan-y mt-4 space-y-4">
             <Section title="Core" items={quickAccess} />
             <Section title="Tools & More" items={tools} />
           </TabsContent>
 
-          <TabsContent value="widgets" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4">
+          <TabsContent value="widgets" className="flex-1 min-h-0 overflow-y-auto scrollbar-hide touch-pan-y mt-4 pb-4">
             <WidgetPicker />
           </TabsContent>
         </Tabs>
