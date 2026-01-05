@@ -41,6 +41,7 @@ const DEFAULT: Preferences = {
   snoozeDefaultMinutes: 15,
   notificationSoundEnabled: true,
   compactVoiceResponses: true,
+  widgetLayout: undefined,
 };
 
 export function loadPreferences(): Preferences {

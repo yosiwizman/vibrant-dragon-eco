@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import WidgetLibrary from "./WidgetLibrary";
+import { WidgetType } from "./WidgetLibrary";
 import {
   CheckSquare,
   Bell,
@@ -21,6 +24,8 @@ import {
   History,
   Edit,
   Menu,
+  LayoutGrid,
+  Link as LinkIcon,
 } from "lucide-react";
 
 type NavItem = {
@@ -52,10 +57,20 @@ const tools: NavItem[] = [
   { to: "/drafts", label: "Drafts", icon: Edit, color: "text-rose-500" },
 ];
 
-export default function ThumbsPanel() {
+interface ThumbsPanelProps {
+  onWidgetDragStart?: (widget: WidgetType) => void;
+}
+
+export default function ThumbsPanel({ onWidgetDragStart }: ThumbsPanelProps) {
   const [open, setOpen] = useState(false);
 
   const handleNav = () => setOpen(false);
+
+  const handleWidgetDrag = (widget: WidgetType) => {
+    if (onWidgetDragStart) {
+      onWidgetDragStart(widget);
+    }
+  };
 
   const Section = ({ title, items }: { title: string; items: NavItem[] }) => (
     <div className="mb-5">
@@ -103,10 +118,27 @@ export default function ThumbsPanel() {
           <SheetTitle className="text-slate-700">Quick Access</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4 overflow-y-auto flex-1 scrollbar-hide touch-pan-y">
-          <Section title="Core" items={quickAccess} />
-          <Section title="Tools & More" items={tools} />
-        </div>
+        <Tabs defaultValue="apps" className="mt-4 flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-2 bg-white/50">
+            <TabsTrigger value="apps" className="data-[state=active]:bg-white">
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Apps
+            </TabsTrigger>
+            <TabsTrigger value="widgets" className="data-[state=active]:bg-white">
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Widgets
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="apps" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4 space-y-4">
+            <Section title="Core" items={quickAccess} />
+            <Section title="Tools & More" items={tools} />
+          </TabsContent>
+
+          <TabsContent value="widgets" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4">
+            <WidgetLibrary onWidgetDragStart={handleWidgetDrag} />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

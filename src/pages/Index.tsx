@@ -11,7 +11,7 @@ import { useVoice } from "@/contexts/VoiceContext";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { usePreferences } from "@/state/preferences";
 import APIKeyStatus from "@/components/APIKeyStatus";
-import Dashboard from "@/components/Dashboard";
+import WidgetDashboard from "@/components/WidgetDashboard";
 import WelcomeModal from "@/components/WelcomeModal";
 import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
 import WeatherWidget from "@/components/WeatherWidget";
@@ -160,9 +160,9 @@ const Index = () => {
           </div>
         )}
 
-        {/* Dashboard Stats - Live Data */}
+        {/* Widget Dashboard - Drag & Drop */}
         <div className="mt-3 md:mt-4">
-          <Dashboard />
+          <WidgetDashboard />
         </div>
 
         {/* Voice Commands Quick Reference - Collapsible on Mobile */}

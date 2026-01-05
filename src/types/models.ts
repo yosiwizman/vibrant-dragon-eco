@@ -74,6 +74,7 @@ export interface Preferences {
   snoozeDefaultMinutes: number;
   notificationSoundEnabled: boolean;
   compactVoiceResponses: boolean;
+  widgetLayout?: any[];
 }
 
 export interface ToolExecutionLog {

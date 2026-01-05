@@ -44,6 +44,8 @@ import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceComman
 import ProtectedRoute from "@/components/ProtectedRoute";
 import QuickAccessPanel from "@/components/QuickAccessPanel";
 import ThumbsPanel from "@/components/ThumbsPanel";
+import { useState } from "react";
+import { WidgetType } from "@/components/WidgetLibrary";
 
 const queryClient = new QueryClient();
 
@@ -65,21 +67,24 @@ function QuickAddWrapper() {
   return <QuickAddModal open={isOpen} onClose={close} defaultTab={defaultTab} />;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <VoiceProvider>
-            <NavBar />
-            <VoiceStatusIndicator />
-            <CommandPaletteWrapper />
-            <GlobalShortcutsWrapper />
-            <KeyboardShortcutsHelp />
-            <OnboardingTour />
-            <QuickAddWrapper />
+const App = () => {
+  const [draggedWidget, setDraggedWidget] = useState<WidgetType | null>(null);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <VoiceProvider>
+              <NavBar />
+              <VoiceStatusIndicator />
+              <CommandPaletteWrapper />
+              <GlobalShortcutsWrapper />
+              <KeyboardShortcutsHelp />
+              <OnboardingTour />
+              <QuickAddWrapper />
             <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -278,14 +283,15 @@ const App = () => (
             </Routes>
             <MicButton />
             <FloatingVoiceWidget />
-            <ListeningModeIndicator />
-            <QuickAccessPanel />
-            <ThumbsPanel />
-          </VoiceProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+              <ListeningModeIndicator />
+              <QuickAccessPanel />
+              <ThumbsPanel onWidgetDragStart={setDraggedWidget} />
+            </VoiceProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
