@@ -219,8 +219,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             rowHeight={120}
             width={containerWidth}
             onLayoutChange={handleLayoutChange}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
             margin={[12, 12]}
             containerPadding={[12, 12]}
           >
