@@ -6,7 +6,7 @@ import WidgetRenderer from "./WidgetRenderer";
 import { Button } from "@/components/ui/button";
 import { X, GripVertical, Plus } from "lucide-react";
 import { usePreferences } from "@/state/preferences";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -17,6 +17,7 @@ interface WidgetLayout {
   w: number;
   h: number;
   widgetId: string;
+  static?: boolean;
 }
 
 interface WidgetDashboardProps {
@@ -30,19 +31,18 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   const [containerWidth, setContainerWidth] = useState(1200);
   const containerRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastDraggedWidgetRef = useRef<string | null>(null);
 
-  // Initialize layouts from preferences or use defaults
+  // Initialize layouts from preferences or use defaults with NO OVERLAPPING
   const [layouts, setLayouts] = useState<WidgetLayout[]>(() => {
     const savedLayout = preferences.widgetLayout;
     if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
-      return savedLayout;
+      return savedLayout.map(l => ({ ...l, static: true }));
     }
     return [
-      { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
-      { i: "weather-1", x: 1, y: 0, w: 2, h: 2, widgetId: "weather" },
-      { i: "tasks-2", x: 0, y: 1, w: 2, h: 2, widgetId: "tasks" },
-      { i: "upcoming-3", x: 2, y: 2, w: 2, h: 2, widgetId: "upcoming" },
+      { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time", static: true },
+      { i: "weather-1", x: 1, y: 0, w: 2, h: 2, widgetId: "weather", static: true },
+      { i: "tasks-2", x: 3, y: 0, w: 1, h: 2, widgetId: "tasks", static: true },
+      { i: "upcoming-3", x: 0, y: 2, w: 4, h: 2, widgetId: "upcoming", static: true },
     ];
   });
 
@@ -78,7 +78,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   }, [preferences, setPreferences]);
 
   // Handle layout changes from grid
-  const handleLayoutChange = useCallback((newLayout: any[], allLayouts: any) => {
+  const handleLayoutChange = useCallback((newLayout: any[]) => {
     if (!newLayout || !Array.isArray(newLayout)) return;
     
     const updatedLayouts: WidgetLayout[] = newLayout.map((item: any) => {
@@ -90,32 +90,34 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
         w: item.w,
         h: item.h,
         widgetId: existing?.widgetId || "",
+        static: !isEditMode,
       };
     });
     
     setLayouts(updatedLayouts);
     saveLayoutsToPreferences(updatedLayouts);
-  }, [layouts, saveLayoutsToPreferences]);
+  }, [layouts, isEditMode, saveLayoutsToPreferences]);
 
   // Add widget to dashboard
   const addWidget = useCallback((widgetId: string, defaultSize: { w: number; h: number }) => {
     // Check if widget already exists
     const exists = layouts.some(l => l.widgetId === widgetId);
     if (exists) {
-      showSuccess(`${widgetId} widget is already on your dashboard`);
+      showError(`${widgetId} widget is already on your dashboard`);
       return;
     }
 
-    // Find next available position
+    // Find next available position at bottom
     const maxY = layouts.length > 0 ? Math.max(...layouts.map(l => l.y + l.h)) : 0;
     
     const newWidget: WidgetLayout = {
       i: `${widgetId}-${Date.now()}`,
       x: 0,
       y: maxY,
-      w: defaultSize.w,
+      w: Math.min(defaultSize.w, 4), // Ensure width doesn't exceed 4 columns
       h: defaultSize.h,
       widgetId: widgetId,
+      static: !isEditMode,
     };
     
     const newLayouts = [...layouts, newWidget];
@@ -126,37 +128,38 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     if (onAddWidget) {
       onAddWidget(widgetId);
     }
-  }, [layouts, saveLayoutsToPreferences, onAddWidget]);
+  }, [layouts, isEditMode, saveLayoutsToPreferences, onAddWidget]);
 
   // Remove widget from dashboard
   const handleRemoveWidget = useCallback((id: string) => {
+    const widget = layouts.find(l => l.i === id);
     const newLayouts = layouts.filter((l) => l.i !== id);
     setLayouts(newLayouts);
     setPreferences({
       ...preferences,
       widgetLayout: newLayouts,
     });
-    showSuccess("Widget removed");
+    showSuccess(`Removed ${widget?.widgetId || 'widget'}`);
   }, [layouts, preferences, setPreferences]);
 
   // Watch for draggedWidget changes
   useEffect(() => {
     if (draggedWidget) {
-      const widgetKey = `${draggedWidget.id}-${draggedWidget.defaultSize.w}-${draggedWidget.defaultSize.h}`;
-      
-      // Only add if it's a new drag (prevent duplicate adds)
-      if (lastDraggedWidgetRef.current !== widgetKey) {
-        lastDraggedWidgetRef.current = widgetKey;
-        addWidget(draggedWidget.id, draggedWidget.defaultSize);
+      addWidget(draggedWidget.id, draggedWidget.defaultSize);
+      // Clear the dragged widget after adding
+      if (onAddWidget) {
+        onAddWidget(draggedWidget.id);
       }
     }
-  }, [draggedWidget, addWidget]);
+  }, [draggedWidget]);
 
-  // Reset last dragged widget when edit mode changes
+  // Update static property when edit mode changes
   useEffect(() => {
-    if (!isEditMode) {
-      lastDraggedWidgetRef.current = null;
-    }
+    const updatedLayouts = layouts.map(l => ({
+      ...l,
+      static: !isEditMode
+    }));
+    setLayouts(updatedLayouts);
   }, [isEditMode]);
 
   return (
@@ -168,7 +171,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             {isEditMode ? "Edit Mode Active" : "Widget Dashboard"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Click widgets in side panel to add • Drag to reposition" : `${layouts.length} widgets`}
+            {isEditMode ? "Click widgets in side panel to add • Drag to reposition" : `${layouts.length} widgets • 4 columns × 16 rows`}
           </p>
         </div>
         <Button
@@ -219,23 +222,19 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             rowHeight={100}
             width={containerWidth}
             onLayoutChange={handleLayoutChange}
-            margin={[8, 8]}
-            containerPadding={[8, 8]}
+            margin={[12, 12]}
+            containerPadding={[12, 12]}
             maxRows={16}
           >
             {layouts.map((layout) => (
               <div
                 key={layout.i}
-                className={`relative ${isEditMode ? 'animate-wiggle' : ''}`}
-                style={{ position: 'relative', zIndex: 1 }}
-                data-grid={{
-                  ...layout,
-                  static: !isEditMode
-                }}
+                className={`${isEditMode ? 'animate-wiggle' : ''}`}
+                data-grid={layout}
               >
                 {isEditMode && (
                   <>
-                    <div className="absolute top-1 left-1 z-20 bg-slate-800/80 rounded p-1 backdrop-blur-sm">
+                    <div className="absolute top-1 left-1 z-20 bg-slate-800/90 rounded p-1 backdrop-blur-sm cursor-move">
                       <GripVertical className="h-3 w-3 text-slate-300" />
                     </div>
                     <div className="absolute top-1 right-1 z-20">
@@ -253,7 +252,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
                     </div>
                   </>
                 )}
-                <div className={`h-full ${isEditMode ? 'pointer-events-none' : ''}`}>
+                <div className={`h-full w-full ${isEditMode ? 'pointer-events-none' : ''}`}>
                   <WidgetRenderer widgetId={layout.widgetId} />
                 </div>
               </div>
