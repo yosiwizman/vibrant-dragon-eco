@@ -47,15 +47,20 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
-    const savedLayout = preferences.widgetLayout;
-    if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
-      setLayouts(savedLayout);
+    if (!isInitialized) {
+      const savedLayout = preferences.widgetLayout;
+      if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
+        setLayouts(savedLayout);
+      }
+      setIsInitialized(true);
     }
-  }, [preferences.widgetLayout]);
+  }, []);
 
   const handleLayoutChange = (newLayout: any[]) => {
-    if (!newLayout || !Array.isArray(newLayout)) return;
+    if (!newLayout || !Array.isArray(newLayout) || !isInitialized) return;
     
     const updatedLayouts = newLayout.map((item: any) => {
       const existing = layouts.find((l) => l.i === item.i);
@@ -64,12 +69,20 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
         widgetId: existing?.widgetId || "",
       } as WidgetLayout;
     });
-    setLayouts(updatedLayouts);
     
-    setPreferences({
-      ...preferences,
-      widgetLayout: updatedLayouts,
-    });
+    // Only update if layouts actually changed
+    const hasChanged = JSON.stringify(updatedLayouts) !== JSON.stringify(layouts);
+    if (hasChanged) {
+      setLayouts(updatedLayouts);
+      
+      // Debounce saving to preferences
+      setTimeout(() => {
+        setPreferences({
+          ...preferences,
+          widgetLayout: updatedLayouts,
+        });
+      }, 500);
+    }
   };
 
   const handleRemoveWidget = (id: string) => {

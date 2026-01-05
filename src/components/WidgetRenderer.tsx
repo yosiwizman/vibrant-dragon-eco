@@ -34,15 +34,33 @@ export default function WidgetRenderer({ widgetId }: WidgetRendererProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && widgetId !== "time" && widgetId !== "weather" && widgetId !== "location" && widgetId !== "quick-actions" && widgetId !== "ai-usage" && widgetId !== "recent-activity" && widgetId !== "productivity") {
+    let isMounted = true;
+    
+    const shouldLoadData = user &&
+      widgetId !== "time" &&
+      widgetId !== "weather" &&
+      widgetId !== "location" &&
+      widgetId !== "quick-actions" &&
+      widgetId !== "ai-usage" &&
+      widgetId !== "recent-activity" &&
+      widgetId !== "productivity";
+    
+    if (shouldLoadData) {
       loadWidgetData();
     } else {
       setLoading(false);
     }
-  }, [user, widgetId]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const loadWidgetData = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
