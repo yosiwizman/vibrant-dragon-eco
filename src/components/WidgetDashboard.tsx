@@ -166,16 +166,17 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           rowHeight={150}
           width={containerWidth}
           onLayoutChange={handleLayoutChange}
-          isDraggable={true}
-          isResizable={true}
+          draggableHandle=".drag-handle"
           compactType={null}
           preventCollision={true}
-          isDroppable={true}
           onDrop={handleDrop}
           droppingItem={{ i: "drop", x: 0, y: 0, w: 2, h: 2 }}
         >
           {(layouts || []).map((layout) => (
             <div key={layout.i} className="relative group">
+              <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity drag-handle cursor-move">
+                <GripVertical className="h-4 w-4 text-slate-400" />
+              </div>
               <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   size="icon"
