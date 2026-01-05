@@ -9,8 +9,6 @@ import { usePreferences } from "@/state/preferences";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// WidthProvider is not exported, so we'll use Responsive directly without it
-
 interface WidgetLayout {
   i: string;
   x: number;
@@ -29,13 +27,12 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   const { preferences, setPreferences } = usePreferences();
   const [layouts, setLayouts] = useState<WidgetLayout[]>([
     { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
-    { i: "weather-1", x: 1, y: 0, w: 2, h: 1, widgetId: "weather" },
-    { i: "tasks-2", x: 0, y: 1, w: 2, h: 2, widgetId: "tasks" },
-    { i: "upcoming-3", x: 2, y: 1, w: 2, h: 2, widgetId: "upcoming" },
+    { i: "weather-1", x: 1, y: 0, w: 1, h: 1, widgetId: "weather" },
+    { i: "tasks-2", x: 2, y: 0, w: 1, h: 2, widgetId: "tasks" },
+    { i: "upcoming-3", x: 3, y: 0, w: 1, h: 2, widgetId: "upcoming" },
   ]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  
-  const [containerWidth, setContainerWidth] = React.useState(1200);
+  const [containerWidth, setContainerWidth] = useState(1200);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,7 +48,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   }, []);
 
   useEffect(() => {
-    // Load saved layout from preferences
     const savedLayout = preferences.widgetLayout;
     if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
       setLayouts(savedLayout);
@@ -70,7 +66,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     });
     setLayouts(updatedLayouts);
     
-    // Save to preferences
     setPreferences({
       ...preferences,
       widgetLayout: updatedLayouts,
@@ -86,12 +81,12 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     });
   };
 
-  const handleDrop = (layout: any[], layoutItem: any, _event: Event) => {
+  const handleDrop = (layout: any[], layoutItem: any, _event: any) => {
     if (draggedWidget) {
       const newWidget: WidgetLayout = {
         i: `${draggedWidget.id}-${Date.now()}`,
-        x: layoutItem.x,
-        y: layoutItem.y,
+        x: layoutItem.x || 0,
+        y: layoutItem.y || Infinity,
         w: draggedWidget.defaultSize.w,
         h: draggedWidget.defaultSize.h,
         widgetId: draggedWidget.id,
@@ -110,6 +105,26 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     }
     setIsDraggingOver(false);
   };
+
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('text/plain')) {
+        setIsDraggingOver(true);
+      }
+    };
+
+    const handleDragEnd = () => {
+      setIsDraggingOver(false);
+    };
+
+    document.addEventListener('dragenter', handleDragEnter);
+    document.addEventListener('dragend', handleDragEnd);
+    
+    return () => {
+      document.removeEventListener('dragenter', handleDragEnter);
+      document.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -153,8 +168,8 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           onLayoutChange={handleLayoutChange}
           isDraggable={true}
           isResizable={true}
-          compactType="vertical"
-          preventCollision={false}
+          compactType={null}
+          preventCollision={true}
           isDroppable={true}
           onDrop={handleDrop}
           droppingItem={{ i: "drop", w: 2, h: 2 }}

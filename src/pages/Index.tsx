@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { usePreferences } from "@/state/preferences";
+import { useWidgetDrag } from "@/contexts/WidgetDragContext";
 import APIKeyStatus from "@/components/APIKeyStatus";
 import WidgetDashboard from "@/components/WidgetDashboard";
 import WelcomeModal from "@/components/WelcomeModal";
@@ -21,6 +22,7 @@ const Index = () => {
   const { user } = useAuth();
   const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const { preferences } = usePreferences();
+  const { draggedWidget, setDraggedWidget } = useWidgetDrag();
   const {
     isListening,
     isProcessing,
@@ -44,28 +46,6 @@ const Index = () => {
       await startConversationMode();
     }
   };
-
-  const quickAccessItems = [
-    { to: "/tasks", icon: CheckSquare, label: "Tasks", color: "text-green-400" },
-    { to: "/reminders", icon: Bell, label: "Reminders", color: "text-yellow-400" },
-    { to: "/notes", icon: FileText, label: "Notes", color: "text-orange-400" },
-    { to: "/calendar", icon: Clock, label: "Calendar", color: "text-blue-400" },
-    { to: "/contacts", icon: Users, label: "Contacts", color: "text-cyan-400" },
-    { to: "/messages", icon: Send, label: "Messages", color: "text-emerald-400" },
-    { to: "/appointments", icon: Calendar, label: "Appointments", color: "text-teal-400" },
-    { to: "/documents", icon: FileText, label: "Documents", color: "text-indigo-400" },
-  ];
-
-  const toolsItems = [
-    { to: "/knowledge", icon: BookOpenText, label: "Knowledge", color: "text-purple-400" },
-    { to: "/knowledge-base", icon: Brain, label: "RAG Docs", color: "text-violet-400" },
-    { to: "/listening-sessions", icon: EarOff, label: "Sessions", color: "text-purple-400" },
-    { to: "/tools", icon: Wrench, label: "Tools", color: "text-fuchsia-400" },
-    { to: "/integrations", icon: Puzzle, label: "Integrations", color: "text-pink-400" },
-    { to: "/ai-logs", icon: Activity, label: "AI Logs", color: "text-lime-400" },
-    { to: "/history", icon: History, label: "History", color: "text-amber-400" },
-    { to: "/drafts", icon: Edit, label: "Drafts", color: "text-rose-400" },
-  ];
 
   const isVoiceActive = isListening || isProcessing || isSpeaking || isConversationMode;
 
@@ -162,7 +142,10 @@ const Index = () => {
 
         {/* Widget Dashboard - Drag & Drop */}
         <div className="mt-3 md:mt-4">
-          <WidgetDashboard />
+          <WidgetDashboard 
+            draggedWidget={draggedWidget} 
+            onAddWidget={() => setDraggedWidget(null)} 
+          />
         </div>
 
         {/* Voice Commands Quick Reference - Collapsible on Mobile */}
@@ -222,7 +205,7 @@ const Index = () => {
             </li>
             <li className="flex items-start gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
-              <span>Click "Start Voice" for conversation mode</span>
+              <span>Click "Talk to Echo" for conversation mode</span>
             </li>
           </ol>
         </div>
