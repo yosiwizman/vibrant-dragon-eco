@@ -145,9 +145,9 @@ const Index = () => {
           )}
         </div>
 
-        {/* API Key Status - Shows if not configured */}
+        {/* API Key Status - Shows if not configured (hidden on mobile) */}
         {!hasOpenAIKey && (
-          <div className="mt-3 md:mt-4">
+          <div className="mt-3 md:mt-4 hidden md:block">
             <APIKeyStatus />
           </div>
         )}

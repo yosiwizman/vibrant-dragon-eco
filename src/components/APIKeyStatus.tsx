@@ -54,10 +54,10 @@ export default function APIKeyStatus({ showWhenConfigured = false, compact = fal
   }
 
   return (
-    <Alert className="border-yellow-500/30 bg-yellow-500/10">
-      <Key className="h-4 w-4 text-yellow-400" />
-      <AlertTitle className="text-yellow-400">OpenAI API Key Required</AlertTitle>
-      <AlertDescription className="text-yellow-300/80">
+    <Alert className="border-yellow-400/40 bg-yellow-50">
+      <Key className="h-4 w-4 text-yellow-600" />
+      <AlertTitle className="text-yellow-700">OpenAI API Key Required</AlertTitle>
+      <AlertDescription className="text-yellow-600">
         <p className="mb-3">
           To use voice features, chat, and AI capabilities, you need to add your OpenAI API key.
         </p>
