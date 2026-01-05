@@ -68,14 +68,13 @@ const Index = () => {
   const isVoiceActive = isListening || isProcessing || isSpeaking || isConversationMode;
 
   const getButtonText = () => {
-    if (!hasOpenAIKey) return "Add API Key First";
     if (isConversationMode) {
       if (isListening) return "Listening...";
       if (isProcessing) return "Thinking...";
       if (isSpeaking) return "Speaking...";
       return "End Conversation";
     }
-    return "Start Voice";
+    return "Talk to Echo";
   };
 
   const getButtonIcon = () => {
@@ -102,12 +101,12 @@ const Index = () => {
             Have natural conversations with your AI assistant. Just speak — Echo listens,
             thinks, and responds.
           </p>
-          <div className="mt-4 md:mt-5 flex flex-wrap gap-2 md:gap-3">
+          <div className="mt-4 md:mt-5 flex flex-col sm:flex-row gap-2 md:gap-3">
             <Button
-              size="default"
+              size="lg"
               onClick={handleVoiceToggle}
               disabled={!hasOpenAIKey}
-              className={`shadow-lg transition-all text-sm md:text-base ${
+              className={`w-full sm:w-auto shadow-lg transition-all text-base md:text-lg font-semibold py-6 md:py-3 ${
                 isConversationMode
                   ? "bg-green-600 hover:bg-green-500 shadow-green-500/25 ring-2 ring-green-400/50"
                   : isListening
@@ -119,9 +118,9 @@ const Index = () => {
               {getButtonIcon()}
               {getButtonText()}
             </Button>
-            <Link to="/chat">
-              <Button size="default" variant="outline" className="border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20 text-sm md:text-base">
-                <MessageSquareText className="mr-2 h-4 w-4" /> Text Chat
+            <Link to="/chat" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full border-fuchsia-500/40 bg-fuchsia-500/10 text-white hover:bg-fuchsia-500/20 text-base md:text-lg py-6 md:py-3">
+                <MessageSquareText className="mr-2 h-5 w-5" /> Text Chat
               </Button>
             </Link>
           </div>
