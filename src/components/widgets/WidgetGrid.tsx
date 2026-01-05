@@ -353,10 +353,10 @@ export default function WidgetGrid() {
       {/* Grid */}
       <div
         ref={gridRef}
-        className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
+        className={`relative rounded-xl border-2 transition-all widget-grid-bg overflow-hidden ${
           isEditMode ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed" : "border-slate-700/30 bg-transparent"
         }`}
-        style={{ 
+        style={{
           height: `${getGridHeight()}px`,
           display: 'grid',
           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
