@@ -61,7 +61,7 @@ interface ThumbsPanelProps {
   onWidgetDragStart?: (widget: WidgetType) => void;
 }
 
-export default function ThumbsPanel({ onWidgetDragStart }: ThumbsPanelProps) {
+export default function ThumbsPanel({ onWidgetDragStart }: ThumbsPanelProps = {}) {
   const [open, setOpen] = useState(false);
 
   const handleNav = () => setOpen(false);

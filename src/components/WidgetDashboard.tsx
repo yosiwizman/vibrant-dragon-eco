@@ -29,7 +29,7 @@ interface WidgetDashboardProps {
   draggedWidget?: { id: string; defaultSize: { w: number; h: number } } | null;
 }
 
-export default function WidgetDashboard({ onAddWidget, draggedWidget }: WidgetDashboardProps) {
+export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: WidgetDashboardProps) {
   const { preferences, setPreferences } = usePreferences();
   const [layouts, setLayouts] = useState<WidgetLayout[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);

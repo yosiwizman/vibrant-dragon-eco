@@ -44,8 +44,6 @@ import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceComman
 import ProtectedRoute from "@/components/ProtectedRoute";
 import QuickAccessPanel from "@/components/QuickAccessPanel";
 import ThumbsPanel from "@/components/ThumbsPanel";
-import { useState } from "react";
-import { WidgetType } from "@/components/WidgetLibrary";
 
 const queryClient = new QueryClient();
 
@@ -67,10 +65,7 @@ function QuickAddWrapper() {
   return <QuickAddModal open={isOpen} onClose={close} defaultTab={defaultTab} />;
 }
 
-const App = () => {
-  const [draggedWidget, setDraggedWidget] = useState<WidgetType | null>(null);
-
-  return (
+const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
@@ -285,7 +280,7 @@ const App = () => {
             <FloatingVoiceWidget />
               <ListeningModeIndicator />
               <QuickAccessPanel />
-              <ThumbsPanel onWidgetDragStart={setDraggedWidget} />
+              <ThumbsPanel />
             </VoiceProvider>
           </BrowserRouter>
         </TooltipProvider>
