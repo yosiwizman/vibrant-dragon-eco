@@ -75,6 +75,7 @@ export interface Preferences {
   notificationSoundEnabled: boolean;
   compactVoiceResponses: boolean;
   widgetLayout?: any[];
+  widgets?: any[];
 }
 
 export interface ToolExecutionLog {

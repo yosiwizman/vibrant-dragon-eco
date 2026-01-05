@@ -10,19 +10,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { usePreferences } from "@/state/preferences";
-import { useWidgetDrag } from "@/contexts/WidgetDragContext";
 import APIKeyStatus from "@/components/APIKeyStatus";
-import WidgetDashboard from "@/components/WidgetDashboard";
+import WidgetGrid from "@/components/widgets/WidgetGrid";
 import WelcomeModal from "@/components/WelcomeModal";
 import VoiceTranscriptDisplay from "@/components/VoiceTranscriptDisplay";
-import WeatherWidget from "@/components/WeatherWidget";
-import LocationDisplay from "@/components/LocationDisplay";
 
 const Index = () => {
   const { user } = useAuth();
   const { hasKey: hasOpenAIKey } = useOpenAIKey();
   const { preferences } = usePreferences();
-  const { draggedWidget, setDraggedWidget } = useWidgetDrag();
   const {
     isListening,
     isProcessing,
@@ -140,12 +136,9 @@ const Index = () => {
           </div>
         )}
 
-        {/* Widget Dashboard - Drag & Drop */}
+        {/* Widget Grid - iOS Style */}
         <div className="mt-3 md:mt-4">
-          <WidgetDashboard 
-            draggedWidget={draggedWidget} 
-            onAddWidget={() => setDraggedWidget(null)} 
-          />
+          <WidgetGrid />
         </div>
 
         {/* Voice Commands Quick Reference - Collapsible on Mobile */}

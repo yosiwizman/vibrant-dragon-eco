@@ -5,8 +5,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import WidgetLibrary from "./WidgetLibrary";
-import { useWidgetDrag } from "@/contexts/WidgetDragContext";
+import WidgetPicker from "./widgets/WidgetPicker";
 import {
   CheckSquare,
   Bell,
@@ -59,13 +58,8 @@ const tools: NavItem[] = [
 
 export default function ThumbsPanel() {
   const [open, setOpen] = useState(false);
-  const { setDraggedWidget } = useWidgetDrag();
 
   const handleNav = () => setOpen(false);
-
-  const handleWidgetClick = (widget: any) => {
-    setDraggedWidget(widget);
-  };
 
   const Section = ({ title, items }: { title: string; items: NavItem[] }) => (
     <div className="mb-5">
@@ -131,7 +125,7 @@ export default function ThumbsPanel() {
           </TabsContent>
 
           <TabsContent value="widgets" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4">
-            <WidgetLibrary onWidgetClick={handleWidgetClick} />
+            <WidgetPicker />
           </TabsContent>
         </Tabs>
       </SheetContent>

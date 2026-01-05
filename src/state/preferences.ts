@@ -42,6 +42,7 @@ const DEFAULT: Preferences = {
   notificationSoundEnabled: true,
   compactVoiceResponses: true,
   widgetLayout: undefined,
+  widgets: undefined,
 };
 
 export function loadPreferences(): Preferences {
