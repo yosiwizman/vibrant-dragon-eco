@@ -222,13 +222,18 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             margin={[8, 8]}
             containerPadding={[8, 8]}
             maxRows={16}
+            compactType="vertical"
+            preventCollision={true}
           >
             {layouts.map((layout) => (
               <div
                 key={layout.i}
                 className={`relative ${isEditMode ? 'animate-wiggle' : ''}`}
-                style={{ zIndex: isEditMode ? 10 : 1 }}
-                data-grid={layout}
+                style={{ position: 'relative', zIndex: 1 }}
+                data-grid={{
+                  ...layout,
+                  static: !isEditMode
+                }}
               >
                 {isEditMode && (
                   <>
