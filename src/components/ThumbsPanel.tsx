@@ -59,7 +59,7 @@ export default function ThumbsPanel() {
 
   const Section = ({ title, items }: { title: string; items: NavItem[] }) => (
     <div className="mb-5">
-      <h3 className="text-xs font-semibold text-slate-600 mb-2">{title}</h3>
+      <h3 className="text-xs font-semibold text-slate-500 mb-2">{title}</h3>
       <div className="grid gap-2 grid-cols-3 md:grid-cols-3">
         {items.map((item) => {
           const Icon = item.icon;
@@ -68,10 +68,10 @@ export default function ThumbsPanel() {
               to={item.to}
               key={item.to}
               onClick={handleNav}
-              className="group rounded-lg border border-slate-200/60 bg-white/80 hover:bg-slate-50/90 transition-colors p-3 flex flex-col items-center text-center shadow-sm backdrop-blur-sm"
+              className="group rounded-xl border border-purple-100/50 bg-white/90 hover:bg-gradient-to-br hover:from-purple-50/90 hover:to-fuchsia-50/90 transition-all p-3 flex flex-col items-center text-center shadow-sm hover:shadow-md backdrop-blur-sm"
             >
               <Icon className={`h-5 w-5 ${item.color}`} />
-              <span className="mt-1 text-[11px] text-slate-700 leading-tight">{item.label}</span>
+              <span className="mt-1 text-[11px] text-slate-600 leading-tight">{item.label}</span>
             </Link>
           );
         })}
@@ -97,10 +97,10 @@ export default function ThumbsPanel() {
       {/* Side panel content - lighter colors with transparency and scrolling */}
       <SheetContent
         side="right"
-        className="w-[88vw] sm:w-[400px] border-l border-slate-200/30 bg-white/40 backdrop-blur-lg p-4 flex flex-col"
+        className="w-[88vw] sm:w-[400px] border-l border-purple-200/20 bg-gradient-to-b from-white/85 via-purple-50/80 to-fuchsia-50/80 backdrop-blur-xl p-4 flex flex-col"
       >
         <SheetHeader className="flex-shrink-0">
-          <SheetTitle className="text-slate-800">Quick Access</SheetTitle>
+          <SheetTitle className="text-slate-700">Quick Access</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 space-y-4 overflow-y-auto flex-1 pr-2">
