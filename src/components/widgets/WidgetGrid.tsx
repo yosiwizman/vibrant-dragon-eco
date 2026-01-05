@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, X, GripVertical } from "lucide-react";
+import { Plus, GripVertical } from "lucide-react";
 import { Widget } from "@/types/widgets";
+import { WIDGET_CONFIGS } from "@/types/widgets";
 import { usePreferences } from "@/state/preferences";
 import { showSuccess } from "@/utils/toast";
 import WidgetCell from "./WidgetCell";
@@ -20,7 +21,9 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [draggedWidget, setDraggedWidget] = useState<Widget | null>(null);
+  const [resizingWidget, setResizingWidget] = useState<{ widget: Widget; direction: string } | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0, widgetX: 0, widgetY: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -125,39 +128,108 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
     });
   };
 
+  // Start resizing widget
+  const startResize = (widget: Widget, direction: string, e: React.MouseEvent | React.TouchEvent) => {
+    if (!isEditMode || !gridRef.current) return;
+    
+    e.stopPropagation();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setResizingWidget({ widget, direction });
+    setResizeStart({
+      x: clientX,
+      y: clientY,
+      w: widget.w,
+      h: widget.h,
+      widgetX: widget.x,
+      widgetY: widget.y,
+    });
+  };
+
   // Handle drag move
   const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!draggedWidget || !gridRef.current) return;
+    if (!gridRef.current) return;
 
     const gridRect = gridRef.current.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
     const cellWidth = gridRect.width / COLS;
-    const cellHeight = 100; // rowHeight
+    const cellHeight = 100;
 
-    const newX = Math.floor((clientX - gridRect.left - dragOffset.x) / cellWidth);
-    const newY = Math.floor((clientY - gridRect.top - dragOffset.y) / cellHeight);
+    // Handle widget dragging
+    if (draggedWidget) {
+      const newX = Math.floor((clientX - gridRect.left - dragOffset.x) / cellWidth);
+      const newY = Math.floor((clientY - gridRect.top - dragOffset.y) / cellHeight);
 
-    // Constrain to grid bounds
-    const constrainedX = Math.max(0, Math.min(newX, COLS - draggedWidget.w));
-    const constrainedY = Math.max(0, Math.min(newY, ROWS - draggedWidget.h));
+      const constrainedX = Math.max(0, Math.min(newX, COLS - draggedWidget.w));
+      const constrainedY = Math.max(0, Math.min(newY, ROWS - draggedWidget.h));
 
-    // Update widget position
-    const updatedWidgets = widgets.map(w =>
-      w.id === draggedWidget.id
-        ? { ...w, x: constrainedX, y: constrainedY }
-        : w
-    );
+      const updatedWidgets = widgets.map(w =>
+        w.id === draggedWidget.id
+          ? { ...w, x: constrainedX, y: constrainedY }
+          : w
+      );
 
-    setWidgets(updatedWidgets);
+      setWidgets(updatedWidgets);
+    }
+
+    // Handle widget resizing
+    if (resizingWidget) {
+      const { widget, direction } = resizingWidget;
+      const config = WIDGET_CONFIGS[widget.type];
+      
+      const deltaX = Math.round((clientX - resizeStart.x) / cellWidth);
+      const deltaY = Math.round((clientY - resizeStart.y) / cellHeight);
+
+      let newX = resizeStart.widgetX;
+      let newY = resizeStart.widgetY;
+      let newW = resizeStart.w;
+      let newH = resizeStart.h;
+
+      // Calculate new size based on direction
+      if (direction.includes('e')) {
+        newW = Math.max(config.minSize.w, Math.min(config.maxSize.w, resizeStart.w + deltaX));
+        newW = Math.min(newW, COLS - newX); // Don't exceed grid
+      }
+      if (direction.includes('w')) {
+        const potentialW = resizeStart.w - deltaX;
+        if (potentialW >= config.minSize.w && potentialW <= config.maxSize.w) {
+          newW = potentialW;
+          newX = resizeStart.widgetX + deltaX;
+          newX = Math.max(0, newX); // Don't go negative
+        }
+      }
+      if (direction.includes('s')) {
+        newH = Math.max(config.minSize.h, Math.min(config.maxSize.h, resizeStart.h + deltaY));
+        newH = Math.min(newH, ROWS - newY); // Don't exceed grid
+      }
+      if (direction.includes('n')) {
+        const potentialH = resizeStart.h - deltaY;
+        if (potentialH >= config.minSize.h && potentialH <= config.maxSize.h) {
+          newH = potentialH;
+          newY = resizeStart.widgetY + deltaY;
+          newY = Math.max(0, newY); // Don't go negative
+        }
+      }
+
+      const updatedWidgets = widgets.map(w =>
+        w.id === widget.id
+          ? { ...w, x: newX, y: newY, w: newW, h: newH }
+          : w
+      );
+
+      setWidgets(updatedWidgets);
+    }
   };
 
-  // End drag
+  // End drag or resize
   const endDrag = () => {
-    if (draggedWidget) {
+    if (draggedWidget || resizingWidget) {
       saveWidgets(widgets);
       setDraggedWidget(null);
+      setResizingWidget(null);
     }
   };
 
@@ -178,7 +250,7 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Drag to move • Click X to remove" : `${widgets.length} widgets • Hold to edit`}
+            {isEditMode ? "Drag to move • Resize from edges • Click X to remove" : `${widgets.length} widgets • Hold to edit`}
           </p>
         </div>
         <Button
@@ -223,7 +295,7 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
             <div className="text-center text-slate-400">
               <GripVertical className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Hold to enter edit mode</p>
-              <p className="text-xs text-slate-500 mt-1">Then click + to add widgets</p>
+              <p className="text-xs text-slate-500 mt-1">Then click Edit to add widgets</p>
             </div>
           </div>
         ) : (
@@ -235,6 +307,7 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
               isDragging={draggedWidget?.id === widget.id}
               onRemove={() => removeWidget(widget.id)}
               onDragStart={(e) => startDrag(widget, e)}
+              onResizeStart={(e, dir) => startResize(widget, dir, e)}
             />
           ))
         )}
