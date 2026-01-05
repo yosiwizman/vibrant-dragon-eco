@@ -113,17 +113,6 @@ export default function NavBar() {
             <HelpCircle className="h-4 w-4" />
           </Button>
 
-          {/* Voice Button */}
-          <Link to="/voice" onClick={handleVoiceClick}>
-            <Button
-              size="sm"
-              className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 gap-2"
-            >
-              <Mic className="h-4 w-4" />
-              <span className="hidden sm:inline">Voice</span>
-            </Button>
-          </Link>
-
           <UserMenu />
         </div>
       </div>
