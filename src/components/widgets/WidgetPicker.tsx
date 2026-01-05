@@ -14,6 +14,10 @@ import {
   Users,
   Send,
   MapPin,
+  Target,
+  Brain,
+  Zap,
+  Activity,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, any> = {
@@ -27,6 +31,10 @@ const ICON_MAP: Record<string, any> = {
   Users,
   Send,
   MapPin,
+  Target,
+  Brain,
+  Zap,
+  Activity,
 };
 
 export default function WidgetPicker() {
