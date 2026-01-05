@@ -136,73 +136,10 @@ const Index = () => {
           </div>
         )}
 
-        {/* Widget Grid - iOS Style */}
-        <div className="mt-3 md:mt-4">
+        {/* Widget Grid - iOS Style - Clean area with no obstacles */}
+        <div className="mt-3 md:mt-4 mb-20">
           <WidgetGrid />
         </div>
-
-        {/* Voice Commands Quick Reference - Collapsible on Mobile */}
-        <details className="mt-3 md:mt-4 rounded-lg md:rounded-xl border border-slate-700/50 bg-black/30">
-          <summary className="p-3 md:p-4 cursor-pointer text-sm md:text-base font-semibold text-white flex items-center gap-2">
-            <Mic className="h-4 w-4 text-fuchsia-400" />
-            Voice Commands
-            <span className="text-[10px] md:text-xs text-slate-500 font-normal ml-auto">⌘K</span>
-          </summary>
-          <div className="px-3 pb-3 md:px-4 md:pb-4 grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4 text-xs md:text-sm">
-            <div>
-              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Create</h3>
-              <ul className="space-y-1 text-slate-400 text-xs">
-                <li>"Add task buy groceries"</li>
-                <li>"Remind me at 5pm"</li>
-                <li>"Take a note"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xs font-medium text-fuchsia-300 mb-1.5">Read & Search</h3>
-              <ul className="space-y-1 text-slate-400 text-xs">
-                <li>"Read my tasks"</li>
-                <li>"What's the weather?"</li>
-                <li>"Find coffee shops"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Smart Scheduling</h3>
-              <ul className="space-y-1 text-slate-400 text-xs">
-                <li>"Schedule meeting at 2pm"</li>
-                <li>"When should I do this?"</li>
-                <li>"Check my schedule"</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xs font-medium text-purple-300 mb-1.5">Conversation</h3>
-              <ul className="space-y-1 text-slate-400 text-xs">
-                <li>Click mic to start</li>
-                <li>Say "goodbye" to end</li>
-                <li>Natural chat</li>
-              </ul>
-            </div>
-          </div>
-        </details>
-
-        {/* Setup Reminder - Only show if no API key */}
-        {!hasOpenAIKey && (
-        <div className="mt-3 md:mt-4 rounded-lg md:rounded-xl border border-slate-700/50 bg-slate-800/30 p-3 md:p-4">
-          <h2 className="text-sm md:text-base font-semibold text-white mb-2 flex items-center gap-2">
-            <Settings className="h-4 w-4 text-slate-400" />
-            Quick Setup
-          </h2>
-          <ol className="space-y-1.5 md:space-y-2 text-xs text-slate-300">
-            <li className="flex items-start gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">1</span>
-              <span>Go to <Link to="/settings" className="text-fuchsia-300 hover:underline">Settings</Link> and add your OpenAI API key</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-600 text-xs text-white shrink-0">2</span>
-              <span>Click "Talk to Echo" for conversation mode</span>
-            </li>
-          </ol>
-        </div>
-        )}
       </div>
     </div>
   );
