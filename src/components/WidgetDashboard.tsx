@@ -166,7 +166,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           rowHeight={150}
           width={containerWidth}
           onLayoutChange={handleLayoutChange}
-          draggableHandle=".drag-handle"
           compactType={null}
           preventCollision={true}
           onDrop={handleDrop}
