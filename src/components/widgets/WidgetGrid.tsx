@@ -210,11 +210,13 @@ export default function WidgetGrid({ onOpenWidgetPicker }: WidgetGridProps) {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
         onMouseMove={handleDragMove}
         onTouchMove={handleDragMove}
         onMouseLeave={endDrag}
-        onTouchEnd={endDrag}
+        onTouchEnd={(e) => {
+          handleTouchEnd();
+          endDrag();
+        }}
       >
         {widgets.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center widget-grid-bg">
