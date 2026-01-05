@@ -12,9 +12,6 @@ import "react-resizable/css/styles.css";
 // @ts-ignore - WidthProvider is a default export
 import WidthProvider from "react-grid-layout";
 
-// @ts-ignore - Type issues with react-grid-layout
-const ResponsiveGridLayout: any = WidthProvider(Responsive);
-
 interface WidgetLayout {
   i: string;
   x: number;
@@ -33,6 +30,9 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   const { preferences, setPreferences } = usePreferences();
   const [layouts, setLayouts] = useState<WidgetLayout[]>([]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  
+  // @ts-ignore - Type issues with react-grid-layout
+  const ResponsiveGridLayout: any = React.useMemo(() => WidthProvider(Responsive), []);
 
   useEffect(() => {
     // Load saved layout from preferences
