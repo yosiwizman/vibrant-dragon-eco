@@ -37,6 +37,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -48,8 +49,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
-
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
