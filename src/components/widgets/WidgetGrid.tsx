@@ -272,6 +272,13 @@ export default function WidgetGrid() {
     endAction();
   };
 
+  // Calculate actual grid height based on widgets
+  const getGridHeight = () => {
+    if (widgets.length === 0) return 400; // Minimum height when empty
+    const maxY = Math.max(...widgets.map(w => w.y + w.h));
+    return Math.max(400, maxY * 100 + 24); // 100px per row + padding
+  };
+
   // Expose addWidget globally
   useEffect(() => {
     (window as any).addWidgetToDashboard = addWidget;
@@ -308,8 +315,8 @@ export default function WidgetGrid() {
         className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
           isEditMode ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed" : "border-slate-700/30 bg-transparent"
         }`}
-        style={{ 
-          minHeight: `${ROWS * 100 + 24}px`,
+        style={{
+          height: `${getGridHeight()}px`,
           display: 'grid',
           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
           gridTemplateRows: `repeat(${ROWS}, 100px)`,
