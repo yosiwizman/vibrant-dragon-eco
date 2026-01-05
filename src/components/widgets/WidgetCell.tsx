@@ -62,8 +62,10 @@ export default function WidgetCell({
       onTouchStart={handleTouchStart}
     >
       {/* Widget Content */}
-      <div className={`h-full w-full ${isEditMode ? 'pointer-events-none' : ''}`}>
-        <WidgetContent type={widget.type} />
+      <div className={`h-full w-full p-1 ${isEditMode ? 'pointer-events-none' : ''}`}>
+        <div className="h-full w-full">
+          <WidgetContent type={widget.type} />
+        </div>
       </div>
 
       {/* Edit Mode Overlays */}

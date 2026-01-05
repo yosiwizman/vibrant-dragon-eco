@@ -173,7 +173,7 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   }
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full overflow-hidden">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full overflow-hidden">
       <CardHeader className="p-3 pb-2">
         <CardTitle className="text-sm text-white flex items-center gap-2">
           {type === 'tasks' && <><CheckSquare className="h-4 w-4 text-green-400" />Tasks</>}

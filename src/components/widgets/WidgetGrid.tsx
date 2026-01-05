@@ -135,11 +135,16 @@ export default function WidgetGrid() {
     }
   }, []);
 
-  // Calculate grid height
+  // Calculate grid height with proper spacing
   const getGridHeight = () => {
     if (widgets.length === 0) return 400;
     const maxY = Math.max(...widgets.map(w => w.y + w.h));
-    return Math.max(400, maxY * 100 + 24);
+    // Formula: (rows * rowHeight) + (gaps between rows) + (top + bottom padding)
+    const rowHeight = 100;
+    const gap = 8;
+    const padding = 24; // 12px top + 12px bottom
+    const totalHeight = (maxY * rowHeight) + ((maxY - 1) * gap) + padding;
+    return Math.max(400, totalHeight);
   };
 
   // Save widgets
