@@ -80,7 +80,7 @@ export default function ThumbsPanel() {
   );
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
       {/* Floating trigger button - minimal line design */}
       <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50">
         <SheetTrigger asChild>
@@ -97,7 +97,7 @@ export default function ThumbsPanel() {
       {/* Side panel content - truly transparent with hidden scrollbar */}
       <SheetContent
         side="right"
-        className="w-[88vw] sm:w-[400px] border-l border-purple-300/20 bg-white/10 backdrop-blur-2xl p-4 flex flex-col"
+        className="w-[88vw] sm:w-[400px] border-l border-purple-200/30 bg-white/5 backdrop-blur-xl p-4 flex flex-col"
       >
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-slate-700">Quick Access</SheetTitle>
