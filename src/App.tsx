@@ -66,227 +66,226 @@ function QuickAddWrapper() {
 }
 
 const App = () => (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <VoiceProvider>
-              <NavBar />
-              <VoiceStatusIndicator />
-              <CommandPaletteWrapper />
-              <GlobalShortcutsWrapper />
-              <KeyboardShortcutsHelp />
-              <OnboardingTour />
-              <QuickAddWrapper />
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <VoiceProvider>
+            <NavBar />
+            <VoiceStatusIndicator />
+            <CommandPaletteWrapper />
+            <GlobalShortcutsWrapper />
+            <KeyboardShortcutsHelp />
+            <OnboardingTour />
+            <QuickAddWrapper />
             <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/voice"
-              element={
-                <ProtectedRoute>
-                  <VoiceChat />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat"
-              element={
-                <ProtectedRoute>
-                  <Chat />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tools"
-              element={
-                <ProtectedRoute>
-                  <Tools />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/knowledge"
-              element={
-                <ProtectedRoute>
-                  <Knowledge />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/knowledge-base"
-              element={
-                <ProtectedRoute>
-                  <KnowledgeBase />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/history"
-              element={
-                <ProtectedRoute>
-                  <History />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/debug"
-              element={
-                <ProtectedRoute>
-                  <Debug />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/integrations"
-              element={
-                <ProtectedRoute>
-                  <Integrations />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <Tasks />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reminders"
-              element={
-                <ProtectedRoute>
-                  <Reminders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notes"
-              element={
-                <ProtectedRoute>
-                  <Notes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <ProtectedRoute>
-                  <Calendar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/contacts"
-              element={
-                <ProtectedRoute>
-                  <Contacts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/messages"
-              element={
-                <ProtectedRoute>
-                  <Messages />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/appointments"
-              element={
-                <ProtectedRoute>
-                  <Appointments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ai-logs"
-              element={
-                <ProtectedRoute>
-                  <AILogs />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/drafts"
-              element={
-                <ProtectedRoute>
-                  <Drafts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/booking-tasks"
-              element={
-                <ProtectedRoute>
-                  <BookingTasks />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <ProtectedRoute>
-                  <Documents />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/listening-sessions"
-              element={
-                <ProtectedRoute>
-                  <ListeningSessions />
-                </ProtectedRoute>
-              }
-            />
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/voice"
+                element={
+                  <ProtectedRoute>
+                    <VoiceChat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tools"
+                element={
+                  <ProtectedRoute>
+                    <Tools />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/knowledge"
+                element={
+                  <ProtectedRoute>
+                    <Knowledge />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/knowledge-base"
+                element={
+                  <ProtectedRoute>
+                    <KnowledgeBase />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ProtectedRoute>
+                    <History />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/debug"
+                element={
+                  <ProtectedRoute>
+                    <Debug />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/integrations"
+                element={
+                  <ProtectedRoute>
+                    <Integrations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <Tasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reminders"
+                element={
+                  <ProtectedRoute>
+                    <Reminders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notes"
+                element={
+                  <ProtectedRoute>
+                    <Notes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <Calendar />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/contacts"
+                element={
+                  <ProtectedRoute>
+                    <Contacts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/messages"
+                element={
+                  <ProtectedRoute>
+                    <Messages />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/appointments"
+                element={
+                  <ProtectedRoute>
+                    <Appointments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ai-logs"
+                element={
+                  <ProtectedRoute>
+                    <AILogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/drafts"
+                element={
+                  <ProtectedRoute>
+                    <Drafts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/booking-tasks"
+                element={
+                  <ProtectedRoute>
+                    <BookingTasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <Documents />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/listening-sessions"
+                element={
+                  <ProtectedRoute>
+                    <ListeningSessions />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MicButton />
             <FloatingVoiceWidget />
-              <ListeningModeIndicator />
-              <QuickAccessPanel />
-              <ThumbsPanel />
-            </VoiceProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-};
+            <ListeningModeIndicator />
+            <QuickAccessPanel />
+            <ThumbsPanel />
+          </VoiceProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
