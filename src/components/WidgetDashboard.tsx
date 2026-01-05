@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Responsive, WidthProvider } from "react-grid-layout";
+import { Responsive } from "react-grid-layout";
 import WidgetRenderer from "./WidgetRenderer";
 import { Button } from "@/components/ui/button";
 import { X, GripVertical } from "lucide-react";
 import { usePreferences } from "@/state/preferences";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+// WidthProvider is not exported, so we'll use Responsive directly without it
 
 interface WidgetLayout {
   i: string;
@@ -33,8 +35,20 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   ]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
-  // @ts-ignore - Type issues with react-grid-layout
-  const ResponsiveGridLayout: any = React.useMemo(() => WidthProvider(Responsive), []);
+  const [containerWidth, setContainerWidth] = React.useState(1200);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   useEffect(() => {
     // Load saved layout from preferences
@@ -108,6 +122,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
 
   return (
     <div
+      ref={containerRef}
       className={`relative min-h-[400px] rounded-xl border-2 border-dashed transition-colors ${
         isDraggingOver ? "border-fuchsia-400 bg-fuchsia-500/5" : "border-slate-700/50 bg-transparent"
       }`}
@@ -122,7 +137,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           </div>
         </div>
       ) : (
-        <ResponsiveGridLayout
+        <Responsive
           className="layout"
           layouts={{
             lg: layouts || [],
@@ -134,6 +149,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={150}
+          width={containerWidth}
           onLayoutChange={handleLayoutChange}
           isDraggable={true}
           isResizable={true}
@@ -160,7 +176,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
               </div>
             </div>
           ))}
-        </ResponsiveGridLayout>
+        </Responsive>
       )}
     </div>
   );
