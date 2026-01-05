@@ -166,8 +166,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           rowHeight={150}
           width={containerWidth}
           onLayoutChange={handleLayoutChange}
-          compactType={null}
-          preventCollision={true}
           onDrop={handleDrop}
           droppingItem={{ i: "drop", x: 0, y: 0, w: 2, h: 2 }}
         >
