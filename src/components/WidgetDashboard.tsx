@@ -172,7 +172,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           preventCollision={true}
           isDroppable={true}
           onDrop={handleDrop}
-          droppingItem={{ i: "drop", w: 2, h: 2 }}
+          droppingItem={{ i: "drop", x: 0, y: 0, w: 2, h: 2 }}
         >
           {(layouts || []).map((layout) => (
             <div key={layout.i} className="relative group">
