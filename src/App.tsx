@@ -43,6 +43,7 @@ import ListeningModeIndicator from "@/components/ListeningModeIndicator";
 import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import QuickAccessPanel from "@/components/QuickAccessPanel";
+import ThumbsPanel from "@/components/ThumbsPanel";
 
 const queryClient = new QueryClient();
 
@@ -279,6 +280,7 @@ const App = () => (
             <FloatingVoiceWidget />
             <ListeningModeIndicator />
             <QuickAccessPanel />
+            <ThumbsPanel />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>
