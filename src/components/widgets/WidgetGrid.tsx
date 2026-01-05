@@ -43,15 +43,70 @@ export default function WidgetGrid() {
     }
   }, []);
 
-  // Save widgets
+  // Auto-arrange widgets to fill gaps (compact vertically)
+  const arrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
+    const sorted = [...widgetsToArrange].sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    });
+
+    const arranged: Widget[] = [];
+    const occupied = new Set<string>();
+
+    for (const widget of sorted) {
+      let placed = false;
+      
+      // Try to place widget starting from top
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x <= COLS - widget.w; x++) {
+          // Check if this position is free
+          let canPlace = true;
+          for (let dy = 0; dy < widget.h; dy++) {
+            for (let dx = 0; dx < widget.w; dx++) {
+              if (occupied.has(`${x + dx},${y + dy}`)) {
+                canPlace = false;
+                break;
+              }
+            }
+            if (!canPlace) break;
+          }
+
+          if (canPlace) {
+            // Mark cells as occupied
+            for (let dy = 0; dy < widget.h; dy++) {
+              for (let dx = 0; dx < widget.w; dx++) {
+                occupied.add(`${x + dx},${y + dy}`);
+              }
+            }
+            arranged.push({ ...widget, x, y });
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
+      }
+
+      // If couldn't place, add to bottom
+      if (!placed) {
+        const maxY = arranged.length > 0 ? Math.max(...arranged.map(w => w.y + w.h)) : 0;
+        arranged.push({ ...widget, x: 0, y: maxY });
+      }
+    }
+
+    return arranged;
+  };
+
+  // Save widgets with auto-arrangement
   const saveWidgets = (newWidgets: Widget[]) => {
-    setWidgets(newWidgets);
-    setPreferences({ ...preferences, widgets: newWidgets });
+    const arranged = arrangeWidgets(newWidgets);
+    setWidgets(arranged);
+    setPreferences({ ...preferences, widgets: arranged });
   };
 
   // Long press to enter edit mode
   const handleGridMouseDown = (e: React.MouseEvent) => {
-    if (!isEditMode && (e.target as HTMLElement).classList.contains('widget-grid-bg')) {
+    const target = e.target as HTMLElement;
+    if (!isEditMode && (target.classList.contains('widget-grid-bg') || target.closest('.widget-grid-bg'))) {
       longPressTimer.current = setTimeout(() => setIsEditMode(true), 800);
     }
   };
@@ -122,7 +177,7 @@ export default function WidgetGrid() {
     if (!activeAction || !gridRef.current) return;
 
     const gridRect = gridRef.current.getBoundingClientRect();
-    const cellW = (gridRect.width - 24) / COLS; // Account for padding
+    const cellW = (gridRect.width - 24) / COLS;
     const cellH = 100;
 
     if (activeAction.type === 'drag') {
@@ -146,7 +201,6 @@ export default function WidgetGrid() {
 
       let { x, y, w, h } = activeAction.originalWidget;
 
-      // Apply resize based on direction
       if (activeAction.direction?.includes('e')) {
         w = Math.max(config.minSize.w, Math.min(config.maxSize.w, COLS - x, activeAction.originalWidget.w + cellDeltaX));
       }
@@ -176,7 +230,7 @@ export default function WidgetGrid() {
     }
   };
 
-  // End action
+  // End action - CRITICAL FIX
   const endAction = () => {
     if (activeAction) {
       saveWidgets(widgets);
@@ -184,18 +238,37 @@ export default function WidgetGrid() {
     }
   };
 
-  // Mouse handlers
-  const handleMouseMove = (e: React.MouseEvent) => handleMove(e.clientX, e.clientY);
+  // Mouse/touch handlers
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (activeAction) {
+      e.preventDefault();
+      handleMove(e.clientX, e.clientY);
+    }
+  };
+
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
+    if (activeAction && e.touches.length > 0) {
+      e.preventDefault();
       handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    endAction();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    endAction();
   };
 
   // Expose addWidget globally
   useEffect(() => {
     (window as any).addWidgetToDashboard = addWidget;
-    return () => delete (window as any).addWidgetToDashboard;
+    return () => {
+      delete (window as any).addWidgetToDashboard;
+    };
   }, [widgets]);
 
   return (
@@ -207,7 +280,7 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Drag to move • Resize from corners" : `${widgets.length} widgets • Hold to edit`}
+            {isEditMode ? "Drag to move • Resize from edges/corners" : `${widgets.length} widgets • Hold to edit`}
           </p>
         </div>
         <Button
@@ -235,18 +308,21 @@ export default function WidgetGrid() {
           padding: '12px',
         }}
         onMouseDown={handleGridMouseDown}
-        onMouseUp={handleGridMouseUp}
+        onMouseUp={(e) => {
+          handleGridMouseUp();
+          handleMouseUp(e);
+        }}
         onMouseMove={handleMouseMove}
-        onTouchMove={handleTouchMove}
         onMouseLeave={endAction}
-        onTouchEnd={endAction}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {widgets.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center text-slate-400">
               <GripVertical className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Hold grid to enter edit mode</p>
-              <p className="text-xs text-slate-500 mt-1">Then click Edit to add widgets</p>
+              <p className="text-xs text-slate-500 mt-1">Or click Edit button</p>
             </div>
           </div>
         ) : (
