@@ -26,15 +26,17 @@ interface WidgetDashboardProps {
 export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: WidgetDashboardProps) {
   const { preferences, setPreferences } = usePreferences();
   const [layouts, setLayouts] = useState<WidgetLayout[]>([
-    { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
-    { i: "weather-1", x: 1, y: 0, w: 1, h: 1, widgetId: "weather" },
-    { i: "tasks-2", x: 2, y: 0, w: 1, h: 2, widgetId: "tasks" },
-    { i: "upcoming-3", x: 3, y: 0, w: 1, h: 2, widgetId: "upcoming" },
+    { i: "time-0", x: 0, y: 0, w: 2, h: 1, widgetId: "time" },
+    { i: "weather-1", x: 2, y: 0, w: 2, h: 1, widgetId: "weather" },
+    { i: "tasks-2", x: 0, y: 1, w: 3, h: 2, widgetId: "tasks" },
+    { i: "upcoming-3", x: 3, y: 1, w: 3, h: 2, widgetId: "upcoming" },
   ]);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [containerWidth, setContainerWidth] = useState(1200);
   const containerRef = React.useRef<HTMLDivElement>(null);
-
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -148,15 +150,89 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
     setIsDraggingOver(false);
   };
 
+  const handleMouseDown = () => {
+    const timer = setTimeout(() => {
+      setIsEditMode(true);
+    }, 800); // 800ms hold to enter edit mode
+    setLongPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleTouchStart = () => {
+    const timer = setTimeout(() => {
+      setIsEditMode(true);
+    }, 800);
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const addWidget = (widgetId: string, defaultSize: { w: number; h: number }) => {
+    const newWidget: WidgetLayout = {
+      i: `${widgetId}-${Date.now()}`,
+      x: 0,
+      y: Infinity, // Add to bottom
+      w: defaultSize.w,
+      h: defaultSize.h,
+      widgetId: widgetId,
+    };
+    
+    const newLayouts = [...layouts, newWidget];
+    setLayouts(newLayouts);
+    setPreferences({
+      ...preferences,
+      widgetLayout: newLayouts,
+    });
+  };
+
+  // Watch for draggedWidget changes and add widget when set
+  useEffect(() => {
+    if (draggedWidget && isEditMode) {
+      addWidget(draggedWidget.id, draggedWidget.defaultSize);
+      if (onAddWidget) {
+        onAddWidget(draggedWidget.id);
+      }
+    }
+  }, [draggedWidget]);
+
   return (
-    <div
-      ref={containerRef}
-      className={`relative min-h-[400px] rounded-xl border-2 border-dashed transition-colors ${
-        isDraggingOver ? "border-fuchsia-400 bg-fuchsia-500/5" : "border-slate-700/50 bg-transparent"
-      }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
+    <div className="space-y-3">
+      {/* Edit Mode Toggle */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          {isEditMode ? "Click widgets in the side panel to add them" : "Hold to enter edit mode"}
+        </p>
+        <Button
+          size="sm"
+          variant={isEditMode ? "default" : "outline"}
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={isEditMode ? "bg-fuchsia-600 hover:bg-fuchsia-500" : ""}
+        >
+          {isEditMode ? "Done" : "Edit Widgets"}
+        </Button>
+      </div>
+
+      <div
+        ref={containerRef}
+        className={`relative min-h-[400px] rounded-xl border-2 border-dashed transition-colors ${
+          isEditMode ? "border-fuchsia-400 bg-fuchsia-500/5" : "border-slate-700/50 bg-transparent"
+        }`}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
       {layouts.length === 0 ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center text-slate-400">
@@ -175,28 +251,35 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             xxs: layouts || []
           }}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }}
-          rowHeight={150}
+          cols={{ lg: 6, md: 4, sm: 2, xs: 1, xxs: 1 }}
+          rowHeight={120}
           width={containerWidth}
           onLayoutChange={handleLayoutChange}
           onDrop={handleDrop}
           droppingItem={{ i: "drop", x: 0, y: 0, w: 2, h: 2 }}
         >
           {(layouts || []).map((layout) => (
-            <div key={layout.i} className="relative group">
-              <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity drag-handle cursor-move">
-                <GripVertical className="h-4 w-4 text-slate-400" />
-              </div>
-              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  className="h-6 w-6 rounded-full"
-                  onClick={() => handleRemoveWidget(layout.i)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
+            <div
+              key={layout.i}
+              className={`relative group ${isEditMode ? 'animate-wiggle' : ''}`}
+            >
+              {isEditMode && (
+                <>
+                  <div className="absolute top-2 left-2 z-10 transition-opacity drag-handle cursor-move">
+                    <GripVertical className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <div className="absolute top-2 right-2 z-10 transition-opacity">
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="h-6 w-6 rounded-full"
+                      onClick={() => handleRemoveWidget(layout.i)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </>
+              )}
               <div className="h-full">
                 <WidgetRenderer widgetId={layout.widgetId} />
               </div>
@@ -204,6 +287,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           ))}
         </Responsive>
       )}
+      </div>
     </div>
   );
 }

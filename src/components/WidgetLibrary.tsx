@@ -34,31 +34,31 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "Tasks",
     icon: CheckSquare,
     color: "text-green-500",
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "reminders",
     name: "Reminders",
     icon: Bell,
     color: "text-yellow-500",
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "notes",
     name: "Notes",
     icon: FileText,
     color: "text-orange-500",
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "calendar",
     name: "Calendar",
     icon: Calendar,
     color: "text-blue-500",
-    defaultSize: { w: 2, h: 2 },
+    defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
   },
   {
@@ -66,8 +66,8 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "Time",
     icon: Clock,
     color: "text-purple-500",
-    defaultSize: { w: 1, h: 1 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 2, h: 1 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "weather",
@@ -75,7 +75,7 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     icon: CloudSun,
     color: "text-cyan-500",
     defaultSize: { w: 2, h: 1 },
-    minSize: { w: 1, h: 1 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "location",
@@ -83,14 +83,14 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     icon: MapPin,
     color: "text-pink-500",
     defaultSize: { w: 2, h: 1 },
-    minSize: { w: 1, h: 1 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "upcoming",
     name: "Coming Up",
     icon: TrendingUp,
     color: "text-fuchsia-500",
-    defaultSize: { w: 2, h: 2 },
+    defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
   },
   {
@@ -98,23 +98,23 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "Contacts",
     icon: Users,
     color: "text-indigo-500",
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "messages",
     name: "Messages",
     icon: Send,
     color: "text-emerald-500",
-    defaultSize: { w: 2, h: 2 },
-    minSize: { w: 1, h: 1 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 1 },
   },
   {
     id: "productivity",
     name: "Productivity",
     icon: Target,
     color: "text-amber-500",
-    defaultSize: { w: 2, h: 2 },
+    defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
   },
   {
@@ -122,7 +122,7 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "AI Usage",
     icon: Brain,
     color: "text-violet-500",
-    defaultSize: { w: 2, h: 1 },
+    defaultSize: { w: 3, h: 1 },
     minSize: { w: 2, h: 1 },
   },
   {
@@ -130,7 +130,7 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "Quick Actions",
     icon: Zap,
     color: "text-yellow-500",
-    defaultSize: { w: 2, h: 1 },
+    defaultSize: { w: 3, h: 1 },
     minSize: { w: 2, h: 1 },
   },
   {
@@ -138,28 +138,28 @@ export const AVAILABLE_WIDGETS: WidgetType[] = [
     name: "Recent Activity",
     icon: Activity,
     color: "text-blue-500",
-    defaultSize: { w: 2, h: 2 },
+    defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
   },
 ];
 
 interface WidgetLibraryProps {
-  onWidgetDragStart: (widget: WidgetType) => void;
+  onWidgetClick: (widget: WidgetType) => void;
 }
 
-export default function WidgetLibrary({ onWidgetDragStart }: WidgetLibraryProps) {
+export default function WidgetLibrary({ onWidgetClick }: WidgetLibraryProps) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-700">Available Widgets</h3>
+      <p className="text-xs text-slate-500">Click a widget to add it to your dashboard</p>
       <div className="grid grid-cols-2 gap-2">
         {AVAILABLE_WIDGETS.map((widget) => {
           const Icon = widget.icon;
           return (
             <Card
               key={widget.id}
-              draggable
-              onDragStart={() => onWidgetDragStart(widget)}
-              className="cursor-move border-slate-200/60 bg-white/90 hover:bg-slate-50/90 transition-all hover:shadow-md backdrop-blur-sm"
+              onClick={() => onWidgetClick(widget)}
+              className="cursor-pointer border-slate-200/60 bg-white/90 hover:bg-gradient-to-br hover:from-purple-50/90 hover:to-fuchsia-50/90 transition-all hover:shadow-md backdrop-blur-sm active:scale-95"
             >
               <CardContent className="p-3 flex flex-col items-center text-center gap-2">
                 <div className={`p-2 rounded-lg bg-slate-100`}>

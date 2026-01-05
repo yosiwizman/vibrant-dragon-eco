@@ -63,6 +63,10 @@ export default function ThumbsPanel() {
 
   const handleNav = () => setOpen(false);
 
+  const handleWidgetClick = (widget: any) => {
+    setDraggedWidget(widget);
+  };
+
   const Section = ({ title, items }: { title: string; items: NavItem[] }) => (
     <div className="mb-5">
       <h3 className="text-xs font-semibold text-slate-500 mb-2">{title}</h3>
@@ -127,7 +131,7 @@ export default function ThumbsPanel() {
           </TabsContent>
 
           <TabsContent value="widgets" className="flex-1 overflow-y-auto scrollbar-hide touch-pan-y mt-4">
-            <WidgetLibrary onWidgetDragStart={setDraggedWidget} />
+            <WidgetLibrary onWidgetClick={handleWidgetClick} />
           </TabsContent>
         </Tabs>
       </SheetContent>
