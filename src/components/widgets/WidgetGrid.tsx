@@ -362,16 +362,17 @@ export default function WidgetGrid() {
       {/* Grid */}
       <div
         ref={gridRef}
-        className={`relative rounded-xl border-2 transition-all widget-grid-bg overflow-hidden ${
+        className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
           isEditMode ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed" : "border-slate-700/30 bg-transparent"
         }`}
         style={{
-          height: `${getGridHeight()}px`,
+          minHeight: `${getGridHeight()}px`,
           display: 'grid',
           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
           gridTemplateRows: `repeat(${ROWS}, 100px)`,
           gap: '8px',
           padding: '12px',
+          paddingBottom: '24px',
         }}
         onMouseDown={handleGridMouseDown}
         onMouseUp={(e) => {
