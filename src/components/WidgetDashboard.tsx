@@ -12,7 +12,8 @@ import "react-resizable/css/styles.css";
 // @ts-ignore - WidthProvider is a default export
 import WidthProvider from "react-grid-layout";
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+// @ts-ignore - Type issues with react-grid-layout
+const ResponsiveGridLayout: any = WidthProvider(Responsive);
 
 interface WidgetLayout {
   i: string;
