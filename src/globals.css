@@ -135,13 +135,13 @@
   display: none;  /* Chrome, Safari and Opera */
 }
 
-/* Widget wiggle animation for edit mode */
-@keyframes wiggle {
+/* Widget wiggle animation for edit mode - subtle */
+@keyframes subtle-wiggle {
   0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-1deg); }
-  75% { transform: rotate(1deg); }
+  25% { transform: rotate(-0.3deg); }
+  75% { transform: rotate(0.3deg); }
 }
 
-.animate-wiggle {
-  animation: wiggle 0.3s ease-in-out infinite;
+.animate-subtle-wiggle {
+  animation: subtle-wiggle 0.5s ease-in-out infinite;
 }
