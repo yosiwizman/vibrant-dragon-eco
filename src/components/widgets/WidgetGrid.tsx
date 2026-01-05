@@ -97,10 +97,15 @@ export default function WidgetGrid() {
   };
 
   // Save widgets with auto-arrangement
-  const saveWidgets = (newWidgets: Widget[]) => {
-    const arranged = arrangeWidgets(newWidgets);
-    setWidgets(arranged);
-    setPreferences({ ...preferences, widgets: arranged });
+  const saveWidgets = (newWidgets: Widget[], skipArrange = false) => {
+    if (skipArrange) {
+      setWidgets(newWidgets);
+      setPreferences({ ...preferences, widgets: newWidgets });
+    } else {
+      const arranged = arrangeWidgets(newWidgets);
+      setWidgets(arranged);
+      setPreferences({ ...preferences, widgets: arranged });
+    }
   };
 
   // Long press to enter edit mode
@@ -189,6 +194,7 @@ export default function WidgetGrid() {
       const newX = Math.max(0, Math.min(COLS - activeAction.originalWidget.w, activeAction.originalWidget.x + cellDeltaX));
       const newY = Math.max(0, Math.min(ROWS - activeAction.originalWidget.h, activeAction.originalWidget.y + cellDeltaY));
 
+      // Update without auto-arrange during drag (for smooth movement)
       setWidgets(widgets.map(w =>
         w.id === activeAction.widgetId ? { ...w, x: newX, y: newY } : w
       ));
@@ -224,16 +230,19 @@ export default function WidgetGrid() {
         }
       }
 
+      // Update without auto-arrange during resize (for smooth resizing)
       setWidgets(widgets.map(widget =>
         widget.id === activeAction.widgetId ? { ...widget, x, y, w, h } : widget
       ));
     }
   };
 
-  // End action - CRITICAL FIX
+  // End action - Auto-arrange after every change
   const endAction = () => {
     if (activeAction) {
-      saveWidgets(widgets);
+      const arranged = arrangeWidgets(widgets);
+      setWidgets(arranged);
+      setPreferences({ ...preferences, widgets: arranged });
       setActiveAction(null);
     }
   };
