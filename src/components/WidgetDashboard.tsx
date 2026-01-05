@@ -39,10 +39,10 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
       return savedLayout;
     }
     return [
-      { i: "time-0", x: 0, y: 0, w: 2, h: 1, widgetId: "time" },
-      { i: "weather-1", x: 2, y: 0, w: 2, h: 1, widgetId: "weather" },
-      { i: "tasks-2", x: 0, y: 1, w: 3, h: 2, widgetId: "tasks" },
-      { i: "upcoming-3", x: 3, y: 1, w: 3, h: 2, widgetId: "upcoming" },
+      { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
+      { i: "weather-1", x: 1, y: 0, w: 2, h: 2, widgetId: "weather" },
+      { i: "tasks-2", x: 0, y: 1, w: 2, h: 2, widgetId: "tasks" },
+      { i: "upcoming-3", x: 2, y: 2, w: 2, h: 2, widgetId: "upcoming" },
     ];
   });
 
@@ -215,17 +215,19 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
               xxs: layouts
             }}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 6, md: 4, sm: 2, xs: 1, xxs: 1 }}
-            rowHeight={120}
+            cols={{ lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }}
+            rowHeight={100}
             width={containerWidth}
             onLayoutChange={handleLayoutChange}
-            margin={[12, 12]}
-            containerPadding={[12, 12]}
+            margin={[8, 8]}
+            containerPadding={[8, 8]}
+            maxRows={16}
           >
             {layouts.map((layout) => (
               <div
                 key={layout.i}
                 className={`relative ${isEditMode ? 'animate-wiggle' : ''}`}
+                style={{ zIndex: isEditMode ? 10 : 1 }}
                 data-grid={layout}
               >
                 {isEditMode && (
