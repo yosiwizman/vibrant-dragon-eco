@@ -28,7 +28,12 @@ interface WidgetDashboardProps {
 
 export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: WidgetDashboardProps) {
   const { preferences, setPreferences } = usePreferences();
-  const [layouts, setLayouts] = useState<WidgetLayout[]>([]);
+  const [layouts, setLayouts] = useState<WidgetLayout[]>([
+    { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
+    { i: "weather-1", x: 1, y: 0, w: 2, h: 1, widgetId: "weather" },
+    { i: "tasks-2", x: 0, y: 1, w: 2, h: 2, widgetId: "tasks" },
+    { i: "upcoming-3", x: 2, y: 1, w: 2, h: 2, widgetId: "upcoming" },
+  ]);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   
   // @ts-ignore - Type issues with react-grid-layout
@@ -37,20 +42,14 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
   useEffect(() => {
     // Load saved layout from preferences
     const savedLayout = preferences.widgetLayout;
-    if (savedLayout && Array.isArray(savedLayout)) {
+    if (savedLayout && Array.isArray(savedLayout) && savedLayout.length > 0) {
       setLayouts(savedLayout);
-    } else {
-      // Default layout
-      setLayouts([
-        { i: "time-0", x: 0, y: 0, w: 1, h: 1, widgetId: "time" },
-        { i: "weather-1", x: 1, y: 0, w: 2, h: 1, widgetId: "weather" },
-        { i: "tasks-2", x: 0, y: 1, w: 2, h: 2, widgetId: "tasks" },
-        { i: "upcoming-3", x: 2, y: 1, w: 2, h: 2, widgetId: "upcoming" },
-      ]);
     }
-  }, []);
+  }, [preferences.widgetLayout]);
 
   const handleLayoutChange = (newLayout: any[]) => {
+    if (!newLayout || !Array.isArray(newLayout)) return;
+    
     const updatedLayouts = newLayout.map((item: any) => {
       const existing = layouts.find((l) => l.i === item.i);
       return {
@@ -128,7 +127,13 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
       ) : (
         <ResponsiveGridLayout
           className="layout"
-          layouts={{ lg: layouts }}
+          layouts={{
+            lg: layouts || [],
+            md: layouts || [],
+            sm: layouts || [],
+            xs: layouts || [],
+            xxs: layouts || []
+          }}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 4, md: 3, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={150}
@@ -141,7 +146,7 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
           onDrop={handleDrop}
           droppingItem={{ i: "drop", w: 2, h: 2 }}
         >
-          {layouts.map((layout) => (
+          {(layouts || []).map((layout) => (
             <div key={layout.i} className="relative group">
               <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
