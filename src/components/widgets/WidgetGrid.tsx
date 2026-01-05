@@ -11,9 +11,14 @@ import WidgetCell from "./WidgetCell";
 
 const COLS = 4;
 const ROWS = 16;
+const ROW_HEIGHT = 100;
+const GAP = 8;
+const PADDING = 12;
 
 // Auto-arrange widgets to fill gaps and prevent overlaps
 const arrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
+  if (widgetsToArrange.length === 0) return [];
+  
   const sorted = [...widgetsToArrange].sort((a, b) => {
     if (a.y !== b.y) return a.y - b.y;
     return a.x - b.x;
@@ -22,31 +27,42 @@ const arrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
   const arranged: Widget[] = [];
   const occupied = new Set<string>();
 
+  const markOccupied = (x: number, y: number, w: number, h: number) => {
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        occupied.add(`${x + dx},${y + dy}`);
+      }
+    }
+  };
+
+  const canPlace = (x: number, y: number, w: number, h: number): boolean => {
+    if (x < 0 || y < 0 || x + w > COLS) return false;
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        if (occupied.has(`${x + dx},${y + dy}`)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   for (const widget of sorted) {
     let placed = false;
     
-    // Try to place widget starting from top
-    for (let y = 0; y < ROWS; y++) {
+    // First try the widget's current position
+    if (canPlace(widget.x, widget.y, widget.w, widget.h)) {
+      markOccupied(widget.x, widget.y, widget.w, widget.h);
+      arranged.push({ ...widget });
+      placed = true;
+      continue;
+    }
+    
+    // If current position is occupied, find next available position
+    for (let y = 0; y < ROWS * 2; y++) { // Allow extending beyond initial rows
       for (let x = 0; x <= COLS - widget.w; x++) {
-        // Check if this position is free
-        let canPlace = true;
-        for (let dy = 0; dy < widget.h; dy++) {
-          for (let dx = 0; dx < widget.w; dx++) {
-            if (occupied.has(`${x + dx},${y + dy}`)) {
-              canPlace = false;
-              break;
-            }
-          }
-          if (!canPlace) break;
-        }
-
-        if (canPlace) {
-          // Mark cells as occupied
-          for (let dy = 0; dy < widget.h; dy++) {
-            for (let dx = 0; dx < widget.w; dx++) {
-              occupied.add(`${x + dx},${y + dy}`);
-            }
-          }
+        if (canPlace(x, y, widget.w, widget.h)) {
+          markOccupied(x, y, widget.w, widget.h);
           arranged.push({ ...widget, x, y });
           placed = true;
           break;
@@ -55,9 +71,10 @@ const arrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
       if (placed) break;
     }
 
-    // If couldn't place, add to bottom
+    // Fallback: add to bottom
     if (!placed) {
       const maxY = arranged.length > 0 ? Math.max(...arranged.map(w => w.y + w.h)) : 0;
+      markOccupied(0, maxY, widget.w, widget.h);
       arranged.push({ ...widget, x: 0, y: maxY });
     }
   }
@@ -98,7 +115,7 @@ export default function WidgetGrid() {
 
   // Find next available position
   const findAvailablePosition = useCallback((w: number, h: number): { x: number; y: number } => {
-    for (let y = 0; y <= ROWS - h; y++) {
+    for (let y = 0; y <= ROWS * 2; y++) {
       for (let x = 0; x <= COLS - w; x++) {
         if (!isPositionOccupied(x, y, w, h)) {
           return { x, y };
@@ -116,21 +133,25 @@ export default function WidgetGrid() {
     let initialWidgets: Widget[];
     
     if (saved && Array.isArray(saved) && saved.length > 0) {
-      // Auto-arrange saved widgets to fix any overlaps
+      // Always auto-arrange saved widgets to fix any overlaps
       initialWidgets = arrangeWidgets(saved);
     } else {
-      // Default widgets
+      // Default widgets - already arranged properly
       initialWidgets = [
         { id: '1', type: 'time', x: 0, y: 0, w: 1, h: 1 },
         { id: '2', type: 'weather', x: 1, y: 0, w: 2, h: 2 },
         { id: '3', type: 'tasks', x: 3, y: 0, w: 1, h: 2 },
-        { id: '4', type: 'upcoming', x: 0, y: 2, w: 4, h: 2 },
+        { id: '4', type: 'upcoming', x: 0, y: 2, w: 2, h: 2 },
+        { id: '5', type: 'calendar', x: 2, y: 2, w: 2, h: 2 },
       ];
     }
     
     setWidgets(initialWidgets);
-    // Save arranged widgets
-    if (JSON.stringify(saved) !== JSON.stringify(initialWidgets)) {
+    
+    // Save arranged widgets if they changed
+    const savedStr = JSON.stringify(saved);
+    const arrangedStr = JSON.stringify(initialWidgets);
+    if (savedStr !== arrangedStr) {
       setPreferences({ ...preferences, widgets: initialWidgets });
     }
   }, []);
@@ -140,15 +161,19 @@ export default function WidgetGrid() {
     if (widgets.length === 0) return 400;
     
     const maxY = Math.max(...widgets.map(w => w.y + w.h));
-    const rowHeight = 100;
-    const gap = 8;
-    const topPadding = 12;
-    const bottomPadding = 12;
     
-    // Calculate: (number of rows * row height) + (gaps between rows) + (top and bottom padding)
-    const totalHeight = (maxY * rowHeight) + ((maxY - 1) * gap) + topPadding + bottomPadding;
+    // Calculate: (number of rows * row height) + (gaps between rows) + padding
+    const totalHeight = (maxY * ROW_HEIGHT) + ((maxY > 0 ? maxY - 1 : 0) * GAP) + (PADDING * 2);
     
     return Math.max(400, totalHeight);
+  };
+
+  // Calculate cell dimensions
+  const getCellDimensions = () => {
+    if (!gridRef.current) return { cellWidth: 0, cellHeight: ROW_HEIGHT };
+    const gridWidth = gridRef.current.clientWidth - (PADDING * 2);
+    const cellWidth = (gridWidth - (GAP * (COLS - 1))) / COLS;
+    return { cellWidth, cellHeight: ROW_HEIGHT };
   };
 
   // Save widgets
@@ -188,7 +213,8 @@ export default function WidgetGrid() {
       h: size.h,
     };
 
-    saveWidgets([...widgets, newWidget]);
+    const newWidgets = arrangeWidgets([...widgets, newWidget]);
+    saveWidgets(newWidgets);
     showSuccess(`Added ${type}`);
   }, [widgets, findAvailablePosition]);
 
@@ -231,22 +257,21 @@ export default function WidgetGrid() {
   const handleMove = (clientX: number, clientY: number) => {
     if (!activeAction || !gridRef.current) return;
 
-    const gridRect = gridRef.current.getBoundingClientRect();
-    const cellW = (gridRect.width - 24) / COLS;
-    const cellH = 100;
+    const { cellWidth, cellHeight } = getCellDimensions();
+    if (cellWidth === 0) return;
 
     if (activeAction.type === 'drag') {
       const deltaX = clientX - activeAction.startX;
       const deltaY = clientY - activeAction.startY;
-      const cellDeltaX = Math.round(deltaX / cellW);
-      const cellDeltaY = Math.round(deltaY / cellH);
+      const cellDeltaX = Math.round(deltaX / (cellWidth + GAP));
+      const cellDeltaY = Math.round(deltaY / (cellHeight + GAP));
 
       let newX = activeAction.originalWidget.x + cellDeltaX;
       let newY = activeAction.originalWidget.y + cellDeltaY;
 
       // Constrain to grid bounds
       newX = Math.max(0, Math.min(COLS - activeAction.originalWidget.w, newX));
-      newY = Math.max(0, Math.min(ROWS - activeAction.originalWidget.h, newY));
+      newY = Math.max(0, newY);
 
       // Check for collisions - if occupied, don't move
       if (!isPositionOccupied(newX, newY, activeAction.originalWidget.w, activeAction.originalWidget.h, activeAction.widgetId)) {
@@ -256,10 +281,12 @@ export default function WidgetGrid() {
       }
     } else if (activeAction.type === 'resize') {
       const config = WIDGET_CONFIGS[activeAction.originalWidget.type];
+      if (!config) return;
+      
       const deltaX = clientX - activeAction.startX;
       const deltaY = clientY - activeAction.startY;
-      const cellDeltaX = Math.round(deltaX / cellW);
-      const cellDeltaY = Math.round(deltaY / cellH);
+      const cellDeltaX = Math.round(deltaX / (cellWidth + GAP));
+      const cellDeltaY = Math.round(deltaY / (cellHeight + GAP));
 
       let { x, y, w, h } = activeAction.originalWidget;
 
@@ -275,7 +302,7 @@ export default function WidgetGrid() {
         }
       }
       if (activeAction.direction?.includes('s')) {
-        h = Math.max(config.minSize.h, Math.min(config.maxSize.h, ROWS - y, activeAction.originalWidget.h + cellDeltaY));
+        h = Math.max(config.minSize.h, Math.min(config.maxSize.h, activeAction.originalWidget.h + cellDeltaY));
       }
       if (activeAction.direction?.includes('n')) {
         const newH = Math.max(config.minSize.h, Math.min(config.maxSize.h, activeAction.originalWidget.h - cellDeltaY));
@@ -337,6 +364,43 @@ export default function WidgetGrid() {
     };
   }, [addWidget]);
 
+  // Calculate widget position in pixels
+  const getWidgetStyle = (widget: Widget): React.CSSProperties => {
+    const { cellWidth, cellHeight } = getCellDimensions();
+    if (cellWidth === 0) {
+      // Fallback when grid ref not ready - use percentage-based positioning
+      const percentWidth = 100 / COLS;
+      return {
+        position: 'absolute',
+        left: `calc(${widget.x * percentWidth}% + ${widget.x > 0 ? GAP * widget.x : 0}px)`,
+        top: `${widget.y * (cellHeight + GAP)}px`,
+        width: `calc(${widget.w * percentWidth}% - ${GAP}px)`,
+        height: `${widget.h * cellHeight + (widget.h - 1) * GAP}px`,
+      };
+    }
+    
+    return {
+      position: 'absolute',
+      left: `${PADDING + widget.x * (cellWidth + GAP)}px`,
+      top: `${PADDING + widget.y * (cellHeight + GAP)}px`,
+      width: `${widget.w * cellWidth + (widget.w - 1) * GAP}px`,
+      height: `${widget.h * cellHeight + (widget.h - 1) * GAP}px`,
+    };
+  };
+
+  // Force re-render when grid size changes
+  const [, forceUpdate] = useState({});
+  useEffect(() => {
+    const handleResize = () => forceUpdate({});
+    window.addEventListener('resize', handleResize);
+    // Initial calculation after mount
+    const timer = setTimeout(handleResize, 100);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -359,7 +423,7 @@ export default function WidgetGrid() {
         </Button>
       </div>
 
-      {/* Grid */}
+      {/* Grid - Using absolute positioning for widgets */}
       <div
         ref={gridRef}
         className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
@@ -367,12 +431,7 @@ export default function WidgetGrid() {
         }`}
         style={{
           minHeight: `${getGridHeight()}px`,
-          display: 'grid',
-          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-          gridTemplateRows: `repeat(${ROWS}, 100px)`,
-          gap: '8px',
-          padding: '12px',
-          paddingBottom: '24px',
+          padding: `${PADDING}px`,
         }}
         onMouseDown={handleGridMouseDown}
         onMouseUp={(e) => {
@@ -394,15 +453,20 @@ export default function WidgetGrid() {
           </div>
         ) : (
           widgets.map((widget) => (
-            <WidgetCell
+            <div
               key={widget.id}
-              widget={widget}
-              isEditMode={isEditMode}
-              isActive={activeAction?.widgetId === widget.id}
-              onRemove={() => removeWidget(widget.id)}
-              onDragStart={(clientX, clientY) => startDrag(widget, clientX, clientY)}
-              onResizeStart={(dir, clientX, clientY) => startResize(widget, dir, clientX, clientY)}
-            />
+              style={getWidgetStyle(widget)}
+              className={`transition-all duration-200 ${activeAction?.widgetId === widget.id ? 'z-50' : 'z-10'}`}
+            >
+              <WidgetCell
+                widget={widget}
+                isEditMode={isEditMode}
+                isActive={activeAction?.widgetId === widget.id}
+                onRemove={() => removeWidget(widget.id)}
+                onDragStart={(clientX, clientY) => startDrag(widget, clientX, clientY)}
+                onResizeStart={(dir, clientX, clientY) => startResize(widget, dir, clientX, clientY)}
+              />
+            </div>
           ))
         )}
       </div>

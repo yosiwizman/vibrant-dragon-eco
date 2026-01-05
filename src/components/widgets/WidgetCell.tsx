@@ -53,19 +53,13 @@ export default function WidgetCell({
 
   return (
     <div
-      className={`relative transition-transform ${isEditMode && !isActive ? 'animate-subtle-wiggle' : ''} ${isActive ? 'z-50 scale-105' : 'z-10'}`}
-      style={{
-        gridColumn: `${widget.x + 1} / span ${widget.w}`,
-        gridRow: `${widget.y + 1} / span ${widget.h}`,
-      }}
+      className={`relative h-full w-full transition-transform ${isEditMode && !isActive ? 'animate-subtle-wiggle' : ''} ${isActive ? 'scale-105' : ''}`}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
       {/* Widget Content */}
-      <div className={`h-full w-full p-1 ${isEditMode ? 'pointer-events-none' : ''}`}>
-        <div className="h-full w-full">
-          <WidgetContent type={widget.type} />
-        </div>
+      <div className={`h-full w-full ${isEditMode ? 'pointer-events-none' : ''}`}>
+        <WidgetContent type={widget.type} />
       </div>
 
       {/* Edit Mode Overlays */}
