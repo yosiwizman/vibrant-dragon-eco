@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Responsive } from "react-grid-layout";
+import { Responsive, WidthProvider } from "react-grid-layout";
 import WidgetRenderer from "./WidgetRenderer";
 import { Button } from "@/components/ui/button";
 import { X, GripVertical } from "lucide-react";
 import { usePreferences } from "@/state/preferences";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-
-// @ts-ignore - WidthProvider is a default export
-import WidthProvider from "react-grid-layout";
 
 interface WidgetLayout {
   i: string;
