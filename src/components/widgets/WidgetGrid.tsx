@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical } from "lucide-react";
 import { Widget } from "@/types/widgets";
@@ -11,6 +11,59 @@ import WidgetCell from "./WidgetCell";
 
 const COLS = 4;
 const ROWS = 16;
+
+// Auto-arrange widgets to fill gaps and prevent overlaps
+const arrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
+  const sorted = [...widgetsToArrange].sort((a, b) => {
+    if (a.y !== b.y) return a.y - b.y;
+    return a.x - b.x;
+  });
+
+  const arranged: Widget[] = [];
+  const occupied = new Set<string>();
+
+  for (const widget of sorted) {
+    let placed = false;
+    
+    // Try to place widget starting from top
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x <= COLS - widget.w; x++) {
+        // Check if this position is free
+        let canPlace = true;
+        for (let dy = 0; dy < widget.h; dy++) {
+          for (let dx = 0; dx < widget.w; dx++) {
+            if (occupied.has(`${x + dx},${y + dy}`)) {
+              canPlace = false;
+              break;
+            }
+          }
+          if (!canPlace) break;
+        }
+
+        if (canPlace) {
+          // Mark cells as occupied
+          for (let dy = 0; dy < widget.h; dy++) {
+            for (let dx = 0; dx < widget.w; dx++) {
+              occupied.add(`${x + dx},${y + dy}`);
+            }
+          }
+          arranged.push({ ...widget, x, y });
+          placed = true;
+          break;
+        }
+      }
+      if (placed) break;
+    }
+
+    // If couldn't place, add to bottom
+    if (!placed) {
+      const maxY = arranged.length > 0 ? Math.max(...arranged.map(w => w.y + w.h)) : 0;
+      arranged.push({ ...widget, x: 0, y: maxY });
+    }
+  }
+
+  return arranged;
+};
 
 export default function WidgetGrid() {
   const { preferences, setPreferences } = usePreferences();
@@ -28,28 +81,11 @@ export default function WidgetGrid() {
   const gridRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Load widgets from preferences
-  useEffect(() => {
-    const saved = preferences.widgets;
-    if (saved && Array.isArray(saved)) {
-      setWidgets(saved);
-    } else {
-      // Default widgets - NO OVERLAPPING
-      setWidgets([
-        { id: '1', type: 'time', x: 0, y: 0, w: 1, h: 1 },
-        { id: '2', type: 'weather', x: 1, y: 0, w: 2, h: 2 },
-        { id: '3', type: 'tasks', x: 3, y: 0, w: 1, h: 2 },
-        { id: '4', type: 'upcoming', x: 0, y: 2, w: 4, h: 2 },
-      ]);
-    }
-  }, []);
-
-  // Check if position is occupied by another widget
-  const isPositionOccupied = (x: number, y: number, w: number, h: number, excludeId?: string): boolean => {
+  // Check if position is occupied
+  const isPositionOccupied = useCallback((x: number, y: number, w: number, h: number, excludeId?: string): boolean => {
     for (const widget of widgets) {
       if (widget.id === excludeId) continue;
       
-      // Check if rectangles overlap
       const xOverlap = x < widget.x + widget.w && x + w > widget.x;
       const yOverlap = y < widget.y + widget.h && y + h > widget.y;
       
@@ -58,11 +94,10 @@ export default function WidgetGrid() {
       }
     }
     return false;
-  };
+  }, [widgets]);
 
   // Find next available position
-  const findAvailablePosition = (w: number, h: number): { x: number; y: number } => {
-    // Try each row from top to bottom
+  const findAvailablePosition = useCallback((w: number, h: number): { x: number; y: number } => {
     for (let y = 0; y <= ROWS - h; y++) {
       for (let x = 0; x <= COLS - w; x++) {
         if (!isPositionOccupied(x, y, w, h)) {
@@ -71,12 +106,36 @@ export default function WidgetGrid() {
       }
     }
     
-    // If no space found, place at bottom
     const maxY = widgets.length > 0 ? Math.max(...widgets.map(w => w.y + w.h)) : 0;
     return { x: 0, y: maxY };
-  };
+  }, [widgets, isPositionOccupied]);
 
-  // Calculate actual grid height based on widgets
+  // Load widgets from preferences and auto-arrange
+  useEffect(() => {
+    const saved = preferences.widgets;
+    let initialWidgets: Widget[];
+    
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      // Auto-arrange saved widgets to fix any overlaps
+      initialWidgets = arrangeWidgets(saved);
+    } else {
+      // Default widgets
+      initialWidgets = [
+        { id: '1', type: 'time', x: 0, y: 0, w: 1, h: 1 },
+        { id: '2', type: 'weather', x: 1, y: 0, w: 2, h: 2 },
+        { id: '3', type: 'tasks', x: 3, y: 0, w: 1, h: 2 },
+        { id: '4', type: 'upcoming', x: 0, y: 2, w: 4, h: 2 },
+      ];
+    }
+    
+    setWidgets(initialWidgets);
+    // Save arranged widgets
+    if (JSON.stringify(saved) !== JSON.stringify(initialWidgets)) {
+      setPreferences({ ...preferences, widgets: initialWidgets });
+    }
+  }, []);
+
+  // Calculate grid height
   const getGridHeight = () => {
     if (widgets.length === 0) return 400;
     const maxY = Math.max(...widgets.map(w => w.y + w.h));
@@ -105,7 +164,7 @@ export default function WidgetGrid() {
   };
 
   // Add widget
-  const addWidget = (type: string, size: { w: number; h: number }) => {
+  const addWidget = useCallback((type: string, size: { w: number; h: number }) => {
     if (widgets.some(w => w.type === type)) {
       showSuccess(`${type} already added`);
       return;
@@ -122,11 +181,13 @@ export default function WidgetGrid() {
 
     saveWidgets([...widgets, newWidget]);
     showSuccess(`Added ${type}`);
-  };
+  }, [widgets, findAvailablePosition]);
 
   // Remove widget
   const removeWidget = (id: string) => {
-    saveWidgets(widgets.filter(w => w.id !== id));
+    const newWidgets = widgets.filter(w => w.id !== id);
+    const arranged = arrangeWidgets(newWidgets);
+    saveWidgets(arranged);
     showSuccess("Removed");
   };
 
@@ -178,16 +239,12 @@ export default function WidgetGrid() {
       newX = Math.max(0, Math.min(COLS - activeAction.originalWidget.w, newX));
       newY = Math.max(0, Math.min(ROWS - activeAction.originalWidget.h, newY));
 
-      // Check for collisions and find nearest valid position
-      if (isPositionOccupied(newX, newY, activeAction.originalWidget.w, activeAction.originalWidget.h, activeAction.widgetId)) {
-        // Keep original position if new position is occupied
-        newX = activeAction.originalWidget.x;
-        newY = activeAction.originalWidget.y;
+      // Check for collisions - if occupied, don't move
+      if (!isPositionOccupied(newX, newY, activeAction.originalWidget.w, activeAction.originalWidget.h, activeAction.widgetId)) {
+        setWidgets(widgets.map(w =>
+          w.id === activeAction.widgetId ? { ...w, x: newX, y: newY } : w
+        ));
       }
-
-      setWidgets(widgets.map(w =>
-        w.id === activeAction.widgetId ? { ...w, x: newX, y: newY } : w
-      ));
     } else if (activeAction.type === 'resize') {
       const config = WIDGET_CONFIGS[activeAction.originalWidget.type];
       const deltaX = clientX - activeAction.startX;
@@ -197,7 +254,6 @@ export default function WidgetGrid() {
 
       let { x, y, w, h } = activeAction.originalWidget;
 
-      // Calculate new size based on direction
       if (activeAction.direction?.includes('e')) {
         w = Math.max(config.minSize.w, Math.min(config.maxSize.w, COLS - x, activeAction.originalWidget.w + cellDeltaX));
       }
@@ -221,7 +277,7 @@ export default function WidgetGrid() {
         }
       }
 
-      // Only update if new size doesn't cause collision
+      // Only update if no collision
       if (!isPositionOccupied(x, y, w, h, activeAction.widgetId)) {
         setWidgets(widgets.map(widget =>
           widget.id === activeAction.widgetId ? { ...widget, x, y, w, h } : widget
@@ -230,10 +286,11 @@ export default function WidgetGrid() {
     }
   };
 
-  // End action
+  // End action - auto-arrange on release
   const endAction = () => {
     if (activeAction) {
-      saveWidgets(widgets);
+      const arranged = arrangeWidgets(widgets);
+      saveWidgets(arranged);
       setActiveAction(null);
     }
   };
@@ -269,7 +326,7 @@ export default function WidgetGrid() {
     return () => {
       delete (window as any).addWidgetToDashboard;
     };
-  }, [widgets]);
+  }, [addWidget]);
 
   return (
     <div className="space-y-3">
@@ -280,7 +337,7 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Drag to move • Resize from edges/corners" : `${widgets.length} widgets • Hold to edit`}
+            {isEditMode ? "Drag to move • Resize from corners/edges" : `${widgets.length} widgets • Click Edit`}
           </p>
         </div>
         <Button
@@ -293,7 +350,7 @@ export default function WidgetGrid() {
         </Button>
       </div>
 
-      {/* Grid - Dynamic height */}
+      {/* Grid */}
       <div
         ref={gridRef}
         className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
