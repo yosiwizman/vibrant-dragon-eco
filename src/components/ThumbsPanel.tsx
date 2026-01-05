@@ -86,10 +86,10 @@ export default function ThumbsPanel() {
         <SheetTrigger asChild>
           <Button
             size="icon"
-            className="h-16 w-8 rounded-l-lg rounded-r-none shadow-md bg-gradient-to-b from-purple-100 to-fuchsia-100 hover:from-purple-200 hover:to-fuchsia-200 border-l border-t border-b border-purple-200"
+            className="h-20 w-4 rounded-l-md rounded-r-none shadow-sm bg-gradient-to-b from-purple-400/30 to-fuchsia-400/30 hover:from-purple-400/50 hover:to-fuchsia-400/50 border-l border-t border-b border-purple-300/40 backdrop-blur-sm"
             aria-label="Open quick access panel"
           >
-            <Menu className="h-4 w-4 text-purple-600" />
+            <Menu className="h-3 w-3 text-purple-500" />
           </Button>
         </SheetTrigger>
       </div>
