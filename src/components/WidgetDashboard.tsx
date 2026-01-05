@@ -222,8 +222,6 @@ export default function WidgetDashboard({ onAddWidget, draggedWidget = null }: W
             margin={[8, 8]}
             containerPadding={[8, 8]}
             maxRows={16}
-            compactType="vertical"
-            preventCollision={true}
           >
             {layouts.map((layout) => (
               <div
