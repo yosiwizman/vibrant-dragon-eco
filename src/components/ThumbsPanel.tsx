@@ -68,7 +68,7 @@ export default function ThumbsPanel() {
               to={item.to}
               key={item.to}
               onClick={handleNav}
-              className="group rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors p-3 flex flex-col items-center text-center shadow-sm"
+              className="group rounded-lg border border-slate-200/60 bg-white/80 hover:bg-slate-50/90 transition-colors p-3 flex flex-col items-center text-center shadow-sm backdrop-blur-sm"
             >
               <Icon className={`h-5 w-5 ${item.color}`} />
               <span className="mt-1 text-[11px] text-slate-700 leading-tight">{item.label}</span>
@@ -94,16 +94,16 @@ export default function ThumbsPanel() {
         </SheetTrigger>
       </div>
 
-      {/* Side panel content - lighter colors */}
+      {/* Side panel content - lighter colors with transparency and scrolling */}
       <SheetContent
         side="right"
-        className="w-[88vw] sm:w-[400px] border-l border-slate-200 bg-slate-50 p-4"
+        className="w-[88vw] sm:w-[400px] border-l border-slate-200/50 bg-white/70 backdrop-blur-md p-4 flex flex-col"
       >
-        <SheetHeader>
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-slate-800">Quick Access</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-4 overflow-y-auto flex-1 pr-2">
           <Section title="Core" items={quickAccess} />
           <Section title="Tools & More" items={tools} />
         </div>
