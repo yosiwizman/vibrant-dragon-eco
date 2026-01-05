@@ -97,7 +97,7 @@ export default function ThumbsPanel() {
       {/* Side panel content - lighter colors with transparency and scrolling */}
       <SheetContent
         side="right"
-        className="w-[88vw] sm:w-[400px] border-l border-slate-200/50 bg-white/70 backdrop-blur-md p-4 flex flex-col"
+        className="w-[88vw] sm:w-[400px] border-l border-slate-200/30 bg-white/40 backdrop-blur-lg p-4 flex flex-col"
       >
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-slate-800">Quick Access</SheetTitle>
