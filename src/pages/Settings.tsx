@@ -195,6 +195,33 @@ export default function Settings() {
           <TabsContent value="general" className="space-y-6">
             <IntegrationStatus />
 
+            {/* User Profile */}
+            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <User className="h-5 w-5 text-fuchsia-400" />
+                  Your Profile
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  How the assistant should address you
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-2">
+                  <Label className="text-slate-300">How would you like the assistant to call you?</Label>
+                  <Input
+                    className="bg-slate-900 border-slate-700 text-white"
+                    placeholder="Your name"
+                    value={preferences.preferredName || ""}
+                    onChange={(e) => setPreferences({ ...preferences, preferredName: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500">
+                    This name will appear in greetings and throughout the app
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Assistant Personalization */}
             <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
               <CardHeader>

@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
+import { usePreferences } from "@/state/preferences";
 import APIKeyStatus from "@/components/APIKeyStatus";
 import Dashboard from "@/components/Dashboard";
 import WelcomeModal from "@/components/WelcomeModal";
@@ -19,13 +20,14 @@ import LocationDisplay from "@/components/LocationDisplay";
 const Index = () => {
   const { user } = useAuth();
   const { hasKey: hasOpenAIKey } = useOpenAIKey();
-  const { 
-    isListening, 
-    isProcessing, 
-    isSpeaking, 
+  const { preferences } = usePreferences();
+  const {
+    isListening,
+    isProcessing,
+    isSpeaking,
     isConversationMode,
-    startConversationMode, 
-    stopConversationMode 
+    startConversationMode,
+    stopConversationMode
   } = useVoice();
 
   const getGreeting = () => {
@@ -95,7 +97,7 @@ const Index = () => {
             <span className="text-xs md:text-sm font-medium">Personal • Voice-first • Private</span>
           </div>
           <h1 className="mt-2 md:mt-3 text-2xl md:text-4xl font-bold text-white">
-            {getGreeting()}{user?.email ? `, ${user.email.split("@")[0]}` : ""}!
+            {getGreeting()}{preferences.preferredName ? `, ${preferences.preferredName}` : user?.email ? `, ${user.email.split("@")[0]}` : ""}!
           </h1>
           <p className="mt-2 md:mt-3 max-w-2xl text-slate-300 text-xs md:text-base leading-relaxed">
             Have natural conversations with your AI assistant. Just speak — Echo listens,

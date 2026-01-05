@@ -4,6 +4,7 @@ import type { Preferences } from "../types/models";
 const KEY = "echo:prefs";
 
 const DEFAULT: Preferences = {
+  preferredName: "",
   baseUrl: "",
   privateMode: false,
   pinEnabled: false,

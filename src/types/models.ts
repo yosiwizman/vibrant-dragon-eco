@@ -37,6 +37,7 @@ export interface LocationSnapshot {
 export type OpenAIVoice = "alloy" | "ash" | "ballad" | "coral" | "echo" | "fable" | "onyx" | "nova" | "sage" | "shimmer" | "verse";
 
 export interface Preferences {
+  preferredName: string;
   baseUrl: string;
   privateMode: boolean;
   pinEnabled: boolean;
