@@ -94,16 +94,16 @@ export default function ThumbsPanel() {
         </SheetTrigger>
       </div>
 
-      {/* Side panel content - lighter colors with transparency and scrolling */}
+      {/* Side panel content - truly transparent with hidden scrollbar */}
       <SheetContent
         side="right"
-        className="w-[88vw] sm:w-[400px] border-l border-purple-200/20 bg-gradient-to-b from-white/85 via-purple-50/80 to-fuchsia-50/80 backdrop-blur-xl p-4 flex flex-col"
+        className="w-[88vw] sm:w-[400px] border-l border-purple-300/20 bg-white/10 backdrop-blur-2xl p-4 flex flex-col"
       >
         <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-slate-700">Quick Access</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4 overflow-y-auto flex-1 pr-2">
+        <div className="mt-4 space-y-4 overflow-y-auto flex-1 scrollbar-hide touch-pan-y">
           <Section title="Core" items={quickAccess} />
           <Section title="Tools & More" items={tools} />
         </div>
