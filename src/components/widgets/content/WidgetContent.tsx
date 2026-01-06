@@ -1,8 +1,6 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import CurrentTimeDisplay from "@/components/CurrentTimeDisplay";
-import WeatherWidget from "@/components/WeatherWidget";
 import LocationDisplay from "@/components/LocationDisplay";
 import QuickActions from "@/components/QuickActions";
 import AIUsageWidget from "@/components/AIUsageWidget";
