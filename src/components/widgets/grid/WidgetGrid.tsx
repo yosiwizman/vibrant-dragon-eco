@@ -251,7 +251,7 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Resize from the purple handles" : `${widgets.length} widgets`}
+            {isEditMode ? (activeResize ? `Resizing widget...` : "Resize from the purple handles") : `${widgets.length} widgets`}
           </p>
         </div>
 
@@ -290,7 +290,9 @@ export default function WidgetGrid() {
         ref={containerRef}
         className={`relative rounded-xl border-2 p-3 transition-colors ${
           isEditMode
-            ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed"
+            ? activeResize
+              ? "border-fuchsia-400 bg-fuchsia-500/10 border-solid"
+              : "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed"
             : "border-slate-700/30 bg-transparent"
         }`}
         style={{ minHeight: gridHeight }}

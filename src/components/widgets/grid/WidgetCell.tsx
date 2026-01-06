@@ -18,7 +18,9 @@ interface WidgetCellProps {
 
 export default function WidgetCell({ widget, isEditMode, onRemove, onResizeStart }: WidgetCellProps) {
   return (
-    <div className="relative h-full w-full min-h-0 min-w-0 overflow-hidden rounded-xl">
+    <div className={`relative h-full w-full min-h-0 min-w-0 overflow-hidden rounded-xl transition-all ${
+      isEditMode ? "ring-2 ring-fuchsia-400/30 hover:ring-fuchsia-400/50" : ""
+    }`}>
       {/* Clip any child overflow so widgets never visually overlap */}
       <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
         <WidgetContent type={widget.type} />
