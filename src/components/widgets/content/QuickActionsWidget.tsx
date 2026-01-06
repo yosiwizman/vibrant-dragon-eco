@@ -28,11 +28,15 @@ type ActionType = "task" | "reminder" | "note" | "event" | "call" | "email" | "m
 
 interface QuickAction {
   type: ActionType;
+  enabled: boolean;
+}
+
+interface ActionConfig {
+  type: ActionType;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   color: string;
   bgColor: string;
-  enabled: boolean;
 }
 
 interface ActionTemplate {
@@ -42,15 +46,17 @@ interface ActionTemplate {
   description?: string;
 }
 
-const DEFAULT_ACTIONS: QuickAction[] = [
-  { type: "task", icon: CheckSquare, label: "Task", color: "text-green-400", bgColor: "bg-green-500/10 hover:bg-green-500/20", enabled: true },
-  { type: "reminder", icon: Bell, label: "Reminder", color: "text-yellow-400", bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20", enabled: true },
-  { type: "note", icon: FileText, label: "Note", color: "text-purple-400", bgColor: "bg-purple-500/10 hover:bg-purple-500/20", enabled: true },
-  { type: "event", icon: Calendar, label: "Event", color: "text-blue-400", bgColor: "bg-blue-500/10 hover:bg-blue-500/20", enabled: true },
-  { type: "call", icon: Phone, label: "Call", color: "text-cyan-400", bgColor: "bg-cyan-500/10 hover:bg-cyan-500/20", enabled: false },
-  { type: "email", icon: Mail, label: "Email", color: "text-orange-400", bgColor: "bg-orange-500/10 hover:bg-orange-500/20", enabled: false },
-  { type: "message", icon: MessageSquare, label: "Message", color: "text-pink-400", bgColor: "bg-pink-500/10 hover:bg-pink-500/20", enabled: false },
-];
+const ACTION_CONFIGS: Record<ActionType, ActionConfig> = {
+  task: { type: "task", icon: CheckSquare, label: "Task", color: "text-green-400", bgColor: "bg-green-500/10 hover:bg-green-500/20" },
+  reminder: { type: "reminder", icon: Bell, label: "Reminder", color: "text-yellow-400", bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20" },
+  note: { type: "note", icon: FileText, label: "Note", color: "text-purple-400", bgColor: "bg-purple-500/10 hover:bg-purple-500/20" },
+  event: { type: "event", icon: Calendar, label: "Event", color: "text-blue-400", bgColor: "bg-blue-500/10 hover:bg-blue-500/20" },
+  call: { type: "call", icon: Phone, label: "Call", color: "text-cyan-400", bgColor: "bg-cyan-500/10 hover:bg-cyan-500/20" },
+  email: { type: "email", icon: Mail, label: "Email", color: "text-orange-400", bgColor: "bg-orange-500/10 hover:bg-orange-500/20" },
+  message: { type: "message", icon: MessageSquare, label: "Message", color: "text-pink-400", bgColor: "bg-pink-500/10 hover:bg-pink-500/20" },
+};
+
+const DEFAULT_ENABLED: ActionType[] = ["task", "reminder", "note", "event"];
 
 const TASK_TEMPLATES = [
   "Buy groceries",
@@ -69,7 +75,7 @@ const REMINDER_TEMPLATES = [
 
 export default function QuickActionsWidget() {
   const { user } = useAuth();
-  const [actions, setActions] = useState<QuickAction[]>(DEFAULT_ACTIONS);
+  const [enabledTypes, setEnabledTypes] = useState<ActionType[]>(DEFAULT_ENABLED);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [actionType, setActionType] = useState<ActionType>("task");
@@ -80,10 +86,10 @@ export default function QuickActionsWidget() {
   const [timeUnit, setTimeUnit] = useState<"minutes" | "hours" | "days">("hours");
 
   useEffect(() => {
-    const saved = localStorage.getItem("quickActions");
+    const saved = localStorage.getItem("quickActionsEnabled");
     if (saved) {
       try {
-        setActions(JSON.parse(saved));
+        setEnabledTypes(JSON.parse(saved));
       } catch (e) {
         console.error("Failed to load quick actions");
       }
@@ -91,13 +97,15 @@ export default function QuickActionsWidget() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("quickActions", JSON.stringify(actions));
-  }, [actions]);
+    localStorage.setItem("quickActionsEnabled", JSON.stringify(enabledTypes));
+  }, [enabledTypes]);
 
   const toggleAction = (type: ActionType) => {
-    setActions(actions.map(a => 
-      a.type === type ? { ...a, enabled: !a.enabled } : a
-    ));
+    if (enabledTypes.includes(type)) {
+      setEnabledTypes(enabledTypes.filter(t => t !== type));
+    } else {
+      setEnabledTypes([...enabledTypes, type]);
+    }
   };
 
   const handleQuickAction = async () => {
@@ -213,8 +221,8 @@ export default function QuickActionsWidget() {
     }
   };
 
-  const enabledActions = actions.filter(a => a.enabled);
-  const currentAction = actions.find(a => a.type === actionType);
+  const enabledActions = enabledTypes.map(type => ACTION_CONFIGS[type]);
+  const currentAction = ACTION_CONFIGS[actionType];
 
   return (
     <>
@@ -370,27 +378,28 @@ export default function QuickActionsWidget() {
           </DialogHeader>
           <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-hide">
             <p className="text-sm text-slate-400">Select which actions to show:</p>
-            {actions.map((action) => {
-              const Icon = action.icon;
+            {Object.values(ACTION_CONFIGS).map((config) => {
+              const Icon = config.icon;
+              const isEnabled = enabledTypes.includes(config.type);
               return (
                 <div
-                  key={action.type}
+                  key={config.type}
                   className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700"
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4 w-4 ${action.color}`} />
-                    <span className="text-sm text-white">{action.label}</span>
+                    <Icon className={`h-4 w-4 ${config.color}`} />
+                    <span className="text-sm text-white">{config.label}</span>
                   </div>
                   <Button
                     size="sm"
-                    variant={action.enabled ? "default" : "outline"}
-                    onClick={() => toggleAction(action.type)}
-                    className={action.enabled 
-                      ? "bg-fuchsia-600 text-white hover:bg-fuchsia-500" 
+                    variant={isEnabled ? "default" : "outline"}
+                    onClick={() => toggleAction(config.type)}
+                    className={isEnabled
+                      ? "bg-fuchsia-600 text-white hover:bg-fuchsia-500"
                       : "border-slate-600 text-slate-300"
                     }
                   >
-                    {action.enabled ? "Enabled" : "Disabled"}
+                    {isEnabled ? "Enabled" : "Disabled"}
                   </Button>
                 </div>
               );
