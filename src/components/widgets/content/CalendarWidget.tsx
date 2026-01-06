@@ -230,7 +230,7 @@ export default function CalendarWidget() {
           </div>
         </CardHeader>
 
-        <CardContent className="p-3 pt-0 flex-1 min-h-0 overflow-y-auto space-y-3">
+        <CardContent className="p-3 pt-0 flex-1 min-h-0 overflow-y-auto scrollbar-hide space-y-3">
           {/* Month Navigation */}
           <div className="flex items-center justify-between">
             <Button
