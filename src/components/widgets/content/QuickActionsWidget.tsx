@@ -28,7 +28,7 @@ type ActionType = "task" | "reminder" | "note" | "event" | "call" | "email" | "m
 
 interface QuickAction {
   type: ActionType;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   color: string;
   bgColor: string;
