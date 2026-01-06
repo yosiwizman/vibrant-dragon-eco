@@ -205,7 +205,7 @@ export default function WidgetGrid() {
       nextW = Math.max(minW, Math.min(maxW, nextW));
       nextH = Math.max(minH, Math.min(maxH, nextH));
       nextX = Math.max(0, Math.min(GRID_COLS - nextW, nextX));
-      nextY = Math.max(0, nextY));
+      nextY = Math.max(0, nextY);
 
       if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
 
