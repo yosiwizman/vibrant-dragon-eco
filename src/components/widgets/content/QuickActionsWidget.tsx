@@ -368,7 +368,7 @@ export default function QuickActionsWidget() {
           <DialogHeader>
             <DialogTitle className="text-white">Customize Quick Actions</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-hide">
             <p className="text-sm text-slate-400">Select which actions to show:</p>
             {actions.map((action) => {
               const Icon = action.icon;
