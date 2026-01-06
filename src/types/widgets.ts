@@ -91,7 +91,7 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
   },
   location: {
     type: "location",
-    name: "Location",
+    name: "Map",
     icon: "MapPin",
     defaultSize: { w: 2, h: 2 },
     minSize: { w: 1, h: 1 },
