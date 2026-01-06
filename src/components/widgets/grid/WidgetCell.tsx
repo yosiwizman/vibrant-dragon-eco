@@ -7,7 +7,7 @@ import type { Widget } from "@/types/widgets";
 import WidgetContent from "../content/WidgetContent.tsx";
 import ResizeHandles from "./ResizeHandles";
 
-type ResizeDir = "e" | "s" | "se";
+type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 interface WidgetCellProps {
   widget: Widget;

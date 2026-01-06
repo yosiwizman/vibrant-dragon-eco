@@ -15,7 +15,7 @@ const CELL_HEIGHT = 100;
 const GAP = 8;
 const PADDING = 12;
 
-type ResizeDir = "e" | "s" | "se";
+type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 const DEFAULT_WIDGETS: Widget[] = [
   { id: "default-1", type: "time", x: 0, y: 0, w: 1, h: 1 },
@@ -183,24 +183,37 @@ export default function WidgetGrid() {
 
       let nextW = activeResize.original.w;
       let nextH = activeResize.original.h;
+      let nextX = activeResize.original.x;
+      let nextY = activeResize.original.y;
 
-      if (activeResize.dir === "e" || activeResize.dir === "se") {
+      // Handle width changes
+      if (activeResize.dir === "e" || activeResize.dir === "se" || activeResize.dir === "ne") {
         nextW = activeResize.original.w + dCols;
-      }
-      if (activeResize.dir === "s" || activeResize.dir === "se") {
-        nextH = activeResize.original.h + dRows;
+      } else if (activeResize.dir === "w" || activeResize.dir === "sw" || activeResize.dir === "nw") {
+        nextW = activeResize.original.w - dCols;
+        nextX = activeResize.original.x + dCols;
       }
 
-      nextW = Math.max(minW, Math.min(maxW, nextW, GRID_COLS - activeResize.original.x));
+      // Handle height changes
+      if (activeResize.dir === "s" || activeResize.dir === "se" || activeResize.dir === "sw") {
+        nextH = activeResize.original.h + dRows;
+      } else if (activeResize.dir === "n" || activeResize.dir === "ne" || activeResize.dir === "nw") {
+        nextH = activeResize.original.h - dRows;
+        nextY = activeResize.original.y + dRows;
+      }
+
+      nextW = Math.max(minW, Math.min(maxW, nextW));
       nextH = Math.max(minH, Math.min(maxH, nextH));
+      nextX = Math.max(0, Math.min(GRID_COLS - nextW, nextX));
+      nextY = Math.max(0, nextY));
 
       if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
 
-      // Bumper: only allow resize if it doesn't collide at the current x/y.
+      // Bumper: only allow resize if it doesn't collide at the new position.
       const ok = canPlaceAt(
         widgets,
-        activeResize.original.x,
-        activeResize.original.y,
+        nextX,
+        nextY,
         nextW,
         nextH,
         activeResize.widgetId
@@ -209,7 +222,7 @@ export default function WidgetGrid() {
 
       setWidgets((prev) =>
         prev.map((w) =>
-          w.id === activeResize.widgetId ? { ...w, w: nextW, h: nextH } : w
+          w.id === activeResize.widgetId ? { ...w, x: nextX, y: nextY, w: nextW, h: nextH } : w
         )
       );
     };
