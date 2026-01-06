@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { Preferences } from "../types/models";
 
 const KEY = "echo:prefs";
+const WIDGET_VERSION_KEY = "echo:widget_version";
+const CURRENT_WIDGET_VERSION = 2; // Increment this to force reset widgets
 
 const DEFAULT: Preferences = {
   preferredName: "",
@@ -30,7 +32,6 @@ const DEFAULT: Preferences = {
   enableSmartScheduling: true,
   defaultReminderLeadTime: 30,
   quietModeExitPhrase: "Echo summarize",
-  // New enhanced preferences
   enableActionHistory: true,
   maxUndoTimeMinutes: 5,
   enableProductivityTracking: true,
@@ -65,16 +66,45 @@ export function clearWidgetData() {
   savePreferences(prefs);
 }
 
+// Check if widgets need to be reset due to version change or corruption
+function shouldResetWidgets(): boolean {
+  const savedVersion = localStorage.getItem(WIDGET_VERSION_KEY);
+  if (!savedVersion || parseInt(savedVersion) < CURRENT_WIDGET_VERSION) {
+    return true;
+  }
+  return false;
+}
+
+function markWidgetVersionCurrent() {
+  localStorage.setItem(WIDGET_VERSION_KEY, String(CURRENT_WIDGET_VERSION));
+}
+
 export function usePreferences() {
   const [preferences, setPreferences] = useState<Preferences>(() => {
     const prefs = loadPreferences();
     
-    // Check if widgets have overlapping positions (corrupted data)
+    // Force reset widgets if version changed
+    if (shouldResetWidgets()) {
+      console.log('[Preferences] Widget version changed, resetting widgets...');
+      prefs.widgets = undefined;
+      prefs.widgetLayout = undefined;
+      savePreferences(prefs);
+      markWidgetVersionCurrent();
+      return prefs;
+    }
+    
+    // Also check for corruption - any overlapping cells
     if (prefs.widgets && Array.isArray(prefs.widgets) && prefs.widgets.length > 0) {
       const positions = new Set<string>();
       let hasOverlap = false;
       
       for (const widget of prefs.widgets) {
+        if (typeof widget.x !== 'number' || typeof widget.y !== 'number' ||
+            typeof widget.w !== 'number' || typeof widget.h !== 'number') {
+          hasOverlap = true;
+          break;
+        }
+        
         for (let dy = 0; dy < widget.h; dy++) {
           for (let dx = 0; dx < widget.w; dx++) {
             const key = `${widget.x + dx},${widget.y + dy}`;
@@ -89,10 +119,10 @@ export function usePreferences() {
         if (hasOverlap) break;
       }
       
-      // If corrupted, clear the widget data
       if (hasOverlap) {
         console.log('[Preferences] Detected corrupted widget data, clearing...');
         prefs.widgets = undefined;
+        prefs.widgetLayout = undefined;
         savePreferences(prefs);
       }
     }

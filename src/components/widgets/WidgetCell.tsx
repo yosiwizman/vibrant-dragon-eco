@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { X, GripVertical } from "lucide-react";
+import { X } from "lucide-react";
 import { Widget } from "@/types/widgets";
 import WidgetContent from "./WidgetContent";
 
@@ -11,7 +11,7 @@ interface WidgetCellProps {
   isEditMode: boolean;
   isDragging: boolean;
   onRemove: () => void;
-  onDragStart: (clientX: number, clientY: number) => void;
+  onDragStart: () => void;
 }
 
 export default function WidgetCell({
@@ -21,57 +21,26 @@ export default function WidgetCell({
   onRemove,
   onDragStart,
 }: WidgetCellProps) {
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isEditMode) {
-      e.preventDefault();
-      onDragStart(e.clientX, e.clientY);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isEditMode && e.touches.length > 0) {
-      e.preventDefault();
-      onDragStart(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  };
-
   return (
-    <div
-      className={`
-        relative h-full w-full rounded-lg overflow-hidden
-        ${isEditMode ? 'cursor-move' : ''}
-        ${isDragging ? 'opacity-90 scale-105 shadow-2xl' : ''}
-        ${isEditMode && !isDragging ? 'ring-2 ring-fuchsia-500/50' : ''}
-      `}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-    >
+    <div className={`relative h-full w-full ${isEditMode ? 'ring-2 ring-fuchsia-500/30 rounded-lg' : ''}`}>
       {/* Widget Content */}
-      <div className={`h-full w-full ${isEditMode ? 'pointer-events-none' : ''}`}>
+      <div className="h-full w-full">
         <WidgetContent type={widget.type} />
       </div>
 
-      {/* Edit Mode Overlay */}
+      {/* Remove button in edit mode */}
       {isEditMode && (
-        <>
-          {/* Drag indicator */}
-          <div className="absolute top-2 left-2 bg-slate-900/80 rounded p-1 backdrop-blur-sm">
-            <GripVertical className="h-4 w-4 text-slate-300" />
-          </div>
-
-          {/* Remove button */}
-          <Button
-            size="icon"
-            variant="destructive"
-            className="absolute top-2 right-2 h-6 w-6 rounded-full shadow-lg"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </>
+        <Button
+          size="icon"
+          variant="destructive"
+          className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-lg z-20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
       )}
     </div>
   );
