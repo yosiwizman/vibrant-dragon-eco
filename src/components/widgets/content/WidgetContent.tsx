@@ -13,6 +13,7 @@ import TasksWidget from "./TasksWidget";
 import RemindersWidget from "./RemindersWidget";
 import NotesWidget from "./NotesWidget";
 import ContactsWidget from "./ContactsWidget";
+import ClockWidget from "./ClockWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -173,7 +174,7 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   };
 
   // Special widgets (they render their own cards)
-  if (type === "time") return <div className="h-full w-full overflow-hidden"><CurrentTimeDisplay /></div>;
+  if (type === "time") return <div className="h-full w-full overflow-hidden"><ClockWidget /></div>;
   if (type === "weather") return <div className="h-full w-full overflow-hidden"><WeatherWidget /></div>;
   if (type === "location") return <div className="h-full w-full overflow-hidden"><LocationDisplay /></div>;
   if (type === "quick-actions") return <div className="h-full w-full overflow-hidden"><QuickActions /></div>;
