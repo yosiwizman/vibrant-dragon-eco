@@ -15,6 +15,7 @@ import WeatherWidget from "./WeatherWidget";
 import MapWidget from "./MapWidget";
 import QuickActionsWidget from "./QuickActionsWidget";
 import AIUsageWidget from "./AIUsageWidget";
+import RecentActivityWidget from "./RecentActivityWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,7 +181,7 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   if (type === "location") return <div className="h-full w-full overflow-hidden"><MapWidget /></div>;
   if (type === "quick-actions") return <div className="h-full w-full overflow-hidden"><QuickActionsWidget /></div>;
   if (type === "ai-usage") return <div className="h-full w-full overflow-hidden"><AIUsageWidget /></div>;
-  if (type === "recent-activity") return <div className="h-full w-full overflow-hidden"><RecentActivity /></div>;
+  if (type === "recent-activity") return <div className="h-full w-full overflow-hidden"><RecentActivityWidget /></div>;
   if (type === "productivity") return <div className="h-full w-full overflow-hidden"><ProductivityInsights /></div>;
   if (type === "calendar") return <div className="h-full w-full overflow-hidden"><CalendarWidget /></div>;
   if (type === "tasks") return <div className="h-full w-full overflow-hidden"><TasksWidget /></div>;
