@@ -58,8 +58,47 @@ export function savePreferences(prefs: Preferences) {
   localStorage.setItem(KEY, JSON.stringify(prefs));
 }
 
+export function clearWidgetData() {
+  const prefs = loadPreferences();
+  prefs.widgets = undefined;
+  prefs.widgetLayout = undefined;
+  savePreferences(prefs);
+}
+
 export function usePreferences() {
-  const [preferences, setPreferences] = useState<Preferences>(loadPreferences());
+  const [preferences, setPreferences] = useState<Preferences>(() => {
+    const prefs = loadPreferences();
+    
+    // Check if widgets have overlapping positions (corrupted data)
+    if (prefs.widgets && Array.isArray(prefs.widgets) && prefs.widgets.length > 0) {
+      const positions = new Set<string>();
+      let hasOverlap = false;
+      
+      for (const widget of prefs.widgets) {
+        for (let dy = 0; dy < widget.h; dy++) {
+          for (let dx = 0; dx < widget.w; dx++) {
+            const key = `${widget.x + dx},${widget.y + dy}`;
+            if (positions.has(key)) {
+              hasOverlap = true;
+              break;
+            }
+            positions.add(key);
+          }
+          if (hasOverlap) break;
+        }
+        if (hasOverlap) break;
+      }
+      
+      // If corrupted, clear the widget data
+      if (hasOverlap) {
+        console.log('[Preferences] Detected corrupted widget data, clearing...');
+        prefs.widgets = undefined;
+        savePreferences(prefs);
+      }
+    }
+    
+    return prefs;
+  });
 
   useEffect(() => {
     savePreferences(preferences);

@@ -1,460 +1,298 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, RefreshCw } from "lucide-react";
+import { Plus, GripVertical, RotateCcw } from "lucide-react";
 import { Widget } from "@/types/widgets";
 import { WIDGET_CONFIGS } from "@/types/widgets";
 import { usePreferences } from "@/state/preferences";
 import { showSuccess } from "@/utils/toast";
 import WidgetCell from "./WidgetCell";
 
-const COLS = 4;
-const ROW_HEIGHT = 100;
-const GAP = 8;
-const PADDING = 12;
+// Grid configuration
+const GRID_COLS = 4;
+const CELL_HEIGHT = 100;
+const CELL_GAP = 8;
+const GRID_PADDING = 12;
 
-// Create a 2D grid to track occupied cells
-class OccupancyGrid {
-  private grid: Map<string, string> = new Map(); // cell -> widgetId
+// Simple grid-based layout calculator
+// This function GUARANTEES no overlaps by placing widgets one by one
+function calculateLayout(widgets: Widget[]): Widget[] {
+  if (widgets.length === 0) return [];
 
-  clear() {
-    this.grid.clear();
+  // Create a 2D grid to track occupied cells
+  // grid[y][x] = widgetId or null
+  const maxRows = 50; // Support up to 50 rows
+  const grid: (string | null)[][] = [];
+  for (let y = 0; y < maxRows; y++) {
+    grid[y] = new Array(GRID_COLS).fill(null);
   }
 
-  isOccupied(x: number, y: number): boolean {
-    return this.grid.has(`${x},${y}`);
-  }
+  const result: Widget[] = [];
 
-  getOccupant(x: number, y: number): string | undefined {
-    return this.grid.get(`${x},${y}`);
-  }
-
-  canPlace(x: number, y: number, w: number, h: number, excludeId?: string): boolean {
-    if (x < 0 || y < 0 || x + w > COLS) return false;
-    
-    for (let dy = 0; dy < h; dy++) {
-      for (let dx = 0; dx < w; dx++) {
-        const key = `${x + dx},${y + dy}`;
-        const occupant = this.grid.get(key);
-        if (occupant && occupant !== excludeId) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  place(x: number, y: number, w: number, h: number, widgetId: string) {
-    for (let dy = 0; dy < h; dy++) {
-      for (let dx = 0; dx < w; dx++) {
-        this.grid.set(`${x + dx},${y + dy}`, widgetId);
-      }
-    }
-  }
-
-  remove(widgetId: string) {
-    for (const [key, id] of this.grid.entries()) {
-      if (id === widgetId) {
-        this.grid.delete(key);
-      }
-    }
-  }
-
-  findNextAvailable(w: number, h: number, excludeId?: string): { x: number; y: number } {
-    // Search row by row, column by column
-    for (let y = 0; y < 100; y++) { // Allow up to 100 rows
-      for (let x = 0; x <= COLS - w; x++) {
-        if (this.canPlace(x, y, w, h, excludeId)) {
-          return { x, y };
-        }
-      }
-    }
-    // Fallback - should never reach here
-    return { x: 0, y: 0 };
-  }
-}
-
-// Force arrange all widgets to prevent any overlaps
-const forceArrangeWidgets = (widgetsToArrange: Widget[]): Widget[] => {
-  if (widgetsToArrange.length === 0) return [];
-
-  const grid = new OccupancyGrid();
-  const arranged: Widget[] = [];
-
-  // Sort by y position first, then x position (top-left to bottom-right)
-  const sorted = [...widgetsToArrange].sort((a, b) => {
-    if (a.y !== b.y) return a.y - b.y;
-    return a.x - b.x;
+  // Sort widgets by their original position (top-left first)
+  const sortedWidgets = [...widgets].sort((a, b) => {
+    const aScore = a.y * 1000 + a.x;
+    const bScore = b.y * 1000 + b.x;
+    return aScore - bScore;
   });
 
-  for (const widget of sorted) {
-    // Validate widget dimensions
+  for (const widget of sortedWidgets) {
+    // Validate widget size
     const config = WIDGET_CONFIGS[widget.type];
-    let w = widget.w;
-    let h = widget.h;
+    let w = Math.max(1, Math.min(GRID_COLS, widget.w));
+    let h = Math.max(1, widget.h);
     
     if (config) {
       w = Math.max(config.minSize.w, Math.min(config.maxSize.w, w));
       h = Math.max(config.minSize.h, Math.min(config.maxSize.h, h));
     }
-    
-    // Ensure width doesn't exceed grid
-    w = Math.min(w, COLS);
 
-    // Try to place at current position first
-    if (grid.canPlace(widget.x, widget.y, w, h)) {
-      grid.place(widget.x, widget.y, w, h, widget.id);
-      arranged.push({ ...widget, w, h });
-    } else {
-      // Find next available position
-      const pos = grid.findNextAvailable(w, h);
-      grid.place(pos.x, pos.y, w, h, widget.id);
-      arranged.push({ ...widget, x: pos.x, y: pos.y, w, h });
-    }
-  }
+    // Find the first available position for this widget
+    let placed = false;
+    let finalX = 0;
+    let finalY = 0;
 
-  return arranged;
-};
+    for (let y = 0; y < maxRows && !placed; y++) {
+      for (let x = 0; x <= GRID_COLS - w && !placed; x++) {
+        // Check if all cells for this widget are free
+        let canPlace = true;
+        for (let dy = 0; dy < h && canPlace; dy++) {
+          for (let dx = 0; dx < w && canPlace; dx++) {
+            if (y + dy >= maxRows || grid[y + dy][x + dx] !== null) {
+              canPlace = false;
+            }
+          }
+        }
 
-// Compact widgets to remove gaps (move everything up)
-const compactWidgets = (widgets: Widget[]): Widget[] => {
-  if (widgets.length === 0) return [];
-  
-  const grid = new OccupancyGrid();
-  const compacted: Widget[] = [];
-
-  // Sort by y position first, then x position
-  const sorted = [...widgets].sort((a, b) => {
-    if (a.y !== b.y) return a.y - b.y;
-    return a.x - b.x;
-  });
-
-  for (const widget of sorted) {
-    // Try to move widget up as much as possible
-    let bestY = 0;
-    
-    // Find the highest y position where this widget can fit
-    for (let y = 0; y <= widget.y; y++) {
-      if (grid.canPlace(widget.x, y, widget.w, widget.h)) {
-        bestY = y;
-        break;
+        if (canPlace) {
+          // Mark cells as occupied
+          for (let dy = 0; dy < h; dy++) {
+            for (let dx = 0; dx < w; dx++) {
+              grid[y + dy][x + dx] = widget.id;
+            }
+          }
+          finalX = x;
+          finalY = y;
+          placed = true;
+        }
       }
-      bestY = y + 1;
     }
 
-    // If we can't place at the preferred x, find any available position at bestY or higher
-    if (!grid.canPlace(widget.x, bestY, widget.w, widget.h)) {
-      const pos = grid.findNextAvailable(widget.w, widget.h);
-      bestY = pos.y;
-      grid.place(pos.x, bestY, widget.w, widget.h, widget.id);
-      compacted.push({ ...widget, x: pos.x, y: bestY });
-    } else {
-      grid.place(widget.x, bestY, widget.w, widget.h, widget.id);
-      compacted.push({ ...widget, y: bestY });
+    result.push({
+      ...widget,
+      x: finalX,
+      y: finalY,
+      w,
+      h,
+    });
+  }
+
+  return result;
+}
+
+// Check if a position is valid (no overlaps)
+function canPlaceWidget(
+  widgets: Widget[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  excludeId?: string
+): boolean {
+  if (x < 0 || y < 0 || x + w > GRID_COLS) return false;
+
+  for (const widget of widgets) {
+    if (widget.id === excludeId) continue;
+
+    // Check for overlap
+    const overlapX = x < widget.x + widget.w && x + w > widget.x;
+    const overlapY = y < widget.y + widget.h && y + h > widget.y;
+
+    if (overlapX && overlapY) {
+      return false;
     }
   }
 
-  return compacted;
-};
+  return true;
+}
+
+// Find next available position
+function findNextPosition(widgets: Widget[], w: number, h: number): { x: number; y: number } {
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x <= GRID_COLS - w; x++) {
+      if (canPlaceWidget(widgets, x, y, w, h)) {
+        return { x, y };
+      }
+    }
+  }
+  return { x: 0, y: 0 };
+}
+
+// Default widgets for new users
+const DEFAULT_WIDGETS: Widget[] = [
+  { id: 'default-time', type: 'time', x: 0, y: 0, w: 1, h: 1 },
+  { id: 'default-weather', type: 'weather', x: 1, y: 0, w: 2, h: 2 },
+  { id: 'default-tasks', type: 'tasks', x: 3, y: 0, w: 1, h: 2 },
+  { id: 'default-upcoming', type: 'upcoming', x: 0, y: 2, w: 2, h: 2 },
+  { id: 'default-calendar', type: 'calendar', x: 2, y: 2, w: 2, h: 2 },
+];
 
 export default function WidgetGrid() {
   const { preferences, setPreferences } = usePreferences();
-  const [isEditMode, setIsEditMode] = useState(false);
   const [widgets, setWidgets] = useState<Widget[]>([]);
-  const [gridWidth, setGridWidth] = useState(0);
-  const [activeAction, setActiveAction] = useState<{
-    type: 'drag' | 'resize';
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [dragState, setDragState] = useState<{
     widgetId: string;
-    direction?: string;
     startX: number;
     startY: number;
     originalWidget: Widget;
   } | null>(null);
   
   const gridRef = useRef<HTMLDivElement>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const occupancyGrid = useRef(new OccupancyGrid());
-
-  // Rebuild occupancy grid whenever widgets change
-  useEffect(() => {
-    occupancyGrid.current.clear();
-    for (const widget of widgets) {
-      occupancyGrid.current.place(widget.x, widget.y, widget.w, widget.h, widget.id);
-    }
-  }, [widgets]);
-
-  // Check if position is occupied (using the occupancy grid)
-  const isPositionOccupied = useCallback((x: number, y: number, w: number, h: number, excludeId?: string): boolean => {
-    return !occupancyGrid.current.canPlace(x, y, w, h, excludeId);
-  }, []);
-
-  // Find next available position
-  const findAvailablePosition = useCallback((w: number, h: number, excludeId?: string): { x: number; y: number } => {
-    return occupancyGrid.current.findNextAvailable(w, h, excludeId);
-  }, []);
-
-  // Load widgets from preferences and force arrange
-  useEffect(() => {
-    const saved = preferences.widgets;
-    let initialWidgets: Widget[];
-    
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      // ALWAYS force arrange to fix any overlaps
-      initialWidgets = forceArrangeWidgets(saved);
-      // Then compact to remove gaps
-      initialWidgets = compactWidgets(initialWidgets);
-    } else {
-      // Default widgets - pre-arranged
-      initialWidgets = [
-        { id: '1', type: 'time', x: 0, y: 0, w: 1, h: 1 },
-        { id: '2', type: 'weather', x: 1, y: 0, w: 2, h: 2 },
-        { id: '3', type: 'tasks', x: 3, y: 0, w: 1, h: 2 },
-        { id: '4', type: 'upcoming', x: 0, y: 2, w: 2, h: 2 },
-        { id: '5', type: 'calendar', x: 2, y: 2, w: 2, h: 2 },
-      ];
-    }
-    
-    setWidgets(initialWidgets);
-    
-    // Save if changed
-    const savedStr = JSON.stringify(saved);
-    const arrangedStr = JSON.stringify(initialWidgets);
-    if (savedStr !== arrangedStr) {
-      setPreferences({ ...preferences, widgets: initialWidgets });
-    }
-  }, []);
-
-  // Calculate grid height dynamically
-  const gridHeight = useMemo(() => {
-    if (widgets.length === 0) return 400;
-    
-    const maxY = Math.max(...widgets.map(w => w.y + w.h));
-    const totalHeight = (maxY * ROW_HEIGHT) + ((maxY > 0 ? maxY - 1 : 0) * GAP) + (PADDING * 2) + 24;
-    
-    return Math.max(400, totalHeight);
-  }, [widgets]);
+  const [gridWidth, setGridWidth] = useState(0);
 
   // Calculate cell width based on grid width
-  const cellWidth = useMemo(() => {
-    if (gridWidth === 0) return 0;
-    return (gridWidth - (PADDING * 2) - (GAP * (COLS - 1))) / COLS;
-  }, [gridWidth]);
+  const cellWidth = gridWidth > 0 
+    ? (gridWidth - GRID_PADDING * 2 - CELL_GAP * (GRID_COLS - 1)) / GRID_COLS 
+    : 0;
+
+  // Load and fix widgets on mount
+  useEffect(() => {
+    const saved = preferences.widgets;
+    
+    let loadedWidgets: Widget[];
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      // ALWAYS recalculate layout to fix any overlaps
+      loadedWidgets = calculateLayout(saved);
+    } else {
+      loadedWidgets = calculateLayout(DEFAULT_WIDGETS);
+    }
+
+    setWidgets(loadedWidgets);
+    
+    // Save the fixed layout
+    setPreferences({ ...preferences, widgets: loadedWidgets });
+  }, []);
 
   // Update grid width on resize
   useEffect(() => {
     const updateWidth = () => {
       if (gridRef.current) {
-        setGridWidth(gridRef.current.clientWidth);
+        setGridWidth(gridRef.current.offsetWidth);
       }
     };
-    
+
     updateWidth();
     window.addEventListener('resize', updateWidth);
     
-    // Also update after a short delay to handle initial render
-    const timer = setTimeout(updateWidth, 100);
-    
+    // Delayed update for initial render
+    const timer = setTimeout(updateWidth, 50);
+
     return () => {
       window.removeEventListener('resize', updateWidth);
       clearTimeout(timer);
     };
   }, []);
 
-  // Save widgets
+  // Calculate grid height based on widgets
+  const gridHeight = React.useMemo(() => {
+    if (widgets.length === 0) return 400;
+    const maxY = Math.max(...widgets.map(w => w.y + w.h));
+    return Math.max(400, maxY * CELL_HEIGHT + (maxY - 1) * CELL_GAP + GRID_PADDING * 2 + 20);
+  }, [widgets]);
+
+  // Save widgets to preferences
   const saveWidgets = useCallback((newWidgets: Widget[]) => {
-    // Always force arrange before saving
-    const arranged = forceArrangeWidgets(newWidgets);
-    const compacted = compactWidgets(arranged);
-    setWidgets(compacted);
-    setPreferences({ ...preferences, widgets: compacted });
+    const fixed = calculateLayout(newWidgets);
+    setWidgets(fixed);
+    setPreferences({ ...preferences, widgets: fixed });
   }, [preferences, setPreferences]);
 
-  // Force re-arrange all widgets (manual trigger)
-  const forceReArrange = useCallback(() => {
-    const arranged = forceArrangeWidgets(widgets);
-    const compacted = compactWidgets(arranged);
-    setWidgets(compacted);
-    setPreferences({ ...preferences, widgets: compacted });
-    showSuccess("Widgets re-arranged");
-  }, [widgets, preferences, setPreferences]);
+  // Reset to default layout
+  const resetLayout = useCallback(() => {
+    const defaultLayout = calculateLayout(DEFAULT_WIDGETS);
+    setWidgets(defaultLayout);
+    setPreferences({ ...preferences, widgets: defaultLayout });
+    showSuccess("Reset to default layout");
+  }, [preferences, setPreferences]);
 
-  // Long press to enter edit mode
-  const handleGridMouseDown = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (!isEditMode && (target.classList.contains('widget-grid-bg') || target.closest('.widget-grid-bg'))) {
-      longPressTimer.current = setTimeout(() => setIsEditMode(true), 800);
-    }
-  };
-
-  const handleGridMouseUp = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
-  // Add widget
+  // Add a new widget
   const addWidget = useCallback((type: string, size: { w: number; h: number }) => {
     if (widgets.some(w => w.type === type)) {
-      showSuccess(`${type} already added`);
+      showSuccess(`${type} widget already exists`);
       return;
     }
 
-    const w = Math.min(size.w, COLS);
+    const w = Math.min(size.w, GRID_COLS);
     const h = size.h;
-    const position = findAvailablePosition(w, h);
-    
+    const pos = findNextPosition(widgets, w, h);
+
     const newWidget: Widget = {
       id: `${type}-${Date.now()}`,
       type,
-      x: position.x,
-      y: position.y,
+      x: pos.x,
+      y: pos.y,
       w,
       h,
     };
 
     saveWidgets([...widgets, newWidget]);
-    showSuccess(`Added ${type}`);
-  }, [widgets, findAvailablePosition, saveWidgets]);
-
-  // Remove widget
-  const removeWidget = useCallback((id: string) => {
-    const newWidgets = widgets.filter(w => w.id !== id);
-    saveWidgets(newWidgets);
-    showSuccess("Removed");
+    showSuccess(`Added ${type} widget`);
   }, [widgets, saveWidgets]);
 
-  // Start drag
+  // Remove a widget
+  const removeWidget = useCallback((id: string) => {
+    saveWidgets(widgets.filter(w => w.id !== id));
+    showSuccess("Widget removed");
+  }, [widgets, saveWidgets]);
+
+  // Start dragging
   const startDrag = useCallback((widget: Widget, clientX: number, clientY: number) => {
-    if (!isEditMode || !gridRef.current) return;
-    
-    setActiveAction({
-      type: 'drag',
-      widgetId: widget.id,
-      startX: clientX,
-      startY: clientY,
-      originalWidget: { ...widget },
-    });
-  }, [isEditMode]);
-
-  // Start resize
-  const startResize = useCallback((widget: Widget, direction: string, clientX: number, clientY: number) => {
     if (!isEditMode) return;
-    
-    setActiveAction({
-      type: 'resize',
+    setDragState({
       widgetId: widget.id,
-      direction,
       startX: clientX,
       startY: clientY,
       originalWidget: { ...widget },
     });
   }, [isEditMode]);
 
-  // Handle mouse/touch move
-  const handleMove = useCallback((clientX: number, clientY: number) => {
-    if (!activeAction || cellWidth === 0) return;
+  // Handle drag move
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragState || cellWidth === 0) return;
 
-    const cellWithGap = cellWidth + GAP;
-    const rowWithGap = ROW_HEIGHT + GAP;
+    const deltaX = e.clientX - dragState.startX;
+    const deltaY = e.clientY - dragState.startY;
 
-    if (activeAction.type === 'drag') {
-      const deltaX = clientX - activeAction.startX;
-      const deltaY = clientY - activeAction.startY;
-      const cellDeltaX = Math.round(deltaX / cellWithGap);
-      const cellDeltaY = Math.round(deltaY / rowWithGap);
+    const cellDeltaX = Math.round(deltaX / (cellWidth + CELL_GAP));
+    const cellDeltaY = Math.round(deltaY / (CELL_HEIGHT + CELL_GAP));
 
-      let newX = activeAction.originalWidget.x + cellDeltaX;
-      let newY = activeAction.originalWidget.y + cellDeltaY;
+    let newX = dragState.originalWidget.x + cellDeltaX;
+    let newY = dragState.originalWidget.y + cellDeltaY;
 
-      // Constrain to grid bounds
-      newX = Math.max(0, Math.min(COLS - activeAction.originalWidget.w, newX));
-      newY = Math.max(0, newY);
+    // Clamp to grid bounds
+    newX = Math.max(0, Math.min(GRID_COLS - dragState.originalWidget.w, newX));
+    newY = Math.max(0, newY);
 
-      // Only move if position is not occupied
-      if (!isPositionOccupied(newX, newY, activeAction.originalWidget.w, activeAction.originalWidget.h, activeAction.widgetId)) {
-        setWidgets(prev => prev.map(w =>
-          w.id === activeAction.widgetId ? { ...w, x: newX, y: newY } : w
-        ));
-      }
-    } else if (activeAction.type === 'resize') {
-      const config = WIDGET_CONFIGS[activeAction.originalWidget.type];
-      if (!config) return;
-      
-      const deltaX = clientX - activeAction.startX;
-      const deltaY = clientY - activeAction.startY;
-      const cellDeltaX = Math.round(deltaX / cellWithGap);
-      const cellDeltaY = Math.round(deltaY / rowWithGap);
-
-      let { x, y, w, h } = activeAction.originalWidget;
-
-      if (activeAction.direction?.includes('e')) {
-        w = Math.max(config.minSize.w, Math.min(config.maxSize.w, COLS - x, activeAction.originalWidget.w + cellDeltaX));
-      }
-      if (activeAction.direction?.includes('w')) {
-        const newW = Math.max(config.minSize.w, Math.min(config.maxSize.w, activeAction.originalWidget.w - cellDeltaX));
-        const newX = activeAction.originalWidget.x + (activeAction.originalWidget.w - newW);
-        if (newX >= 0 && !isPositionOccupied(newX, y, newW, h, activeAction.widgetId)) {
-          x = newX;
-          w = newW;
-        }
-      }
-      if (activeAction.direction?.includes('s')) {
-        h = Math.max(config.minSize.h, Math.min(config.maxSize.h, activeAction.originalWidget.h + cellDeltaY));
-      }
-      if (activeAction.direction?.includes('n')) {
-        const newH = Math.max(config.minSize.h, Math.min(config.maxSize.h, activeAction.originalWidget.h - cellDeltaY));
-        const newY = activeAction.originalWidget.y + (activeAction.originalWidget.h - newH);
-        if (newY >= 0 && !isPositionOccupied(x, newY, w, newH, activeAction.widgetId)) {
-          y = newY;
-          h = newH;
-        }
-      }
-
-      // Only update if no collision
-      if (!isPositionOccupied(x, y, w, h, activeAction.widgetId)) {
-        setWidgets(prev => prev.map(widget =>
-          widget.id === activeAction.widgetId ? { ...widget, x, y, w, h } : widget
-        ));
-      }
+    // Only update if position is valid
+    const otherWidgets = widgets.filter(w => w.id !== dragState.widgetId);
+    if (canPlaceWidget(otherWidgets, newX, newY, dragState.originalWidget.w, dragState.originalWidget.h)) {
+      setWidgets(prev => prev.map(w =>
+        w.id === dragState.widgetId ? { ...w, x: newX, y: newY } : w
+      ));
     }
-  }, [activeAction, cellWidth, isPositionOccupied]);
+  }, [dragState, cellWidth, widgets]);
 
-  // End action
-  const endAction = useCallback(() => {
-    if (activeAction) {
+  // End drag
+  const endDrag = useCallback(() => {
+    if (dragState) {
       saveWidgets(widgets);
-      setActiveAction(null);
+      setDragState(null);
     }
-  }, [activeAction, widgets, saveWidgets]);
+  }, [dragState, widgets, saveWidgets]);
 
-  // Mouse/touch handlers
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (activeAction) {
-      e.preventDefault();
-      handleMove(e.clientX, e.clientY);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (activeAction && e.touches.length > 0) {
-      e.preventDefault();
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  };
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    endAction();
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    endAction();
-  };
-
-  // Expose addWidget globally
+  // Expose addWidget globally for the widget picker
   useEffect(() => {
     (window as any).addWidgetToDashboard = addWidget;
     return () => {
@@ -462,29 +300,21 @@ export default function WidgetGrid() {
     };
   }, [addWidget]);
 
-  // Calculate widget position in pixels
+  // Calculate pixel position for a widget
   const getWidgetStyle = useCallback((widget: Widget): React.CSSProperties => {
     if (cellWidth === 0) {
-      // Fallback when grid ref not ready
-      return {
-        position: 'absolute',
-        left: `${PADDING + widget.x * 25}%`,
-        top: `${PADDING + widget.y * (ROW_HEIGHT + GAP)}px`,
-        width: `${widget.w * 25}%`,
-        height: `${widget.h * ROW_HEIGHT + (widget.h - 1) * GAP}px`,
-        boxSizing: 'border-box',
-      };
+      return { display: 'none' };
     }
-    
+
     return {
       position: 'absolute',
-      left: `${PADDING + widget.x * (cellWidth + GAP)}px`,
-      top: `${PADDING + widget.y * (ROW_HEIGHT + GAP)}px`,
-      width: `${widget.w * cellWidth + (widget.w - 1) * GAP}px`,
-      height: `${widget.h * ROW_HEIGHT + (widget.h - 1) * GAP}px`,
-      boxSizing: 'border-box',
+      left: GRID_PADDING + widget.x * (cellWidth + CELL_GAP),
+      top: GRID_PADDING + widget.y * (CELL_HEIGHT + CELL_GAP),
+      width: widget.w * cellWidth + (widget.w - 1) * CELL_GAP,
+      height: widget.h * CELL_HEIGHT + (widget.h - 1) * CELL_GAP,
+      transition: dragState?.widgetId === widget.id ? 'none' : 'all 0.2s ease',
     };
-  }, [cellWidth]);
+  }, [cellWidth, dragState]);
 
   return (
     <div className="space-y-3">
@@ -495,7 +325,7 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Drag to move • Resize from corners" : `${widgets.length} widgets • Click Edit`}
+            {isEditMode ? "Drag widgets to reposition" : `${widgets.length} widgets`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -503,11 +333,11 @@ export default function WidgetGrid() {
             <Button
               size="sm"
               variant="outline"
-              onClick={forceReArrange}
+              onClick={resetLayout}
               className="border-slate-600 text-slate-300"
-              title="Re-arrange all widgets"
+              title="Reset to default layout"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" />
             </Button>
           )}
           <Button
@@ -521,31 +351,25 @@ export default function WidgetGrid() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Widget Grid */}
       <div
         ref={gridRef}
-        className={`relative rounded-xl border-2 transition-all widget-grid-bg ${
-          isEditMode ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed" : "border-slate-700/30 bg-transparent"
+        className={`relative rounded-xl border-2 transition-colors ${
+          isEditMode 
+            ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed" 
+            : "border-slate-700/30 bg-transparent"
         }`}
-        style={{
-          minHeight: `${gridHeight}px`,
-        }}
-        onMouseDown={handleGridMouseDown}
-        onMouseUp={(e) => {
-          handleGridMouseUp();
-          handleMouseUp(e);
-        }}
+        style={{ minHeight: gridHeight }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={endAction}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onMouseUp={endDrag}
+        onMouseLeave={endDrag}
       >
         {widgets.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-slate-400">
               <GripVertical className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Click Edit to add widgets</p>
-              <p className="text-xs text-slate-500 mt-1">Open side panel → Widgets tab</p>
+              <p className="text-sm">No widgets</p>
+              <p className="text-xs text-slate-500 mt-1">Click Edit to add widgets</p>
             </div>
           </div>
         ) : (
@@ -553,15 +377,14 @@ export default function WidgetGrid() {
             <div
               key={widget.id}
               style={getWidgetStyle(widget)}
-              className={`transition-all duration-150 ${activeAction?.widgetId === widget.id ? 'z-50' : 'z-10'}`}
+              className={dragState?.widgetId === widget.id ? 'z-50' : 'z-10'}
             >
               <WidgetCell
                 widget={widget}
                 isEditMode={isEditMode}
-                isActive={activeAction?.widgetId === widget.id}
+                isDragging={dragState?.widgetId === widget.id}
                 onRemove={() => removeWidget(widget.id)}
-                onDragStart={(clientX, clientY) => startDrag(widget, clientX, clientY)}
-                onResizeStart={(dir, clientX, clientY) => startResize(widget, dir, clientX, clientY)}
+                onDragStart={(x, y) => startDrag(widget, x, y)}
               />
             </div>
           ))
