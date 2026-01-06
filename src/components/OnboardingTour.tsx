@@ -151,30 +151,20 @@ export default function OnboardingTour() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {TOUR_STEPS.map((_, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all",
-                    index === currentStep
-                      ? "w-6 bg-fuchsia-500"
-                      : index < currentStep
-                      ? "w-1.5 bg-fuchsia-500/50"
-                      : "w-1.5 bg-slate-700"
-                  )}
-                />
-              ))}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-slate-400 hover:text-white"
-              onClick={handleSkip}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-2">
+            {TOUR_STEPS.map((_, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  index === currentStep
+                    ? "w-6 bg-fuchsia-500"
+                    : index < currentStep
+                    ? "w-1.5 bg-fuchsia-500/50"
+                    : "w-1.5 bg-slate-700"
+                )}
+              />
+            ))}
           </div>
         </DialogHeader>
 
