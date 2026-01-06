@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { 
   Clock, 
   Plus, 
@@ -19,7 +20,8 @@ import {
   Timer as TimerIcon,
   Play,
   Pause,
-  RotateCcw
+  RotateCcw,
+  AlarmClock
 } from "lucide-react";
 import { getTimeContext, TimeContext } from "@/services/context";
 import { showSuccess, showError } from "@/utils/toast";
@@ -37,6 +39,14 @@ interface TimerState {
   totalSeconds: number;
 }
 
+interface Alarm {
+  id: string;
+  time: string;
+  label: string;
+  enabled: boolean;
+  repeat: string[];
+}
+
 const POPULAR_TIMEZONES = [
   { city: "New York", timezone: "America/New_York" },
   { city: "London", timezone: "Europe/London" },
@@ -50,13 +60,17 @@ const POPULAR_TIMEZONES = [
   { city: "Mumbai", timezone: "Asia/Kolkata" },
 ];
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export default function ClockWidget() {
   const [time, setTime] = useState<TimeContext>(getTimeContext());
   const [worldClocks, setWorldClocks] = useState<WorldClock[]>([]);
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAlarmDialogOpen, setIsAlarmDialogOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedTimezone, setSelectedTimezone] = useState("");
-  const [showTimer, setShowTimer] = useState(false);
+  const [viewMode, setViewMode] = useState<"clock" | "timer" | "alarm">("clock");
   const [timer, setTimer] = useState<TimerState>({
     minutes: 0,
     seconds: 0,
@@ -64,14 +78,20 @@ export default function ClockWidget() {
     totalSeconds: 0
   });
   const [timerInput, setTimerInput] = useState("5");
+  
+  // Alarm form fields
+  const [alarmTime, setAlarmTime] = useState("09:00");
+  const [alarmLabel, setAlarmLabel] = useState("");
+  const [alarmRepeat, setAlarmRepeat] = useState<string[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTime(getTimeContext());
+      checkAlarms();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [alarms]);
 
   useEffect(() => {
     const saved = localStorage.getItem("worldClocks");
@@ -85,10 +105,27 @@ export default function ClockWidget() {
   }, []);
 
   useEffect(() => {
+    const savedAlarms = localStorage.getItem("alarms");
+    if (savedAlarms) {
+      try {
+        setAlarms(JSON.parse(savedAlarms));
+      } catch (e) {
+        console.error("Failed to load alarms");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (worldClocks.length > 0) {
       localStorage.setItem("worldClocks", JSON.stringify(worldClocks));
     }
   }, [worldClocks]);
+
+  useEffect(() => {
+    if (alarms.length > 0) {
+      localStorage.setItem("alarms", JSON.stringify(alarms));
+    }
+  }, [alarms]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -111,6 +148,27 @@ export default function ClockWidget() {
     }
     return () => clearInterval(interval);
   }, [timer.isRunning, timer.totalSeconds]);
+
+  const checkAlarms = () => {
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentDay = DAYS[now.getDay()];
+
+    alarms.forEach(alarm => {
+      if (alarm.enabled && alarm.time === currentTime) {
+        if (alarm.repeat.length === 0 || alarm.repeat.includes(currentDay)) {
+          showSuccess(`⏰ Alarm: ${alarm.label || "Time's up!"}`);
+          // Play notification sound (browser notification API)
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Alarm', {
+              body: alarm.label || "Time's up!",
+              icon: '/favicon.ico'
+            });
+          }
+        }
+      }
+    });
+  };
 
   const getTimeIcon = () => {
     switch (time.timeOfDay) {
@@ -152,6 +210,52 @@ export default function ClockWidget() {
   const removeWorldClock = (id: string) => {
     setWorldClocks(worldClocks.filter(c => c.id !== id));
     showSuccess("World clock removed");
+  };
+
+  const addAlarm = () => {
+    if (!alarmTime) {
+      showError("Please set alarm time");
+      return;
+    }
+
+    const newAlarm: Alarm = {
+      id: Date.now().toString(),
+      time: alarmTime,
+      label: alarmLabel.trim() || "Alarm",
+      enabled: true,
+      repeat: alarmRepeat
+    };
+
+    setAlarms([...alarms, newAlarm]);
+    setIsAlarmDialogOpen(false);
+    setAlarmTime("09:00");
+    setAlarmLabel("");
+    setAlarmRepeat([]);
+    showSuccess("Alarm created!");
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  };
+
+  const toggleAlarm = (id: string) => {
+    setAlarms(alarms.map(alarm => 
+      alarm.id === id ? { ...alarm, enabled: !alarm.enabled } : alarm
+    ));
+  };
+
+  const deleteAlarm = (id: string) => {
+    setAlarms(alarms.filter(a => a.id !== id));
+    showSuccess("Alarm deleted");
+  };
+
+  const toggleRepeatDay = (day: string) => {
+    if (alarmRepeat.includes(day)) {
+      setAlarmRepeat(alarmRepeat.filter(d => d !== day));
+    } else {
+      setAlarmRepeat([...alarmRepeat, day]);
+    }
   };
 
   const getTimeInTimezone = (timezone: string) => {
@@ -210,16 +314,26 @@ export default function ClockWidget() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setShowTimer(!showTimer)}
+                onClick={() => setViewMode(viewMode === "clock" ? "timer" : viewMode === "timer" ? "alarm" : "clock")}
                 className="h-6 px-2 text-[10px] text-slate-400 hover:text-white"
               >
-                {showTimer ? "Clock" : "Timer"}
+                {viewMode === "clock" ? "Timer" : viewMode === "timer" ? "Alarm" : "Clock"}
               </Button>
-              {!showTimer && (
+              {viewMode === "clock" && (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setIsDialogOpen(true)}
+                  className="h-6 w-6 p-0 text-fuchsia-400 hover:text-fuchsia-300"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+              {viewMode === "alarm" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsAlarmDialogOpen(true)}
                   className="h-6 w-6 p-0 text-fuchsia-400 hover:text-fuchsia-300"
                 >
                   <Plus className="h-4 w-4" />
@@ -230,7 +344,7 @@ export default function ClockWidget() {
         </CardHeader>
 
         <CardContent className="p-3 pt-0 flex-1 min-h-0 overflow-y-auto scrollbar-hide space-y-3">
-          {showTimer ? (
+          {viewMode === "timer" ? (
             /* Timer View */
             <div className="space-y-3">
               <div className="text-center">
@@ -298,6 +412,55 @@ export default function ClockWidget() {
                   </Button>
                 ))}
               </div>
+            </div>
+          ) : viewMode === "alarm" ? (
+            /* Alarm View */
+            <div className="space-y-2">
+              {alarms.length === 0 ? (
+                <p className="text-[10px] text-slate-500 text-center py-4">
+                  No alarms set
+                </p>
+              ) : (
+                alarms.map(alarm => (
+                  <div
+                    key={alarm.id}
+                    className="p-2 rounded-lg bg-slate-900/50 border border-slate-700/50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xl font-bold text-white">{alarm.time}</p>
+                          <Switch
+                            checked={alarm.enabled}
+                            onCheckedChange={() => toggleAlarm(alarm.id)}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-400">{alarm.label}</p>
+                        {alarm.repeat.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {alarm.repeat.map(day => (
+                              <span
+                                key={day}
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-400"
+                              >
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteAlarm(alarm.id)}
+                        className="h-5 w-5 p-0 text-slate-400 hover:text-red-400"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           ) : (
             /* Clock View */
@@ -410,6 +573,80 @@ export default function ClockWidget() {
                 className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
               >
                 Add Clock
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Alarm Dialog */}
+      <Dialog open={isAlarmDialogOpen} onOpenChange={setIsAlarmDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <AlarmClock className="h-5 w-5 text-fuchsia-400" />
+              New Alarm
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-slate-400 mb-1 block">Time</label>
+              <Input
+                type="time"
+                className="bg-slate-800 border-slate-700 text-white"
+                value={alarmTime}
+                onChange={(e) => setAlarmTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 mb-1 block">Label</label>
+              <Input
+                placeholder="Wake up, Meeting, etc."
+                className="bg-slate-800 border-slate-700 text-white"
+                value={alarmLabel}
+                onChange={(e) => setAlarmLabel(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-slate-400 mb-2 block">Repeat</label>
+              <div className="flex gap-2 flex-wrap">
+                {DAYS.map(day => (
+                  <Button
+                    key={day}
+                    size="sm"
+                    variant={alarmRepeat.includes(day) ? "default" : "outline"}
+                    onClick={() => toggleRepeatDay(day)}
+                    className={alarmRepeat.includes(day) 
+                      ? "bg-fuchsia-600 text-white hover:bg-fuchsia-500" 
+                      : "border-slate-600 text-slate-300"
+                    }
+                  >
+                    {day}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                {alarmRepeat.length === 0 ? "One time alarm" : `Repeats on ${alarmRepeat.join(", ")}`}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAlarmDialogOpen(false);
+                  setAlarmTime("09:00");
+                  setAlarmLabel("");
+                  setAlarmRepeat([]);
+                }}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={addAlarm}
+                className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+              >
+                Create Alarm
               </Button>
             </div>
           </div>
