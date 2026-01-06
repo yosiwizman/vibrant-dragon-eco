@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import CurrentTimeDisplay from "@/components/CurrentTimeDisplay";
 import LocationDisplay from "@/components/LocationDisplay";
 import QuickActions from "@/components/QuickActions";
-import AIUsageWidget from "@/components/AIUsageWidget";
 import RecentActivity from "@/components/RecentActivity";
 import ProductivityInsights from "@/components/ProductivityInsights";
 import CalendarWidget from "./CalendarWidget";
