@@ -14,6 +14,7 @@ import RemindersWidget from "./RemindersWidget";
 import NotesWidget from "./NotesWidget";
 import ContactsWidget from "./ContactsWidget";
 import ClockWidget from "./ClockWidget";
+import WeatherWidget from "./WeatherWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
