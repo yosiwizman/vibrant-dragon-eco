@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, GripVertical, RotateCcw } from "lucide-react";
+import { Plus, GripVertical, RotateCcw, AlertTriangle } from "lucide-react";
 import type { Widget } from "@/types/widgets";
 import { WIDGET_CONFIGS } from "@/types/widgets";
 import { usePreferences } from "@/state/preferences";
-import { showSuccess } from "@/utils/toast";
+import { showSuccess, showError } from "@/utils/toast";
 import { findNextPosition, packWidgets } from "../system/layout.ts";
 import WidgetCell from "./WidgetCell.tsx";
 
@@ -14,6 +14,7 @@ const GRID_COLS = 4;
 const CELL_HEIGHT = 100;
 const GAP = 8;
 const PADDING = 12;
+const DEBOUNCE_MS = 100;
 
 type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -23,6 +24,29 @@ const DEFAULT_WIDGETS: Widget[] = [
   { id: "default-3", type: "tasks", x: 3, y: 0, w: 1, h: 2 },
   { id: "default-4", type: "upcoming", x: 0, y: 2, w: 2, h: 2 },
 ];
+
+// Enhanced validation functions
+function validateWidget(widget: Partial<Widget>): widget is Widget {
+  return (
+    typeof widget.id === 'string' &&
+    typeof widget.type === 'string' &&
+    typeof widget.x === 'number' &&
+    typeof widget.y === 'number' &&
+    typeof widget.w === 'number' &&
+    typeof widget.h === 'number' &&
+    widget.w > 0 && widget.h > 0
+  );
+}
+
+function sanitizeWidgets(widgets: any[]): Widget[] {
+  return widgets.filter(validateWidget).map(w => ({
+    ...w,
+    x: Math.max(0, Math.min(GRID_COLS - w.w, w.x)),
+    y: Math.max(0, w.y),
+    w: Math.max(1, Math.min(GRID_COLS, w.w)),
+    h: Math.max(1, w.h)
+  }));
+}
 
 function buildOccupied(widgets: Widget[], excludeId?: string) {
   const occ = new Set<string>();
@@ -48,11 +72,23 @@ function canPlaceAt(widgets: Widget[], x: number, y: number, w: number, h: numbe
   return true;
 }
 
+// Debounce utility
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
 export default function WidgetGrid() {
   const { preferences, setPreferences } = usePreferences();
   const [isEditMode, setIsEditMode] = useState(false);
   const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
   const [activeResize, setActiveResize] = useState<{
     widgetId: string;
@@ -82,68 +118,123 @@ export default function WidgetGrid() {
     return (contentWidth - GAP * (GRID_COLS - 1)) / GRID_COLS;
   }, []);
 
+  // Enhanced save with error handling
   const saveWidgets = useCallback(
-    (next: Widget[]) => {
-      const packed = packWidgets(next);
-      setWidgets(packed);
-      setPreferences({ ...preferences, widgets: packed });
-    },
+    debounce((next: Widget[]) => {
+      try {
+        const sanitized = sanitizeWidgets(next);
+        const packed = packWidgets(sanitized);
+        setWidgets(packed);
+        setPreferences({ ...preferences, widgets: packed });
+        setError(null);
+      } catch (err) {
+        console.error('Failed to save widgets:', err);
+        setError('Failed to save layout');
+        showError('Could not save widget layout');
+      }
+    }, DEBOUNCE_MS),
     [preferences, setPreferences]
   );
 
+  // Enhanced initialization with error handling
   useEffect(() => {
-    const saved = preferences.widgets;
-    const initial = packWidgets(
-      Array.isArray(saved) && saved.length > 0 ? (saved as Widget[]) : DEFAULT_WIDGETS
-    );
-    setWidgets(initial);
-
-    if (JSON.stringify(saved) !== JSON.stringify(initial)) {
-      setPreferences({ ...preferences, widgets: initial });
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const saved = preferences.widgets;
+      let initial: Widget[];
+      
+      if (Array.isArray(saved) && saved.length > 0) {
+        const sanitized = sanitizeWidgets(saved as Widget[]);
+        initial = packWidgets(sanitized);
+      } else {
+        initial = packWidgets(DEFAULT_WIDGETS);
+      }
+      
+      setWidgets(initial);
+      
+      if (JSON.stringify(saved) !== JSON.stringify(initial)) {
+        setPreferences({ ...preferences, widgets: initial });
+      }
+    } catch (err) {
+      console.error('Failed to initialize widgets:', err);
+      setError('Failed to load widgets');
+      const fallback = packWidgets(DEFAULT_WIDGETS);
+      setWidgets(fallback);
+    } finally {
+      setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const resetLayout = useCallback(() => {
-    saveWidgets(DEFAULT_WIDGETS);
-    showSuccess("Layout reset");
+    try {
+      saveWidgets(DEFAULT_WIDGETS);
+      showSuccess("Layout reset");
+      setError(null);
+    } catch (err) {
+      console.error('Failed to reset layout:', err);
+      setError('Failed to reset layout');
+      showError('Could not reset layout');
+    }
   }, [saveWidgets]);
 
   const removeWidget = useCallback(
     (id: string) => {
-      saveWidgets(widgets.filter((w) => w.id !== id));
-      showSuccess("Widget removed");
+      try {
+        const filtered = widgets.filter((w) => w.id !== id);
+        saveWidgets(filtered);
+        showSuccess("Widget removed");
+      } catch (err) {
+        console.error('Failed to remove widget:', err);
+        showError('Could not remove widget');
+      }
     },
     [saveWidgets, widgets]
   );
 
   const addWidget = useCallback(
     (type: string, size: { w: number; h: number }) => {
-      if (widgets.some((w) => w.type === type)) {
-        showSuccess(`${type} already exists`);
-        return;
+      try {
+        if (widgets.some((w) => w.type === type)) {
+          showSuccess(`${type} already exists`);
+          return;
+        }
+
+        const cfg = WIDGET_CONFIGS[type];
+        if (!cfg) {
+          showError(`Unknown widget type: ${type}`);
+          return;
+        }
+
+        const w = Math.max(1, Math.min(GRID_COLS, cfg.defaultSize.w || size.w));
+        const h = Math.max(1, cfg.defaultSize.h || size.h);
+
+        const pos = findNextPosition(widgets, w, h);
+        if (!pos) {
+          showError('No space available for widget');
+          return;
+        }
+
+        const next: Widget[] = [
+          ...widgets,
+          {
+            id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type,
+            x: pos.x,
+            y: pos.y,
+            w,
+            h,
+          },
+        ];
+
+        saveWidgets(next);
+        showSuccess(`Added ${type}`);
+      } catch (err) {
+        console.error('Failed to add widget:', err);
+        showError('Could not add widget');
       }
-
-      const cfg = WIDGET_CONFIGS[type];
-      const w = cfg ? cfg.defaultSize.w : size.w;
-      const h = cfg ? cfg.defaultSize.h : size.h;
-
-      const pos = findNextPosition(widgets, w, h);
-
-      const next: Widget[] = [
-        ...widgets,
-        {
-          id: `${type}-${Date.now()}`,
-          type,
-          x: pos.x,
-          y: pos.y,
-          w,
-          h,
-        },
-      ];
-
-      saveWidgets(next);
-      showSuccess(`Added ${type}`);
     },
     [saveWidgets, widgets]
   );
@@ -182,75 +273,83 @@ export default function WidgetGrid() {
     [isEditMode]
   );
 
+  // Enhanced resize with better error handling
   useEffect(() => {
     if (!activeResize) return;
 
     const onMove = (e: PointerEvent) => {
-      const cellW = getCellWidth();
-      if (!cellW) return;
+      try {
+        const cellW = getCellWidth();
+        if (!cellW) return;
 
-      const dx = e.clientX - activeResize.startX;
-      const dy = e.clientY - activeResize.startY;
+        const dx = e.clientX - activeResize.startX;
+        const dy = e.clientY - activeResize.startY;
 
-      const dCols = Math.round(dx / (cellW + GAP));
-      const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
+        const dCols = Math.round(dx / (cellW + GAP));
+        const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
 
-      const cfg = WIDGET_CONFIGS[activeResize.original.type];
-      const minW = cfg?.minSize.w ?? 1;
-      const minH = cfg?.minSize.h ?? 1;
-      const maxW = cfg?.maxSize.w ?? GRID_COLS;
-      const maxH = cfg?.maxSize.h ?? 200;
+        const cfg = WIDGET_CONFIGS[activeResize.original.type];
+        const minW = cfg?.minSize.w ?? 1;
+        const minH = cfg?.minSize.h ?? 1;
+        const maxW = cfg?.maxSize.w ?? GRID_COLS;
+        const maxH = cfg?.maxSize.h ?? 200;
 
-      let nextW = activeResize.original.w;
-      let nextH = activeResize.original.h;
-      let nextX = activeResize.original.x;
-      let nextY = activeResize.original.y;
+        let nextW = activeResize.original.w;
+        let nextH = activeResize.original.h;
+        let nextX = activeResize.original.x;
+        let nextY = activeResize.original.y;
 
-      // Handle width changes
-      if (activeResize.dir === "e" || activeResize.dir === "se" || activeResize.dir === "ne") {
-        nextW = activeResize.original.w + dCols;
-      } else if (activeResize.dir === "w" || activeResize.dir === "sw" || activeResize.dir === "nw") {
-        nextW = activeResize.original.w - dCols;
-        nextX = activeResize.original.x + dCols;
+        // Handle width changes
+        if (activeResize.dir === "e" || activeResize.dir === "se" || activeResize.dir === "ne") {
+          nextW = activeResize.original.w + dCols;
+        } else if (activeResize.dir === "w" || activeResize.dir === "sw" || activeResize.dir === "nw") {
+          nextW = activeResize.original.w - dCols;
+          nextX = activeResize.original.x + dCols;
+        }
+
+        // Handle height changes
+        if (activeResize.dir === "s" || activeResize.dir === "se" || activeResize.dir === "sw") {
+          nextH = activeResize.original.h + dRows;
+        } else if (activeResize.dir === "n" || activeResize.dir === "ne" || activeResize.dir === "nw") {
+          nextH = activeResize.original.h - dRows;
+          nextY = activeResize.original.y + dRows;
+        }
+
+        nextW = Math.max(minW, Math.min(maxW, nextW));
+        nextH = Math.max(minH, Math.min(maxH, nextH));
+        nextX = Math.max(0, Math.min(GRID_COLS - nextW, nextX));
+        nextY = Math.max(0, nextY);
+
+        if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
+
+        const ok = canPlaceAt(
+          widgets,
+          nextX,
+          nextY,
+          nextW,
+          nextH,
+          activeResize.widgetId
+        );
+        if (!ok) return;
+
+        setWidgets((prev) =>
+          prev.map((w) =>
+            w.id === activeResize.widgetId ? { ...w, x: nextX, y: nextY, w: nextW, h: nextH } : w
+          )
+        );
+      } catch (err) {
+        console.error('Resize error:', err);
       }
-
-      // Handle height changes
-      if (activeResize.dir === "s" || activeResize.dir === "se" || activeResize.dir === "sw") {
-        nextH = activeResize.original.h + dRows;
-      } else if (activeResize.dir === "n" || activeResize.dir === "ne" || activeResize.dir === "nw") {
-        nextH = activeResize.original.h - dRows;
-        nextY = activeResize.original.y + dRows;
-      }
-
-      nextW = Math.max(minW, Math.min(maxW, nextW));
-      nextH = Math.max(minH, Math.min(maxH, nextH));
-      nextX = Math.max(0, Math.min(GRID_COLS - nextW, nextX));
-      nextY = Math.max(0, nextY);
-
-      if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
-
-      // Bumper: only allow resize if it doesn't collide at the new position.
-      const ok = canPlaceAt(
-        widgets,
-        nextX,
-        nextY,
-        nextW,
-        nextH,
-        activeResize.widgetId
-      );
-      if (!ok) return;
-
-      setWidgets((prev) =>
-        prev.map((w) =>
-          w.id === activeResize.widgetId ? { ...w, x: nextX, y: nextY, w: nextW, h: nextH } : w
-        )
-      );
     };
 
     const onUp = () => {
-      // Persist + repack (won't move things unless needed)
-      saveWidgets(widgets);
-      setActiveResize(null);
+      try {
+        saveWidgets(widgets);
+        setActiveResize(null);
+      } catch (err) {
+        console.error('Resize save error:', err);
+        setActiveResize(null);
+      }
     };
 
     window.addEventListener("pointermove", onMove);
@@ -262,49 +361,56 @@ export default function WidgetGrid() {
     };
   }, [activeResize, getCellWidth, saveWidgets, widgets]);
 
-  // Drag functionality
+  // Enhanced drag with better error handling
   useEffect(() => {
     if (!activeDrag) return;
 
     const onMove = (e: PointerEvent) => {
-      const cellW = getCellWidth();
-      if (!cellW) return;
+      try {
+        const cellW = getCellWidth();
+        if (!cellW) return;
 
-      const dx = e.clientX - activeDrag.startX;
-      const dy = e.clientY - activeDrag.startY;
+        const dx = e.clientX - activeDrag.startX;
+        const dy = e.clientY - activeDrag.startY;
 
-      const dCols = Math.round(dx / (cellW + GAP));
-      const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
+        const dCols = Math.round(dx / (cellW + GAP));
+        const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
 
-      let nextX = activeDrag.original.x + dCols;
-      let nextY = activeDrag.original.y + dRows;
+        let nextX = activeDrag.original.x + dCols;
+        let nextY = activeDrag.original.y + dRows;
 
-      // Constrain to grid bounds
-      nextX = Math.max(0, Math.min(GRID_COLS - activeDrag.original.w, nextX));
-      nextY = Math.max(0, nextY);
+        nextX = Math.max(0, Math.min(GRID_COLS - activeDrag.original.w, nextX));
+        nextY = Math.max(0, nextY);
 
-      // Check if new position is valid (no collisions)
-      const ok = canPlaceAt(
-        widgets,
-        nextX,
-        nextY,
-        activeDrag.original.w,
-        activeDrag.original.h,
-        activeDrag.widgetId
-      );
+        const ok = canPlaceAt(
+          widgets,
+          nextX,
+          nextY,
+          activeDrag.original.w,
+          activeDrag.original.h,
+          activeDrag.widgetId
+        );
 
-      if (!ok) return;
+        if (!ok) return;
 
-      setWidgets((prev) =>
-        prev.map((w) =>
-          w.id === activeDrag.widgetId ? { ...w, x: nextX, y: nextY } : w
-        )
-      );
+        setWidgets((prev) =>
+          prev.map((w) =>
+            w.id === activeDrag.widgetId ? { ...w, x: nextX, y: nextY } : w
+          )
+        );
+      } catch (err) {
+        console.error('Drag error:', err);
+      }
     };
 
     const onUp = () => {
-      saveWidgets(widgets);
-      setActiveDrag(null);
+      try {
+        saveWidgets(widgets);
+        setActiveDrag(null);
+      } catch (err) {
+        console.error('Drag save error:', err);
+        setActiveDrag(null);
+      }
     };
 
     window.addEventListener("pointermove", onMove);
@@ -315,6 +421,28 @@ export default function WidgetGrid() {
       window.removeEventListener("pointerup", onUp as any);
     };
   }, [activeDrag, getCellWidth, saveWidgets, widgets]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="text-center text-slate-400">
+            <GripVertical className="h-12 w-12 mx-auto mb-2 opacity-50 animate-pulse" />
+            <p className="text-sm">Loading widgets...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -362,6 +490,14 @@ export default function WidgetGrid() {
           </Button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-900/20 border border-red-500/30">
+          <AlertTriangle className="h-4 w-4 text-red-400" />
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
 
       {/* Grid */}
       <div
