@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, RotateCcw } from "lucide-react";
 import type { Widget } from "@/types/widgets";
 import { WIDGET_CONFIGS } from "@/types/widgets";
 import { usePreferences } from "@/state/preferences";
 import { showSuccess } from "@/utils/toast";
-import { findNextPosition, packWidgets } from "../system/layout";
-import WidgetCell from "./WidgetCell";
+import { findNextPosition, packWidgets } from "../system/layout.ts";
+import WidgetCell from "./WidgetCell.tsx";
 
 const GRID_COLS = 4;
 const CELL_HEIGHT = 100;
 const GAP = 8;
+const PADDING = 12;
+
+type ResizeDir = "e" | "s" | "se";
 
 const DEFAULT_WIDGETS: Widget[] = [
   { id: "default-1", type: "time", x: 0, y: 0, w: 1, h: 1 },
@@ -21,17 +24,56 @@ const DEFAULT_WIDGETS: Widget[] = [
   { id: "default-4", type: "upcoming", x: 0, y: 2, w: 2, h: 2 },
 ];
 
+function buildOccupied(widgets: Widget[], excludeId?: string) {
+  const occ = new Set<string>();
+  for (const w of widgets) {
+    if (excludeId && w.id === excludeId) continue;
+    for (let dy = 0; dy < w.h; dy++) {
+      for (let dx = 0; dx < w.w; dx++) {
+        occ.add(`${w.x + dx},${w.y + dy}`);
+      }
+    }
+  }
+  return occ;
+}
+
+function canPlaceAt(widgets: Widget[], x: number, y: number, w: number, h: number, excludeId?: string) {
+  if (x < 0 || y < 0 || x + w > GRID_COLS) return false;
+  const occ = buildOccupied(widgets, excludeId);
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) {
+      if (occ.has(`${x + dx},${y + dy}`)) return false;
+    }
+  }
+  return true;
+}
+
 export default function WidgetGrid() {
   const { preferences, setPreferences } = usePreferences();
   const [isEditMode, setIsEditMode] = useState(false);
   const [widgets, setWidgets] = useState<Widget[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [activeResize, setActiveResize] = useState<{
+    widgetId: string;
+    dir: ResizeDir;
+    startX: number;
+    startY: number;
+    original: Widget;
+  } | null>(null);
 
   const gridHeight = useMemo(() => {
     if (widgets.length === 0) return 400;
     const maxRow = Math.max(...widgets.map((w) => w.y + w.h));
-    // Let grid expand naturally; this is just a minimum so the box doesn't collapse.
     return Math.max(400, maxRow * CELL_HEIGHT + (maxRow - 1) * GAP + 24);
   }, [widgets]);
+
+  const getCellWidth = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return 0;
+    const contentWidth = el.clientWidth - PADDING * 2;
+    return (contentWidth - GAP * (GRID_COLS - 1)) / GRID_COLS;
+  }, []);
 
   const saveWidgets = useCallback(
     (next: Widget[]) => {
@@ -106,6 +148,87 @@ export default function WidgetGrid() {
     };
   }, [addWidget]);
 
+  const beginResize = useCallback(
+    (widget: Widget, dir: ResizeDir, clientX: number, clientY: number) => {
+      if (!isEditMode) return;
+      setActiveResize({
+        widgetId: widget.id,
+        dir,
+        startX: clientX,
+        startY: clientY,
+        original: { ...widget },
+      });
+    },
+    [isEditMode]
+  );
+
+  useEffect(() => {
+    if (!activeResize) return;
+
+    const onMove = (e: PointerEvent) => {
+      const cellW = getCellWidth();
+      if (!cellW) return;
+
+      const dx = e.clientX - activeResize.startX;
+      const dy = e.clientY - activeResize.startY;
+
+      const dCols = Math.round(dx / (cellW + GAP));
+      const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
+
+      const cfg = WIDGET_CONFIGS[activeResize.original.type];
+      const minW = cfg?.minSize.w ?? 1;
+      const minH = cfg?.minSize.h ?? 1;
+      const maxW = cfg?.maxSize.w ?? GRID_COLS;
+      const maxH = cfg?.maxSize.h ?? 200;
+
+      let nextW = activeResize.original.w;
+      let nextH = activeResize.original.h;
+
+      if (activeResize.dir === "e" || activeResize.dir === "se") {
+        nextW = activeResize.original.w + dCols;
+      }
+      if (activeResize.dir === "s" || activeResize.dir === "se") {
+        nextH = activeResize.original.h + dRows;
+      }
+
+      nextW = Math.max(minW, Math.min(maxW, nextW, GRID_COLS - activeResize.original.x));
+      nextH = Math.max(minH, Math.min(maxH, nextH));
+
+      if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
+
+      // Bumper: only allow resize if it doesn't collide at the current x/y.
+      const ok = canPlaceAt(
+        widgets,
+        activeResize.original.x,
+        activeResize.original.y,
+        nextW,
+        nextH,
+        activeResize.widgetId
+      );
+      if (!ok) return;
+
+      setWidgets((prev) =>
+        prev.map((w) =>
+          w.id === activeResize.widgetId ? { ...w, w: nextW, h: nextH } : w
+        )
+      );
+    };
+
+    const onUp = () => {
+      // Persist + repack (won't move things unless needed)
+      saveWidgets(widgets);
+      setActiveResize(null);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp as any);
+    };
+  }, [activeResize, getCellWidth, saveWidgets, widgets]);
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -115,7 +238,7 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? "Click X to remove" : `${widgets.length} widgets`}
+            {isEditMode ? "Resize from the purple handles" : `${widgets.length} widgets`}
           </p>
         </div>
 
@@ -137,7 +260,9 @@ export default function WidgetGrid() {
             onClick={() => setIsEditMode(!isEditMode)}
             className={isEditMode ? "bg-fuchsia-600 hover:bg-fuchsia-500" : "border-slate-600 text-slate-300"}
           >
-            {isEditMode ? "Done" : (
+            {isEditMode ? (
+              "Done"
+            ) : (
               <>
                 <Plus className="h-4 w-4 mr-1" />
                 Edit
@@ -149,6 +274,7 @@ export default function WidgetGrid() {
 
       {/* Grid */}
       <div
+        ref={containerRef}
         className={`relative rounded-xl border-2 p-3 transition-colors ${
           isEditMode
             ? "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed"
@@ -187,6 +313,7 @@ export default function WidgetGrid() {
                   widget={widget}
                   isEditMode={isEditMode}
                   onRemove={() => removeWidget(widget.id)}
+                  onResizeStart={(dir, x, y) => beginResize(widget, dir, x, y)}
                 />
               </div>
             ))}
