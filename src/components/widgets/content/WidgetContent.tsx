@@ -15,6 +15,7 @@ import ClockWidget from "./ClockWidget";
 import WeatherWidget from "./WeatherWidget";
 import MapWidget from "./MapWidget";
 import QuickActionsWidget from "./QuickActionsWidget";
+import AIUsageWidget from "./AIUsageWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
