@@ -290,7 +290,7 @@ export default function MapWidget() {
                       onClick={() => getDirections(place.lat, place.lng)}
                       className="h-5 text-[9px] border-slate-600 text-slate-300"
                     >
-                      <Directions className="h-2.5 w-2.5 mr-1" />
+                      <Navigation className="h-2.5 w-2.5 mr-1" />
                       Directions
                     </Button>
                   </div>
