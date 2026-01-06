@@ -17,6 +17,7 @@ import QuickActionsWidget from "./QuickActionsWidget";
 import AIUsageWidget from "./AIUsageWidget";
 import RecentActivityWidget from "./RecentActivityWidget";
 import ProductivityWidget from "./ProductivityWidget";
+import UpcomingWidget from "./UpcomingWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +41,7 @@ const SPECIAL = new Set([
   "reminders",
   "notes",
   "contacts",
+  "upcoming",
 ]);
 
 export default function WidgetContent({ type }: WidgetContentProps) {
@@ -184,6 +186,7 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   if (type === "ai-usage") return <div className="h-full w-full overflow-hidden"><AIUsageWidget /></div>;
   if (type === "recent-activity") return <div className="h-full w-full overflow-hidden"><RecentActivityWidget /></div>;
   if (type === "productivity") return <div className="h-full w-full overflow-hidden"><ProductivityWidget /></div>;
+  if (type === "upcoming") return <div className="h-full w-full overflow-hidden"><UpcomingWidget /></div>;
   if (type === "calendar") return <div className="h-full w-full overflow-hidden"><CalendarWidget /></div>;
   if (type === "tasks") return <div className="h-full w-full overflow-hidden"><TasksWidget /></div>;
   if (type === "reminders") return <div className="h-full w-full overflow-hidden"><RemindersWidget /></div>;
