@@ -142,9 +142,9 @@ export default function RecentActivity() {
 
   if (loading) {
     return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-        <CardContent className="p-4">
-          <div className="animate-pulse space-y-2">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+        <CardContent className="p-4 h-full">
+          <div className="animate-pulse space-y-2 h-full">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-12 bg-slate-700/50 rounded-lg" />
             ))}
@@ -156,32 +156,34 @@ export default function RecentActivity() {
 
   if (activities.length === 0) {
     return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-        <CardContent className="p-4">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+        <CardContent className="p-4 h-full flex flex-col">
           <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-fuchsia-500/10">
               <Activity className="h-4 w-4 text-fuchsia-400" />
             </div>
             Recent Activity
           </h3>
-          <p className="text-sm text-slate-500 text-center py-4">
-            No recent activity yet. Start by creating a task, note, or reminder!
-          </p>
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-sm text-slate-500 text-center">
+              No recent activity yet
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-fuchsia-500/10">
             <Activity className="h-4 w-4 text-fuchsia-400" />
           </div>
           Recent Activity
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1 overflow-y-auto">
           {activities.map((activity) => {
             const IconComp = TYPE_ICONS[activity.type] || Activity;
             const colorClass = TYPE_COLORS[activity.type] || "text-slate-400";
@@ -201,7 +203,7 @@ export default function RecentActivity() {
                     {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                   </p>
                 </div>
-                <Badge variant="outline" className="border-slate-700 text-slate-500 text-[10px] capitalize">
+                <Badge variant="outline" className="border-slate-700 text-slate-500 text-[10px] capitalize shrink-0">
                   {activity.type}
                 </Badge>
               </div>

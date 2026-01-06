@@ -28,8 +28,8 @@ export default function CurrentTimeDisplay() {
   };
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col justify-center">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-fuchsia-500/20">

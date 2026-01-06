@@ -105,13 +105,13 @@ export default function QuickActions() {
   const currentAction = actions.find(a => a.type === actionType);
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <Zap className="h-4 w-4 text-fuchsia-400" />
           Quick Add
         </h3>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 flex-1">
           {actions.map((action) => (
             <Dialog key={action.type} open={isOpen && actionType === action.type} onOpenChange={(open) => {
               setIsOpen(open);
@@ -120,7 +120,7 @@ export default function QuickActions() {
               <DialogTrigger asChild>
                 <Button
                   variant="ghost"
-                  className={`flex flex-col items-center gap-1.5 h-auto py-3 px-2 border border-slate-700 ${action.bgColor}`}
+                  className={`flex flex-col items-center justify-center gap-1.5 h-full py-3 px-2 border border-slate-700 ${action.bgColor}`}
                   onClick={() => setActionType(action.type)}
                 >
                   <action.icon className={`h-5 w-5 ${action.color}`} />

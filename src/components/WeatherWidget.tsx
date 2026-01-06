@@ -58,8 +58,8 @@ export default function WeatherWidget() {
 
   if (error) {
     return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-        <CardContent className="p-4">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+        <CardContent className="p-4 h-full flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-slate-400">
               <CloudSun className="h-5 w-5" />
@@ -75,15 +75,17 @@ export default function WeatherWidget() {
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
-          <p className="text-xs text-slate-500 mt-2">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchWeather}
-            className="mt-3 w-full border-slate-600 text-slate-300 hover:bg-slate-700"
-          >
-            Try Again
-          </Button>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <p className="text-xs text-slate-500 mb-2">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchWeather}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Try Again
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -91,8 +93,8 @@ export default function WeatherWidget() {
 
   if (!weather) {
     return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-        <CardContent className="p-4">
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+        <CardContent className="p-4 h-full flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-slate-400">
               <CloudSun className="h-5 w-5" />
@@ -108,17 +110,19 @@ export default function WeatherWidget() {
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-            {loading ? "Loading weather..." : "Click refresh to get weather"}
-          </p>
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-xs text-slate-500">
+              {loading ? "Loading weather..." : "Click refresh to get weather"}
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -126,7 +130,6 @@ export default function WeatherWidget() {
             <span className="text-sm font-medium text-white">{locationName}</span>
           </div>
           <div className="flex items-center gap-1">
-            {/* Temperature Unit Toggle */}
             <Button
               variant="ghost"
               size="sm"
@@ -148,7 +151,7 @@ export default function WeatherWidget() {
         </div>
         
         {/* Main Weather Display */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-1">
           <div>
             <p className="text-3xl font-bold text-white">
               {convertTemp(weather.temperature)}{tempUnit}
@@ -159,7 +162,7 @@ export default function WeatherWidget() {
         </div>
         
         {/* Weather Details */}
-        <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-700">
+        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-700">
           <div className="flex items-center gap-1.5">
             <Thermometer className="h-4 w-4 text-orange-400" />
             <div>

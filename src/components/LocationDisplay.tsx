@@ -48,8 +48,8 @@ export default function LocationDisplay() {
   };
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ export default function LocationDisplay() {
         </div>
 
         {location ? (
-          <>
+          <div className="flex-1 flex flex-col">
             {/* Coordinates */}
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-slate-400">
@@ -105,10 +105,10 @@ export default function LocationDisplay() {
 
             {/* Map View */}
             {showMap && (
-              <div className="relative rounded-lg overflow-hidden border border-slate-700">
+              <div className="relative rounded-lg overflow-hidden border border-slate-700 flex-1 min-h-[80px]">
                 <iframe
                   src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.lng - 0.01},${location.lat - 0.01},${location.lng + 0.01},${location.lat + 0.01}&layer=mapnik&marker=${location.lat},${location.lng}`}
-                  className="w-full h-32"
+                  className="w-full h-full absolute inset-0"
                   style={{ border: 0 }}
                   loading="lazy"
                   title="Location Map"
@@ -116,10 +116,10 @@ export default function LocationDisplay() {
                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-slate-900/50 to-transparent" />
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <div className="text-center py-4">
-            <MapPin className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <MapPin className="h-8 w-8 text-slate-600 mb-2" />
             <p className="text-sm text-slate-400 mb-1">Location not set</p>
             <p className="text-xs text-slate-500 mb-3">
               {error || "Enable for weather & nearby places"}

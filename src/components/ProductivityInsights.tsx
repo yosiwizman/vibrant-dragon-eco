@@ -13,7 +13,7 @@ import {
   Award,
   Calendar
 } from "lucide-react";
-import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { subDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 
 interface ProductivityStats {
   tasksCompletedToday: number;
@@ -48,7 +48,6 @@ export default function ProductivityInsights() {
       const lastWeekStart = subDays(weekStart, 7);
       const lastWeekEnd = subDays(weekEnd, 7);
 
-      // Tasks completed today
       const { count: todayCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
@@ -57,7 +56,6 @@ export default function ProductivityInsights() {
         .gte("completed_at", todayStart.toISOString())
         .lte("completed_at", todayEnd.toISOString());
 
-      // Tasks completed this week
       const { count: weekCompletedCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
@@ -66,7 +64,6 @@ export default function ProductivityInsights() {
         .gte("completed_at", weekStart.toISOString())
         .lte("completed_at", weekEnd.toISOString());
 
-      // Total tasks created this week
       const { count: weekTotalCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
@@ -74,7 +71,6 @@ export default function ProductivityInsights() {
         .gte("created_at", weekStart.toISOString())
         .lte("created_at", weekEnd.toISOString());
 
-      // Tasks completed last week (for trend)
       const { count: lastWeekCount } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
@@ -83,7 +79,6 @@ export default function ProductivityInsights() {
         .gte("completed_at", lastWeekStart.toISOString())
         .lte("completed_at", lastWeekEnd.toISOString());
 
-      // Calculate streak (consecutive days with completed tasks)
       let streak = 0;
       for (let i = 0; i < 30; i++) {
         const dayStart = startOfDay(subDays(now, i));
@@ -100,7 +95,6 @@ export default function ProductivityInsights() {
         if (count && count > 0) {
           streak++;
         } else if (i > 0) {
-          // Allow today to have 0 completions without breaking streak
           break;
         }
       }
@@ -130,23 +124,23 @@ export default function ProductivityInsights() {
 
   if (loading || !stats) {
     return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-        <CardContent className="p-4">
-          <div className="h-24 bg-slate-700/50 rounded animate-pulse" />
+      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+        <CardContent className="p-4 h-full flex items-center justify-center">
+          <div className="h-24 w-full bg-slate-700/50 rounded animate-pulse" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
-      <CardContent className="p-4">
+    <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full">
+      <CardContent className="p-4 h-full flex flex-col">
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <Target className="h-4 w-4 text-fuchsia-400" />
           Productivity
         </h3>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1">
           {/* Today's Progress */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -171,7 +165,6 @@ export default function ProductivityInsights() {
 
           {/* Stats Row */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Streak */}
             <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/50">
               <Flame className={`h-5 w-5 ${stats.streak > 0 ? "text-orange-400" : "text-slate-500"}`} />
               <div>
@@ -180,7 +173,6 @@ export default function ProductivityInsights() {
               </div>
             </div>
 
-            {/* Trend */}
             <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/50">
               {stats.trend === "up" ? (
                 <TrendingUp className="h-5 w-5 text-green-400" />
