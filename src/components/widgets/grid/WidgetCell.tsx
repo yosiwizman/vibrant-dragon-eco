@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Move } from "lucide-react";
 import type { Widget } from "@/types/widgets";
 import WidgetContent from "../content/WidgetContent.tsx";
 import ResizeHandles from "./ResizeHandles";
@@ -14,13 +14,33 @@ interface WidgetCellProps {
   isEditMode: boolean;
   onRemove: () => void;
   onResizeStart: (dir: ResizeDir, clientX: number, clientY: number) => void;
+  onDragStart: (widget: Widget, clientX: number, clientY: number) => void;
 }
 
-export default function WidgetCell({ widget, isEditMode, onRemove, onResizeStart }: WidgetCellProps) {
+export default function WidgetCell({ widget, isEditMode, onRemove, onResizeStart, onDragStart }: WidgetCellProps) {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isEditMode) return;
+    
+    // Only start drag if not clicking on resize handles or remove button
+    if ((e.target as HTMLElement).closest('[data-resize-handle]')) return;
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    onDragStart(widget, e.clientX, e.clientY);
+  }, [isEditMode, widget, onDragStart]);
+
   return (
-    <div className={`relative h-full w-full min-h-0 min-w-0 overflow-hidden rounded-xl transition-all ${
-      isEditMode ? "ring-2 ring-fuchsia-400/30 hover:ring-fuchsia-400/50" : ""
-    }`}>
+    <div
+      className={`relative h-full w-full min-h-0 min-w-0 overflow-hidden rounded-xl transition-all cursor-move ${
+        isEditMode ? "ring-2 ring-fuchsia-400/30 hover:ring-fuchsia-400/50 animate-pulse" : ""
+      }`}
+      onPointerDown={handlePointerDown}
+      style={{
+        animation: isEditMode ? 'shake 0.5s ease-in-out infinite' : 'none'
+      }}
+    >
       {/* Clip any child overflow so widgets never visually overlap */}
       <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
         <WidgetContent type={widget.type} />
@@ -28,6 +48,11 @@ export default function WidgetCell({ widget, isEditMode, onRemove, onResizeStart
 
       {isEditMode && (
         <>
+          {/* Drag indicator */}
+          <div className="absolute top-2 left-2 bg-fuchsia-500/80 text-white p-1.5 rounded-full z-40 pointer-events-none">
+            <Move className="h-3 w-3" />
+          </div>
+
           <ResizeHandles onResizeStart={(dir, x, y) => onResizeStart(dir, x, y)} />
 
           <Button

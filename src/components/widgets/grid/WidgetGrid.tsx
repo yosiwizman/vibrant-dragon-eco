@@ -62,6 +62,13 @@ export default function WidgetGrid() {
     original: Widget;
   } | null>(null);
 
+  const [activeDrag, setActiveDrag] = useState<{
+    widgetId: string;
+    startX: number;
+    startY: number;
+    original: Widget;
+  } | null>(null);
+
   const gridHeight = useMemo(() => {
     if (widgets.length === 0) return 400;
     const maxRow = Math.max(...widgets.map((w) => w.y + w.h));
@@ -162,6 +169,19 @@ export default function WidgetGrid() {
     [isEditMode]
   );
 
+  const beginDrag = useCallback(
+    (widget: Widget, clientX: number, clientY: number) => {
+      if (!isEditMode) return;
+      setActiveDrag({
+        widgetId: widget.id,
+        startX: clientX,
+        startY: clientY,
+        original: { ...widget },
+      });
+    },
+    [isEditMode]
+  );
+
   useEffect(() => {
     if (!activeResize) return;
 
@@ -242,6 +262,60 @@ export default function WidgetGrid() {
     };
   }, [activeResize, getCellWidth, saveWidgets, widgets]);
 
+  // Drag functionality
+  useEffect(() => {
+    if (!activeDrag) return;
+
+    const onMove = (e: PointerEvent) => {
+      const cellW = getCellWidth();
+      if (!cellW) return;
+
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+
+      const dCols = Math.round(dx / (cellW + GAP));
+      const dRows = Math.round(dy / (CELL_HEIGHT + GAP));
+
+      let nextX = activeDrag.original.x + dCols;
+      let nextY = activeDrag.original.y + dRows;
+
+      // Constrain to grid bounds
+      nextX = Math.max(0, Math.min(GRID_COLS - activeDrag.original.w, nextX));
+      nextY = Math.max(0, nextY);
+
+      // Check if new position is valid (no collisions)
+      const ok = canPlaceAt(
+        widgets,
+        nextX,
+        nextY,
+        activeDrag.original.w,
+        activeDrag.original.h,
+        activeDrag.widgetId
+      );
+
+      if (!ok) return;
+
+      setWidgets((prev) =>
+        prev.map((w) =>
+          w.id === activeDrag.widgetId ? { ...w, x: nextX, y: nextY } : w
+        )
+      );
+    };
+
+    const onUp = () => {
+      saveWidgets(widgets);
+      setActiveDrag(null);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp as any);
+    };
+  }, [activeDrag, getCellWidth, saveWidgets, widgets]);
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -251,7 +325,11 @@ export default function WidgetGrid() {
             {isEditMode ? "Edit Mode" : "Widgets"}
           </p>
           <p className="text-xs text-slate-500">
-            {isEditMode ? (activeResize ? `Resizing widget...` : "Resize from the purple handles") : `${widgets.length} widgets`}
+            {isEditMode ? (
+              activeResize ? `Resizing widget...` :
+              activeDrag ? `Moving widget...` :
+              "Drag to move, resize from handles"
+            ) : `${widgets.length} widgets`}
           </p>
         </div>
 
@@ -290,7 +368,7 @@ export default function WidgetGrid() {
         ref={containerRef}
         className={`relative rounded-xl border-2 p-3 transition-colors ${
           isEditMode
-            ? activeResize
+            ? activeResize || activeDrag
               ? "border-fuchsia-400 bg-fuchsia-500/10 border-solid"
               : "border-fuchsia-400/50 bg-fuchsia-500/5 border-dashed"
             : "border-slate-700/30 bg-transparent"
@@ -329,6 +407,7 @@ export default function WidgetGrid() {
                   isEditMode={isEditMode}
                   onRemove={() => removeWidget(widget.id)}
                   onResizeStart={(dir, x, y) => beginResize(widget, dir, x, y)}
+                  onDragStart={(widget, x, y) => beginDrag(widget, x, y)}
                 />
               </div>
             ))}
