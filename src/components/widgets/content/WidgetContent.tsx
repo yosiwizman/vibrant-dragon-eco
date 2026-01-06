@@ -8,6 +8,7 @@ import QuickActions from "@/components/QuickActions";
 import AIUsageWidget from "@/components/AIUsageWidget";
 import RecentActivity from "@/components/RecentActivity";
 import ProductivityInsights from "@/components/ProductivityInsights";
+import CalendarWidget from "./CalendarWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ const SPECIAL = new Set([
   "ai-usage",
   "recent-activity",
   "productivity",
+  "calendar",
 ]);
 
 export default function WidgetContent({ type }: WidgetContentProps) {
@@ -170,6 +172,7 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   if (type === "ai-usage") return <div className="h-full w-full overflow-hidden"><AIUsageWidget /></div>;
   if (type === "recent-activity") return <div className="h-full w-full overflow-hidden"><RecentActivity /></div>;
   if (type === "productivity") return <div className="h-full w-full overflow-hidden"><ProductivityInsights /></div>;
+  if (type === "calendar") return <div className="h-full w-full overflow-hidden"><CalendarWidget /></div>;
 
   const formatTime = (time: string) => {
     if (!time) return "No due date";
