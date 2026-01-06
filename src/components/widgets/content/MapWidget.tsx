@@ -14,7 +14,6 @@ import {
   Trash2,
   ExternalLink,
   Search,
-  Directions,
   Star,
   Home,
   Briefcase,
