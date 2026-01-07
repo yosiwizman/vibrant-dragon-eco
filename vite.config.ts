@@ -24,5 +24,14 @@ export default defineConfig(async () => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+        },
+      },
+    },
+    // Ensure service worker is copied to dist
+    publicDir: 'public',
   };
 });
