@@ -254,20 +254,6 @@ class SmartSyncService {
     return () => this.conflictCallbacks.delete(callback);
   }
 
-  /**
-   * Subscribe to suggestions
-   */
-  subscribe(callback: (suggestions: Suggestion[]) => void): () => void {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
-  }
-
-  /**
-   * Notify listeners
-   */
-  private notifyListeners(): void {
-    this.listeners.forEach(cb => cb(this.suggestions));
-  }
 }
 
 export const smartSync = new SmartSyncService();
