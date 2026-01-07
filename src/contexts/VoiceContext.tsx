@@ -295,7 +295,6 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
 
       // Use OpenAI (online mode)
       console.log('[Voice] Using OpenAI (online mode)');
-      const normalizedText = normalizeSpeechInput(text);
       
       // Get memory context if enabled
       let memoryContext = "";
