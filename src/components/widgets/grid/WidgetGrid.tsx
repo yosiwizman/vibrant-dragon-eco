@@ -9,6 +9,8 @@ import { usePreferences } from "@/state/preferences";
 import { showSuccess, showError } from "@/utils/toast";
 import { findNextPosition, packWidgets } from "../system/layout.ts";
 import WidgetCell from "./WidgetCell.tsx";
+import { trackWidgetInteraction } from "@/services/analytics";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GRID_COLS = 4;
 const CELL_HEIGHT = 100;
@@ -82,6 +84,7 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
 }
 
 export default function WidgetGrid() {
+  const { user } = useAuth();
   const { preferences, setPreferences } = usePreferences();
   const [isEditMode, setIsEditMode] = useState(false);
   const [widgets, setWidgets] = useState<Widget[]>([]);
@@ -183,15 +186,21 @@ export default function WidgetGrid() {
   const removeWidget = useCallback(
     (id: string) => {
       try {
+        const widget = widgets.find(w => w.id === id);
         const filtered = widgets.filter((w) => w.id !== id);
         saveWidgets(filtered);
         showSuccess("Widget removed");
+        
+        // Track widget removal
+        if (widget && user) {
+          trackWidgetInteraction(widget.type, "remove", {}, user.id);
+        }
       } catch (err) {
         console.error('Failed to remove widget:', err);
         showError('Could not remove widget');
       }
     },
-    [saveWidgets, widgets]
+    [saveWidgets, widgets, user]
   );
 
   const addWidget = useCallback(
@@ -231,12 +240,17 @@ export default function WidgetGrid() {
 
         saveWidgets(next);
         showSuccess(`Added ${type}`);
+        
+        // Track widget addition
+        if (user) {
+          trackWidgetInteraction(type, "add", { w, h }, user.id);
+        }
       } catch (err) {
         console.error('Failed to add widget:', err);
         showError('Could not add widget');
       }
     },
-    [saveWidgets, widgets]
+    [saveWidgets, widgets, user]
   );
 
   useEffect(() => {
@@ -345,6 +359,18 @@ export default function WidgetGrid() {
     const onUp = () => {
       try {
         saveWidgets(widgets);
+        
+        // Track widget resize
+        if (user && activeResize) {
+          const widget = widgets.find(w => w.id === activeResize.widgetId);
+          if (widget) {
+            trackWidgetInteraction(widget.type, "resize", {
+              direction: activeResize.dir,
+              newSize: { w: widget.w, h: widget.h }
+            }, user.id);
+          }
+        }
+        
         setActiveResize(null);
       } catch (err) {
         console.error('Resize save error:', err);
@@ -406,6 +432,17 @@ export default function WidgetGrid() {
     const onUp = () => {
       try {
         saveWidgets(widgets);
+        
+        // Track widget drag
+        if (user && activeDrag) {
+          const widget = widgets.find(w => w.id === activeDrag.widgetId);
+          if (widget) {
+            trackWidgetInteraction(widget.type, "move", {
+              newPosition: { x: widget.x, y: widget.y }
+            }, user.id);
+          }
+        }
+        
         setActiveDrag(null);
       } catch (err) {
         console.error('Drag save error:', err);

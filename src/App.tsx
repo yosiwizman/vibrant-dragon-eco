@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { VoiceProvider } from "@/contexts/VoiceContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { trackError } from "@/services/analytics";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -38,6 +39,7 @@ import Drafts from "./pages/Drafts";
 import BookingTasks from "./pages/BookingTasks";
 import Documents from "./pages/Documents";
 import ListeningSessions from "./pages/ListeningSessions";
+import DataManagement from "./pages/DataManagement";
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -58,6 +60,12 @@ function CommandPaletteWrapper() {
 // Wrapper component for global keyboard shortcuts
 function GlobalShortcutsWrapper() {
   useGlobalShortcuts();
+  return null;
+}
+
+// Wrapper component for page tracking
+function PageTrackingWrapper() {
+  usePageTracking();
   return null;
 }
 
@@ -85,6 +93,7 @@ const App = () => (
             <VoiceStatusIndicator />
             <CommandPaletteWrapper />
             <GlobalShortcutsWrapper />
+            <PageTrackingWrapper />
             <KeyboardShortcutsHelp />
             <OnboardingTour />
             <QuickAddWrapper />
@@ -279,6 +288,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <ListeningSessions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/data-management"
+                element={
+                  <ProtectedRoute>
+                    <DataManagement />
                   </ProtectedRoute>
                 }
               />

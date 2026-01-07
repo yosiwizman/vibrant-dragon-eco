@@ -16,6 +16,8 @@ import { getMemoryContext } from "@/services/memory";
 import { saveChatMessage, getChatContext } from "@/services/chat-history";
 import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } from "@/services/wake-word-detection";
 import { isEnterPhrase, isExitPhrase, startListeningSession, addTranscript, endListeningSession, getSessionStatus } from "@/services/quiet-mode";
+import { voiceRateLimiter, openAIRateLimiter } from "@/services/rate-limiter";
+import { trackVoiceCommand, trackError } from "@/services/analytics";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -217,6 +219,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Not configured - please add your OpenAI API key in Settings");
     }
 
+    // Check voice rate limit
+    const voiceCheck = voiceRateLimiter.checkLimit(user.id);
+    if (!voiceCheck.allowed) {
+      const waitTime = Math.ceil((voiceCheck.resetAt - Date.now()) / 1000);
+      throw new Error(`Too many voice commands. Please wait ${waitTime} seconds.`);
+    }
+
+    // Check OpenAI rate limit
+    const apiCheck = openAIRateLimiter.checkLimit(user.id, 0.01);
+    if (!apiCheck.allowed) {
+      throw new Error(apiCheck.reason || "API rate limit exceeded");
+    }
+
     setIsProcessing(true);
     setLastTranscript(text);
     setCurrentTranscript("");
@@ -344,10 +359,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
       setLastResponse(finalResponse);
       setIsProcessing(false);
+      
+      // Track successful voice command
+      trackVoiceCommand(text, true, user.id);
+      
       return finalResponse;
     } catch (error: any) {
       setIsProcessing(false);
       console.error("Voice command processing error:", error);
+      
+      // Track failed voice command
+      trackVoiceCommand(text, false, user.id);
+      trackError(error.message, { command: text }, user.id);
+      
       throw error;
     }
   }, [openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
