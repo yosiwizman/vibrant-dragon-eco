@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import UserMenu from "./UserMenu";
 import LiveVoiceIndicator from "./LiveVoiceIndicator";
+import OfflineModeToggle from "./OfflineModeToggle";
 import {
   Home,
   MessageSquare,
@@ -94,6 +95,9 @@ export default function NavBar() {
               <span>Press ⌘K for commands</span>
             </div>
           )}
+
+          {/* Offline Mode Toggle */}
+          <OfflineModeToggle />
 
           {/* Help Button */}
           <Button

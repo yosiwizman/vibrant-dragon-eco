@@ -3,16 +3,17 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  WifiOff, 
-  Wifi,
-  Cloud,
-  CloudOff
+import {
+  WifiOff,
+  Wifi
 } from "lucide-react";
 import { offlineManager } from "@/services/offline-manager";
-import { showSuccess, showError } from "@/utils/toast";
 
-export default function OfflineModeToggle() {
+interface OfflineModeToggleProps {
+  showOnLoginPage?: boolean;
+}
+
+export default function OfflineModeToggle({ showOnLoginPage = false }: OfflineModeToggleProps) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState({ queueLength: 0, syncInProgress: false });
 
@@ -36,31 +37,27 @@ export default function OfflineModeToggle() {
     });
   };
 
+  // Don't show on login page
+  if (showOnLoginPage) {
+    return null;
+  }
+
   return (
-    <div className="fixed top-20 right-4 z-40">
+    <div className="relative">
       <Button
         variant="ghost"
-        size="sm"
-        className={`gap-2 ${
-          isOnline 
-            ? "bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600" 
-            : "bg-orange-900/80 hover:bg-orange-800/80 border border-orange-500/50"
-        } backdrop-blur-lg shadow-lg`}
+        size="icon"
+        className="h-9 w-9 relative"
+        title={isOnline ? "Online" : "Offline"}
       >
         {isOnline ? (
-          <>
-            <Wifi className="h-3.5 w-3.5 text-green-400" />
-            <span className="text-xs text-slate-300">Online</span>
-          </>
+          <Wifi className="h-5 w-5 text-green-400" />
         ) : (
-          <>
-            <WifiOff className="h-3.5 w-3.5 text-orange-400" />
-            <span className="text-xs text-orange-300">Offline</span>
-          </>
+          <WifiOff className="h-5 w-5 text-slate-600" />
         )}
         
         {syncStatus.queueLength > 0 && (
-          <Badge className="bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50 text-[10px] px-1.5 py-0">
+          <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-fuchsia-500 text-white border-0 text-[9px]">
             {syncStatus.queueLength}
           </Badge>
         )}
