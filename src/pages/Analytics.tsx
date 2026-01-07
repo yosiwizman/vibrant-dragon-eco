@@ -64,9 +64,9 @@ export default function Analytics() {
     );
   }
 
-  const topEvents: [string, number][] = Object.entries(summary.eventsByType)
-    .map(([event, count]) => [event, count as number])
-    .sort(([, a], [, b]) => b - a)
+  const topEvents = Object.entries(summary.eventsByType)
+    .map(([event, count]) => [event, count as number] as [string, number])
+    .sort(([, a], [, b]) => (b as number) - (a as number))
     .slice(0, 10);
 
   const maxCount = Math.max(...Object.values(summary.eventsByType) as number[], 1);
