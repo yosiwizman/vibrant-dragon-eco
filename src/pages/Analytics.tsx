@@ -64,8 +64,9 @@ export default function Analytics() {
     );
   }
 
-  const topEvents = Object.entries(summary.eventsByType)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
+  const topEvents: [string, number][] = Object.entries(summary.eventsByType)
+    .map(([event, count]) => [event, count as number])
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 10);
 
   const maxCount = Math.max(...Object.values(summary.eventsByType) as number[], 1);
@@ -181,7 +182,7 @@ export default function Analytics() {
                   <div key={event} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-300">{event.replace(/_/g, " ")}</span>
-                      <span className="text-slate-400">{count}</span>
+                      <span className="text-slate-400">{String(count)}</span>
                     </div>
                     <div className="w-full bg-slate-700 rounded-full h-2">
                       <div 
