@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 interface OfflineDB extends DBSchema {
