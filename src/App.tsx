@@ -40,6 +40,7 @@ import BookingTasks from "./pages/BookingTasks";
 import Documents from "./pages/Documents";
 import ListeningSessions from "./pages/ListeningSessions";
 import DataManagement from "./pages/DataManagement";
+import Analytics from "./pages/Analytics";
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -296,6 +297,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <DataManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
                   </ProtectedRoute>
                 }
               />

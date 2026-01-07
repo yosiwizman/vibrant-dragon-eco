@@ -641,6 +641,50 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Database className="h-5 w-5 text-fuchsia-400" />
+                  Data Management
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Export, import, and manage your data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <div>
+                    <Label className="text-white">Backup & Export</Label>
+                    <p className="text-sm text-slate-400">
+                      Download all your data as a backup file
+                    </p>
+                  </div>
+                  <Link to="/data-management">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                    >
+                      <Database className="h-4 w-4 mr-2" />
+                      Manage Data
+                    </Button>
+                  </Link>
+                </div>
+
+                <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/30">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-300 font-medium">Your Data is Safe</p>
+                      <p className="text-xs text-blue-400/80 mt-1">
+                        All data is stored securely with Row Level Security. You can export and delete your data anytime.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
