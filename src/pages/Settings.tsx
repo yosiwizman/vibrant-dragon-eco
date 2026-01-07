@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ProviderCard from "@/components/ProviderCard";
 import IntegrationStatus from "@/components/IntegrationStatus";
 import AITestButton from "@/components/AITestButton";
+import OfflineAIDownloader from "@/components/OfflineAIDownloader";
 import { PROVIDER_CONFIGS, PROVIDER_CATEGORIES } from "@/types/providers";
 import { showError, showSuccess } from "@/utils/toast";
 import { getCurrentLocation } from "../services/location";
@@ -254,12 +255,12 @@ export default function Settings() {
                 <CardTitle className="text-xl text-white flex items-center gap-2">
                   <Key className="h-5 w-5 text-fuchsia-400" />
                   OpenAI API Key
-                  <Badge className="ml-2 bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50">
-                    Required
+                  <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/50">
+                    Online Mode
                   </Badge>
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  This is the ONLY place you need to enter your API key. It powers all AI features including chat, voice, and transcription.
+                  For online mode with GPT-4o. Or use Offline AI below for zero-cost, privacy-first operation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -290,6 +291,58 @@ export default function Settings() {
                     Your key is stored locally in your browser. It's only sent to OpenAI's servers when you use AI features.
                     Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-fuchsia-400 hover:underline">platform.openai.com</a>
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-fuchsia-500/30 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-fuchsia-400" />
+                  Offline AI Mode
+                  <Badge className="ml-2 bg-green-500/20 text-green-300 border-green-500/50">
+                    Zero Installation
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Download AI model to your browser for 100% offline operation. No installation required!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 rounded-lg bg-green-900/20 border border-green-500/30">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-green-300 font-medium">Privacy-First AI</p>
+                      <p className="text-xs text-green-400/80 mt-1">
+                        All processing happens in your browser. No data leaves your device. No API costs.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <OfflineAIDownloader />
+
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-400 font-medium">How it works:</p>
+                  <ul className="space-y-1 text-xs text-slate-500">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                      Model downloads to browser cache (one-time)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                      Works on iOS, Android, and Desktop
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                      Automatic fallback when offline
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                      Voice commands work without internet
+                    </li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

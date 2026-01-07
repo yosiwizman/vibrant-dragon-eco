@@ -18,6 +18,7 @@ import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } fr
 import { isEnterPhrase, isExitPhrase, startListeningSession, addTranscript, endListeningSession, getSessionStatus } from "@/services/quiet-mode";
 import { voiceRateLimiter, openAIRateLimiter } from "@/services/rate-limiter";
 import { trackVoiceCommand, trackError } from "@/services/analytics";
+import { webLLM, isWebLLMSupported } from "@/services/web-llm";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -215,8 +216,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, [openaiApiKey, preferences.openaiVoice, stopSpeaking]);
 
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
-    if (!openaiApiKey || !user) {
-      throw new Error("Not configured - please add your OpenAI API key in Settings");
+    if (!user) {
+      throw new Error("Please log in to use AI features");
+    }
+
+    const isOnline = navigator.onLine;
+    const hasOpenAI = !!openaiApiKey;
+    const hasWebLLM = isWebLLMSupported();
+
+    // Determine which AI to use
+    const useLocalAI = !isOnline || !hasOpenAI;
+
+    if (!hasOpenAI && !hasWebLLM) {
+      throw new Error("Please add your OpenAI API key in Settings or enable offline AI");
     }
 
     // Check voice rate limit
@@ -226,10 +238,12 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       throw new Error(`Too many voice commands. Please wait ${waitTime} seconds.`);
     }
 
-    // Check OpenAI rate limit
-    const apiCheck = openAIRateLimiter.checkLimit(user.id, 0.01);
-    if (!apiCheck.allowed) {
-      throw new Error(apiCheck.reason || "API rate limit exceeded");
+    // Only check OpenAI rate limit if using OpenAI
+    if (!useLocalAI) {
+      const apiCheck = openAIRateLimiter.checkLimit(user.id, 0.01);
+      if (!apiCheck.allowed) {
+        throw new Error(apiCheck.reason || "API rate limit exceeded");
+      }
     }
 
     setIsProcessing(true);
@@ -237,6 +251,50 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setCurrentTranscript("");
 
     try {
+      const normalizedText = normalizeSpeechInput(text);
+
+      // Use local AI if offline or no API key
+      if (useLocalAI && hasWebLLM) {
+        console.log('[Voice] Using local WebLLM (offline mode)');
+        
+        // Initialize WebLLM if needed
+        const modelCached = await webLLM.isModelCached();
+        if (!modelCached) {
+          throw new Error("Offline AI not downloaded. Please download the model in Settings.");
+        }
+
+        await webLLM.initialize();
+
+        // Build simple prompt for local AI
+        const systemPrompt = `You are ${preferences.assistantName || "Echo"}, a helpful AI assistant.
+Current time: ${new Date().toLocaleString()}
+Location: ${userLocation?.city || "Unknown"}
+
+Parse the user's command and respond naturally. For tasks, reminders, notes, etc., acknowledge what you'll do.`;
+
+        const response = await webLLM.chat([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: normalizedText },
+        ]);
+
+        // Parse tool calls from local AI response
+        const toolCalls = parseToolCalls(response);
+        
+        if (toolCalls.length > 0) {
+          for (const toolCall of toolCalls) {
+            await executeTool(user.id, toolCall);
+          }
+        }
+
+        setLastResponse(response);
+        setIsProcessing(false);
+        trackVoiceCommand(text, true, user.id);
+        
+        return response;
+      }
+
+      // Use OpenAI (online mode)
+      console.log('[Voice] Using OpenAI (online mode)');
       const normalizedText = normalizeSpeechInput(text);
       
       // Get memory context if enabled

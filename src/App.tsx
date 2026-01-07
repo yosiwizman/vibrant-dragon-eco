@@ -8,6 +8,7 @@ import { VoiceProvider } from "@/contexts/VoiceContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { trackError } from "@/services/analytics";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import ModelDownloadProgress from "@/components/ModelDownloadProgress";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -315,6 +316,7 @@ const App = () => (
             <ListeningModeIndicator />
             <QuickAccessPanel />
             <ThumbsPanel />
+            <ModelDownloadProgress />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>
