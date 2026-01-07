@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ToolCall {
   tool: string;
-  params: Record<string, any>;
+  parameters: Record<string, any>;
 }
 
 interface ToolResult {
@@ -54,7 +54,7 @@ export async function executeToolOffline(
   toolCall: ToolCall
 ): Promise<ToolResult> {
   const isOnline = navigator.onLine;
-  const { tool, params } = toolCall;
+  const { tool, parameters: params } = toolCall;
 
   // Execute offline tools immediately
   if (OFFLINE_TOOLS.has(tool)) {
