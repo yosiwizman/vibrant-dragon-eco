@@ -51,7 +51,7 @@ export default function OfflineModeToggle({ showOnLoginPage = false }: OfflineMo
         title={isOnline ? "Online" : "Offline"}
       >
         {isOnline ? (
-          <Wifi className="h-5 w-5 text-green-400" />
+          <Wifi className="h-5 w-5 text-purple-400" />
         ) : (
           <WifiOff className="h-5 w-5 text-slate-600" />
         )}
