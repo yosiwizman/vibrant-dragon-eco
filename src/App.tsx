@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VoiceProvider } from "@/contexts/VoiceContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { trackError } from "@/services/analytics";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -66,8 +68,14 @@ function QuickAddWrapper() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <ErrorBoundary onError={(error, errorInfo) => {
+    trackError(error.message, {
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    });
+  }}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -284,8 +292,9 @@ const App = () => (
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

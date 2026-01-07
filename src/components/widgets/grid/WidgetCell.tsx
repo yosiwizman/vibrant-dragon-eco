@@ -6,6 +6,7 @@ import { X, Move } from "lucide-react";
 import type { Widget } from "@/types/widgets";
 import WidgetContent from "../content/WidgetContent.tsx";
 import ResizeHandles from "./ResizeHandles";
+import { WidgetErrorBoundary } from "@/components/ErrorBoundary";
 
 type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -43,7 +44,9 @@ export default function WidgetCell({ widget, isEditMode, onRemove, onResizeStart
     >
       {/* Clip any child overflow so widgets never visually overlap */}
       <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
-        <WidgetContent type={widget.type} />
+        <WidgetErrorBoundary widgetType={widget.type}>
+          <WidgetContent type={widget.type} />
+        </WidgetErrorBoundary>
       </div>
 
       {isEditMode && (
