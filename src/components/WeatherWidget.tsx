@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getWeather, WeatherData } from "@/services/search";
 import { getLocationContext } from "@/services/context";
+import { offlineWeather } from "@/services/offline-weather";
 import { CloudSun, Thermometer, Droplets, Wind, RefreshCw, MapPin, Sun, Cloud, CloudRain, Snowflake } from "lucide-react";
 
 export default function WeatherWidget() {
@@ -24,9 +25,21 @@ export default function WeatherWidget() {
         return;
       }
       
-      const weatherData = await getWeather(location.lat, location.lng);
-      setWeather(weatherData);
+      // Use cached weather with 24-hour expiry
+      const result = await offlineWeather.getWeather(
+        location.lat,
+        location.lng,
+        () => getWeather(location.lat, location.lng)
+      );
+      
+      setWeather(result.data);
       setLocationName(location.city || "Your Location");
+      
+      // Show cache status
+      if (result.cached) {
+        const age = Math.floor((Date.now() - result.lastUpdated) / (1000 * 60 * 60));
+        console.log(`[Weather] Using ${result.stale ? 'stale' : 'fresh'} cache (${age}h old)`);
+      }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Failed to get weather";
       setError(errorMessage);

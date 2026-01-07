@@ -3656,6 +3656,25 @@ export async function executeTool(
   const { tool, parameters } = toolCall;
   const startTime = Date.now();
   
+  // Check if offline and handle accordingly
+  const isOnline = navigator.onLine;
+  if (!isOnline) {
+    // Import offline orchestrator
+    const { executeToolOffline } = await import('./offline-orchestrator');
+    const offlineResult = await executeToolOffline(userId, toolCall);
+    
+    if (offlineResult.success || offlineResult.queued) {
+      return {
+        tool,
+        success: offlineResult.success,
+        data: offlineResult.data,
+        error: offlineResult.error,
+        duration: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+  
   try {
     let result: ActionResult;
     

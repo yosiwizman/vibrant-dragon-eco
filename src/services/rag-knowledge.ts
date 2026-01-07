@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { offlineKnowledge } from "./offline-knowledge";
 
 export interface RAGDocument {
   id: string;
@@ -135,6 +136,9 @@ Highly customizable architecture with interchangeable components.
  */
 export async function initializeRAGKnowledge(userId: string): Promise<void> {
   try {
+    // Initialize offline knowledge cache
+    await offlineKnowledge.initialize(userId);
+    
     // Check if RAG architectures knowledge already exists
     const { data: existing } = await supabase
       .from("rag_documents")
@@ -155,6 +159,10 @@ export async function initializeRAGKnowledge(userId: string): Promise<void> {
         },
       });
     }
+    
+    // Cache all documents for offline use
+    const documents = await listDocuments(userId);
+    await offlineKnowledge.cacheDocuments(userId, documents);
   } catch (error) {
     console.error("Failed to initialize RAG knowledge:", error);
   }
@@ -195,28 +203,31 @@ export async function addDocument(
 
     if (error) throw error;
 
-    return {
-      success: true,
-      document: {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title,
-        content: data.content,
-        sourceType: data.source_type,
-        sourceUrl: data.source_url,
-        filePath: data.file_path,
-        chunks: data.chunks,
-        metadata: data.metadata,
-        createdAt: new Date(data.created_at),
-      },
+    const document: RAGDocument = {
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      content: data.content,
+      sourceType: data.source_type,
+      sourceUrl: data.source_url,
+      filePath: data.file_path,
+      chunks: data.chunks,
+      metadata: data.metadata,
+      createdAt: new Date(data.created_at),
     };
+    
+    // Update offline cache
+    const allDocs = await listDocuments(userId);
+    await offlineKnowledge.cacheDocuments(userId, allDocs);
+
+    return { success: true, document };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Search the knowledge base
+ * Search the knowledge base (with offline support)
  */
 export async function searchKnowledge(
   userId: string,
@@ -228,6 +239,32 @@ export async function searchKnowledge(
   } = {}
 ): Promise<SearchResult[]> {
   const { limit = 5, category, tags } = options;
+  const isOnline = navigator.onLine;
+  
+  // Use offline knowledge if not online
+  if (!isOnline) {
+    const offlineResults = offlineKnowledge.searchOffline(query, limit);
+    return offlineResults.map(doc => ({
+      document: {
+        id: doc.id,
+        userId,
+        title: doc.title,
+        content: doc.content,
+        sourceType: 'manual' as const,
+        chunks: [],
+        metadata: { category: doc.category },
+        createdAt: new Date(doc.timestamp),
+      },
+      chunk: {
+        id: 'chunk-0',
+        content: doc.content,
+        startIndex: 0,
+        endIndex: doc.content.length,
+      },
+      relevanceScore: 0.8,
+    }));
+  }
+  
   const results: SearchResult[] = [];
 
   try {
@@ -383,6 +420,10 @@ export async function deleteDocument(
       .eq("user_id", userId);
 
     if (error) throw error;
+    
+    // Update offline cache
+    const allDocs = await listDocuments(userId);
+    await offlineKnowledge.cacheDocuments(userId, allDocs);
 
     return { success: true };
   } catch (error: any) {
