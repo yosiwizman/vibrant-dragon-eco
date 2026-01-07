@@ -19,6 +19,8 @@ import { isEnterPhrase, isExitPhrase, startListeningSession, addTranscript, endL
 import { voiceRateLimiter, openAIRateLimiter } from "@/services/rate-limiter";
 import { trackVoiceCommand, trackError } from "@/services/analytics";
 import { webLLM, isWebLLMSupported } from "@/services/web-llm";
+import { offlineVoice, isOfflineVoiceSupported } from "@/services/offline-voice";
+import { offlineVoiceRecorder, isOfflineVoiceRecorderSupported } from "@/services/offline-voice-recorder";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -129,12 +131,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const speak = useCallback(async (text: string) => {
-    if (!openaiApiKey) {
-      console.error("OpenAI API key not configured");
-      showError("OpenAI API key not configured. Go to Settings to add it.");
-      return;
-    }
-
     if (!text || text.trim().length === 0) {
       console.warn("Empty text provided to speak function");
       return;
@@ -143,9 +139,39 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     // Stop any current audio
     stopSpeaking();
 
+    const isOnline = navigator.onLine;
+    const hasOpenAI = !!openaiApiKey;
+    const hasOfflineVoice = isOfflineVoiceSupported();
+
+    // Use offline voice if offline or no API key
+    if ((!isOnline || !hasOpenAI) && hasOfflineVoice) {
+      try {
+        setIsSpeaking(true);
+        console.log('[Voice] Using offline TTS (Web Speech API)');
+        
+        await offlineVoice.speak(text, {
+          rate: preferences.voiceSpeed || 1.0,
+        });
+        
+        setIsSpeaking(false);
+        return;
+      } catch (error: any) {
+        console.error("Offline speech synthesis error:", error);
+        setIsSpeaking(false);
+        return;
+      }
+    }
+
+    // Use OpenAI TTS (online mode)
+    if (!openaiApiKey) {
+      console.error("OpenAI API key not configured");
+      showError("OpenAI API key not configured. Go to Settings to add it.");
+      return;
+    }
+
     try {
       setIsSpeaking(true);
-      console.log("Synthesizing speech for:", text.substring(0, 50) + "...");
+      console.log('[Voice] Using OpenAI TTS (online mode)');
       
       const speechBlob = await synthesizeSpeech(
         text,
@@ -213,7 +239,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setIsSpeaking(false);
       // Don't show error toast for every TTS failure, just log it
     }
-  }, [openaiApiKey, preferences.openaiVoice, stopSpeaking]);
+  }, [openaiApiKey, preferences.openaiVoice, preferences.voiceSpeed, stopSpeaking]);
 
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
     if (!user) {
@@ -437,8 +463,70 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
   const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
     if (isListening) return;
 
+    const isOnline = navigator.onLine;
+    const hasOpenAI = !!openaiApiKey;
+    const hasOfflineVoiceRecorder = isOfflineVoiceRecorderSupported();
+
+    // Use offline voice recorder if offline or no API key
+    if ((!isOnline || !hasOpenAI) && hasOfflineVoiceRecorder) {
+      console.log('[Voice] Using offline voice recorder (Web Speech API)');
+      
+      if (!isConversation) {
+        playFeedback("start");
+      }
+      
+      setIsListening(true);
+      setCurrentTranscript("");
+      
+      offlineVoiceRecorder.start({
+        onTranscript: (result) => {
+          if (result.isFinal) {
+            setCurrentTranscript(result.transcript);
+          }
+        },
+        onEnd: async (finalTranscript) => {
+          setIsListening(false);
+          
+          if (!isConversation) {
+            playFeedback("stop");
+          }
+          
+          if (finalTranscript && finalTranscript.trim()) {
+            try {
+              const response = await processVoiceCommand(finalTranscript);
+              await speak(response);
+              
+              if (conversationModeRef.current) {
+                setTimeout(() => startListeningInternal(true), 500);
+              }
+            } catch (error: any) {
+              playFeedback("error");
+              showError(error.message || "Voice processing failed");
+              
+              if (conversationModeRef.current) {
+                await speak("Sorry, I had trouble with that. Please try again.");
+                setTimeout(() => startListeningInternal(true), 500);
+              }
+            }
+          } else {
+            if (conversationModeRef.current) {
+              setTimeout(() => startListeningInternal(true), 500);
+            }
+          }
+        },
+        onError: (error) => {
+          setIsListening(false);
+          playFeedback("error");
+          showError(error.message || "Voice recognition failed");
+        },
+      });
+      
+      return;
+    }
+
+    // Use OpenAI Whisper (online mode) - original implementation
     if (!openaiApiKey) {
-      showError("Please add your OpenAI API key in Settings first");
+      showError("Please add your OpenAI API key in Settings or enable offline mode");
       return;
     }
 
@@ -495,12 +583,30 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
           streamRef.current = null;
         }
         
-        if (blob.size > 0 && openaiApiKey) {
+        if (blob.size > 0) {
           let transcriptText = "";
           try {
             setIsProcessing(true);
             console.log("Transcribing audio, blob size:", blob.size);
             
+            const isOnline = navigator.onLine;
+            const hasOpenAI = !!openaiApiKey;
+            const hasOfflineVoice = isOfflineVoiceSupported();
+            
+            // Use offline voice recognition if offline or no API key
+            if ((!isOnline || !hasOpenAI) && hasOfflineVoice) {
+              console.log('[Voice] Using offline STT (Web Speech API)');
+              // Note: Web Speech API works with live audio, not blobs
+              // For now, we'll show a message that offline transcription requires live mode
+              throw new Error("Offline transcription requires using the microphone button. Please try again.");
+            }
+            
+            // Use OpenAI Whisper (online mode)
+            if (!openaiApiKey) {
+              throw new Error("OpenAI API key required for transcription");
+            }
+            
+            console.log('[Voice] Using OpenAI Whisper (online mode)');
             const transcription = await transcribeAudio(blob, openaiApiKey);
             transcriptText = transcription.text.trim();
             
