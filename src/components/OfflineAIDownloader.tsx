@@ -70,11 +70,14 @@ export default function OfflineAIDownloader() {
     <>
       <Button
         onClick={() => setIsOpen(true)}
-        variant="outline"
-        className="border-slate-600 text-slate-300"
+        size="lg"
+        className={isCached
+          ? "w-full bg-green-600 text-white hover:bg-green-500"
+          : "w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+        }
       >
-        <Brain className="h-4 w-4 mr-2" />
-        {isCached ? "Offline AI Ready" : "Enable Offline AI"}
+        <Brain className="h-5 w-5 mr-2" />
+        {isCached ? "✅ Offline AI Ready - Click to Manage" : "📥 Download Offline AI"}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
