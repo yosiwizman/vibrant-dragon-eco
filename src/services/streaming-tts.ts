@@ -60,7 +60,7 @@ class StreamingTTSService {
       const audioBlob = await this.synthesizeChunk(text, apiKey, options.voice);
       const audio = new Audio(URL.createObjectURL(audioBlob));
       
-      audio.rate = options.rate || 1.0;
+      audio.playbackRate = options.rate || 1.0;
       this.currentAudio = audio;
       
       await new Promise<void>((resolve, reject) => {
@@ -93,7 +93,7 @@ class StreamingTTSService {
     // Pre-synthesize and queue
     this.synthesizeChunk(text, apiKey, options.voice).then(blob => {
       const audio = new Audio(URL.createObjectURL(blob));
-      audio.rate = options.rate || 1.0;
+      audio.playbackRate = options.rate || 1.0;
       this.audioQueue.push(audio);
       
       // Start playing queue if not already playing
