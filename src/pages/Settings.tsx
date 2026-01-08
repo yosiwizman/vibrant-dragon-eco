@@ -494,6 +494,59 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Mic className="h-5 w-5 text-fuchsia-400" />
+                  Wake Word
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Activate {preferences.assistantName || "Echo"} hands-free with a wake word
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <div>
+                    <Label className="text-white">Enable Wake Word</Label>
+                    <p className="text-sm text-slate-400">
+                      Say "{preferences.wakeWord || "Echo"}" to activate the assistant
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.wakeWordEnabled}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, wakeWordEnabled: checked })
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-slate-300">Wake Word</Label>
+                  <Input
+                    className="bg-slate-900 border-slate-700 text-white"
+                    placeholder="Echo"
+                    value={preferences.wakeWord || "Echo"}
+                    onChange={(e) => setPreferences({ ...preferences, wakeWord: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Choose a unique word that's easy to say. Examples: "Echo", "Hey Assistant", "Computer"
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-blue-900/20 border border-blue-500/30">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-300 font-medium">Always-On Assistant</p>
+                      <p className="text-xs text-blue-400/80 mt-1">
+                        When enabled, {preferences.assistantName || "Echo"} listens continuously for the wake word. Say "{preferences.wakeWord || "Echo"}" anytime to activate.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Memory & Knowledge Settings */}
