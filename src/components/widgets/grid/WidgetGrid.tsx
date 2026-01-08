@@ -175,6 +175,35 @@ export default function WidgetGrid() {
     }
   };
 
+  // Sync widgets to Supabase helper function
+  const syncWidgetsToSupabase = useCallback(async (userId: string, widgets: Widget[]) => {
+    try {
+      // Delete all existing widgets for this user
+      await supabase
+        .from('user_widgets')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert new widgets
+      if (widgets.length > 0) {
+        const widgetData = widgets.map(w => ({
+          user_id: userId,
+          widget_id: w.id,
+          widget_type: w.type,
+          position: { x: w.x, y: w.y },
+          size: { w: w.w, h: w.h },
+          config: {},
+        }));
+
+        await supabase
+          .from('user_widgets')
+          .insert(widgetData);
+      }
+    } catch (error) {
+      console.error('Failed to sync widgets to Supabase:', error);
+    }
+  }, []);
+
   // Enhanced initialization with Supabase loading
   useEffect(() => {
     const loadWidgets = async () => {
@@ -236,36 +265,7 @@ export default function WidgetGrid() {
 
     loadWidgets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  // Helper function to sync widgets to Supabase
-  const syncWidgetsToSupabase = async (userId: string, widgets: Widget[]) => {
-    try {
-      // Delete all existing widgets for this user
-      await supabase
-        .from('user_widgets')
-        .delete()
-        .eq('user_id', userId);
-
-      // Insert new widgets
-      if (widgets.length > 0) {
-        const widgetData = widgets.map(w => ({
-          user_id: userId,
-          widget_id: w.id,
-          widget_type: w.type,
-          position: { x: w.x, y: w.y },
-          size: { w: w.w, h: w.h },
-          config: {},
-        }));
-
-        await supabase
-          .from('user_widgets')
-          .insert(widgetData);
-      }
-    } catch (error) {
-      console.error('Failed to sync widgets to Supabase:', error);
-    }
-  };
+  }, [user?.id, syncWidgetsToSupabase]);
 
   const resetLayout = useCallback(() => {
     try {
