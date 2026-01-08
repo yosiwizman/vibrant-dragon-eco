@@ -305,10 +305,18 @@ class IntelligentSchedulerService {
    * Get current location
    */
   private async getCurrentLocation(): Promise<{ lat: number; lng: number } | null> {
-    if (this.locationHistory.length === 0) return null;
-    
-    const latest = this.locationHistory[this.locationHistory.length - 1];
-    return { lat: latest.lat, lng: latest.lng };
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      return {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
@@ -318,68 +326,6 @@ class IntelligentSchedulerService {
     // Use geocoding API
     // For now, return null
     return null;
-  }
-
-  /**
-   * Learn from user behavior
-   */
-  async learnFromBehavior(userId: string, action: string, context: any): Promise<void> {
-    // Track action
-    const habit: Habit = {
-      id: `behavior-${Date.now()}`,
-      userId,
-      type: 'activity',
-      pattern: action,
-      frequency: 1,
-      confidence: 0.1,
-      lastOccurrence: Date.now(),
-      metadata: context,
-    };
-
-    // Check if similar habit exists
-    const existing = Array.from(this.habits.values()).find(h => 
-      h.type === 'activity' && h.pattern === action
-    );
-
-    if (existing) {
-      existing.frequency++;
-      existing.confidence = Math.min(existing.frequency / 10, 1);
-      existing.lastOccurrence = Date.now();
-      existing.metadata = { ...existing.metadata, ...context };
-    } else {
-      this.habits.set(habit.id, habit);
-    }
-
-    // Save to database
-    await habitTracker.saveHabits(userId);
-  }
-
-  /**
-   * Get proactive suggestions based on habits
-   */
-  async getProactiveSuggestions(userId: string): Promise<string[]> {
-    const suggestions: string[] = [];
-    const now = new Date();
-    const hour = now.getHours();
-    const day = now.getDay();
-
-    // Check location-based habits
-    const locationHabits = this.getHabitsByType('location');
-    
-    locationHabits.forEach(habit => {
-      const metadata = habit.metadata;
-      
-      // Check if user should be somewhere
-      if (metadata.commonDays?.includes(day)) {
-        const expectedHour = Math.round(metadata.avgArrival);
-        
-        if (hour === expectedHour - 1) {
-          suggestions.push(`You usually go to ${metadata.place} around ${expectedHour}:00. Want to prepare?`);
-        }
-      }
-    });
-
-    return suggestions;
   }
 }
 
