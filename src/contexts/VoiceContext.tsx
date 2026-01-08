@@ -21,6 +21,16 @@ import { trackVoiceCommand, trackError } from "@/services/analytics";
 import { webLLM, isWebLLMSupported } from "@/services/web-llm";
 import { offlineVoice, isOfflineVoiceSupported } from "@/services/offline-voice";
 import { offlineVoiceRecorder, isOfflineVoiceRecorderSupported } from "@/services/offline-voice-recorder";
+import { alwaysOnAssistant } from "@/services/always-on-assistant";
+import { factChecker } from "@/services/real-time-fact-checker";
+import { conversationIndexer } from "@/services/conversation-indexer";
+import { conversationMemory } from "@/services/conversation-memory";
+import { performanceMonitor } from "@/services/performance-monitor";
+import { intentPredictor } from "@/services/intent-predictor";
+import { streamingTTS, processWithStreaming } from "@/services/streaming-tts";
+import { retryAPICall } from "@/utils/retry";
+import { getUserFriendlyError } from "@/utils/error-messages";
+import { responseCache } from "@/services/response-cache";
 
 interface VoiceContextType {
   isListening: boolean;
