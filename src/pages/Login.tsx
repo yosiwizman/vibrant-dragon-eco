@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Bot, Mail, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
-import { showSuccess } from "@/utils/toast";
+import { Bot, Mail, Loader2, AlertCircle, Sparkles, Send, ArrowLeft, CheckCircle } from "lucide-react";
+import { showSuccess, showError } from "@/utils/toast";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -20,12 +20,46 @@ export default function Login() {
   const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
       navigate("/");
     }
   }, [user, loading, navigate]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    if (!email) {
+      setError("Please enter your email address");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+
+      setResetEmailSent(true);
+      showSuccess("Password reset email sent! Check your inbox.");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send reset email";
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +201,103 @@ export default function Login() {
     );
   }
 
+  // Forgot Password View
+  if (showForgotPassword) {
+    if (resetEmailSent) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+            <CardContent className="p-8 text-center">
+              <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
+              <p className="text-slate-300 mb-6">
+                We've sent a password reset link to <strong className="text-fuchsia-300">{email}</strong>
+              </p>
+              <p className="text-sm text-slate-400 mb-6">
+                Click the link in the email to reset your password. The link will expire in 1 hour.
+              </p>
+              <Button
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setResetEmailSent(false);
+                  setEmail("");
+                }}
+                className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+              >
+                Back to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <Button
+              variant="ghost"
+              onClick={() => setShowForgotPassword(false)}
+              className="w-fit mb-4 text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Login
+            </Button>
+            <div className="text-center">
+              <Mail className="h-12 w-12 text-fuchsia-400 mx-auto mb-4" />
+              <CardTitle className="text-2xl font-bold text-white">Forgot Password?</CardTitle>
+              <CardDescription className="text-slate-400">
+                Enter your email and we'll send you a reset link
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email" className="text-slate-300">Email Address</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Reset Link
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
@@ -291,6 +422,14 @@ export default function Login() {
                   )}
                 </Button>
               </form>
+
+              <Button
+                variant="ghost"
+                onClick={() => setShowForgotPassword(true)}
+                className="w-full text-sm text-fuchsia-400 hover:text-fuchsia-300 mt-2"
+              >
+                Forgot your password?
+              </Button>
             </TabsContent>
 
             <TabsContent value="signup">

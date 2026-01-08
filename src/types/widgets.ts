@@ -25,6 +25,22 @@ export const WIDGET_CONFIGS: Record<string, WidgetConfig> = {
     minSize: { w: 1, h: 1 },
     maxSize: { w: 4, h: 3 },
   },
+  stocks: {
+    type: "stocks",
+    name: "Stocks",
+    icon: "TrendingUp",
+    defaultSize: { w: 2, h: 2 },
+    minSize: { w: 1, h: 1 },
+    maxSize: { w: 4, h: 4 },
+  },
+  news: {
+    type: "news",
+    name: "News",
+    icon: "Newspaper",
+    defaultSize: { w: 3, h: 3 },
+    minSize: { w: 2, h: 2 },
+    maxSize: { w: 4, h: 4 },
+  },
   weather: {
     type: "weather",
     name: "Weather",

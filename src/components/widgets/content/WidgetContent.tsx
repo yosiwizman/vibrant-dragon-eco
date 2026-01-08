@@ -19,6 +19,8 @@ import RecentActivityWidget from "./RecentActivityWidget";
 import ProductivityWidget from "./ProductivityWidget";
 import UpcomingWidget from "./UpcomingWidget";
 import MessagesWidget from "./MessagesWidget";
+import StocksWidget from "./StocksWidget";
+import NewsWidget from "./NewsWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -195,6 +197,8 @@ export default function WidgetContent({ type }: WidgetContentProps) {
   if (type === "reminders") return <div className="h-full w-full overflow-hidden"><RemindersWidget /></div>;
   if (type === "notes") return <div className="h-full w-full overflow-hidden"><NotesWidget /></div>;
   if (type === "contacts") return <div className="h-full w-full overflow-hidden"><ContactsWidget /></div>;
+  if (type === "stocks") return <div className="h-full w-full overflow-hidden"><StocksWidget /></div>;
+  if (type === "news") return <div className="h-full w-full overflow-hidden"><NewsWidget /></div>;
 
   const formatTime = (time: string) => {
     if (!time) return "No due date";
