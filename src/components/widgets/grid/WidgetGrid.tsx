@@ -122,60 +122,7 @@ export default function WidgetGrid() {
     return (contentWidth - GAP * (GRID_COLS - 1)) / GRID_COLS;
   }, []);
 
-  // Enhanced save with error handling and Supabase sync
-  const saveWidgets = useCallback(
-    debounce(async (next: Widget[]) => {
-      try {
-        const sanitized = sanitizeWidgets(next);
-        const packed = packWidgets(sanitized);
-        setWidgets(packed);
-        setPreferences({ ...preferences, widgets: packed });
-        
-        // Save to Supabase for persistence
-        if (user) {
-          await syncWidgetsToSupabase(user.id, packed);
-        }
-        
-        setError(null);
-      } catch (err) {
-        console.error('Failed to save widgets:', err);
-        setError('Failed to save layout');
-        showError('Could not save widget layout');
-      }
-    }, DEBOUNCE_MS),
-    [preferences, setPreferences, user]
-  );
-
-  // Sync widgets to Supabase
-  const syncWidgetsToSupabase = async (userId: string, widgets: Widget[]) => {
-    try {
-      // Delete all existing widgets for this user
-      await supabase
-        .from('user_widgets')
-        .delete()
-        .eq('user_id', userId);
-
-      // Insert new widgets
-      if (widgets.length > 0) {
-        const widgetData = widgets.map(w => ({
-          user_id: userId,
-          widget_id: w.id,
-          widget_type: w.type,
-          position: { x: w.x, y: w.y },
-          size: { w: w.w, h: w.h },
-          config: {},
-        }));
-
-        await supabase
-          .from('user_widgets')
-          .insert(widgetData);
-      }
-    } catch (error) {
-      console.error('Failed to sync widgets to Supabase:', error);
-    }
-  };
-
-  // Sync widgets to Supabase helper function
+  // Sync widgets to Supabase helper function (defined first)
   const syncWidgetsToSupabase = useCallback(async (userId: string, widgets: Widget[]) => {
     try {
       // Delete all existing widgets for this user
@@ -203,6 +150,30 @@ export default function WidgetGrid() {
       console.error('Failed to sync widgets to Supabase:', error);
     }
   }, []);
+
+  // Enhanced save with error handling and Supabase sync
+  const saveWidgets = useCallback(
+    debounce(async (next: Widget[]) => {
+      try {
+        const sanitized = sanitizeWidgets(next);
+        const packed = packWidgets(sanitized);
+        setWidgets(packed);
+        setPreferences({ ...preferences, widgets: packed });
+        
+        // Save to Supabase for persistence
+        if (user) {
+          await syncWidgetsToSupabase(user.id, packed);
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Failed to save widgets:', err);
+        setError('Failed to save layout');
+        showError('Could not save widget layout');
+      }
+    loadWidgets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, syncWidgetsToSupabase]);
 
   // Enhanced initialization with Supabase loading
   useEffect(() => {
