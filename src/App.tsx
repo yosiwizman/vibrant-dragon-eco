@@ -42,6 +42,8 @@ import Documents from "./pages/Documents";
 import ListeningSessions from "./pages/ListeningSessions";
 import DataManagement from "./pages/DataManagement";
 import Analytics from "./pages/Analytics";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -309,6 +311,8 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <MicButton />
