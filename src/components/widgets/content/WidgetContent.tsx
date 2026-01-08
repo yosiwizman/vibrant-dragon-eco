@@ -46,6 +46,8 @@ const SPECIAL = new Set([
   "contacts",
   "upcoming",
   "messages",
+  "stocks",
+  "news",
 ]);
 
 export default function WidgetContent({ type }: WidgetContentProps) {

@@ -25,14 +25,30 @@ export default function StocksWidget() {
     setError(null);
 
     try {
-      // Using mock data for demo (replace with real API)
-      const stockData = defaultSymbols.map((symbol) => ({
-        symbol,
-        name: symbol,
-        price: Math.random() * 500 + 100,
-        change: (Math.random() - 0.5) * 20,
-        changePercent: (Math.random() - 0.5) * 5,
-      }));
+      // Using mock data for demo
+      // To use real data, get a free API key from https://www.alphavantage.co/support/#api-key
+      // and replace 'demo' with your key
+      
+      const stockData = defaultSymbols.map((symbol) => {
+        const basePrice = {
+          'AAPL': 180,
+          'GOOGL': 140,
+          'MSFT': 380,
+          'AMZN': 150,
+          'TSLA': 240,
+        }[symbol] || 100;
+
+        const change = (Math.random() - 0.5) * 10;
+        const changePercent = (change / basePrice) * 100;
+
+        return {
+          symbol,
+          name: symbol,
+          price: basePrice + change,
+          change,
+          changePercent,
+        };
+      });
 
       setStocks(stockData);
     } catch (err) {
@@ -86,6 +102,12 @@ export default function StocksWidget() {
       </CardHeader>
 
       <CardContent className="p-3 pt-0 flex-1 min-h-0 overflow-y-auto scrollbar-hide space-y-2">
+        <div className="p-2 rounded-lg bg-blue-900/20 border border-blue-500/30 mb-2">
+          <p className="text-[9px] text-blue-300">
+            📊 Demo data - Get free API key at alphavantage.co for real-time prices
+          </p>
+        </div>
+        
         {error ? (
           <div className="text-center py-4">
             <p className="text-xs text-red-400 mb-2">{error}</p>

@@ -110,12 +110,20 @@ export default function NewsWidget() {
             title="News Feed"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             loading="lazy"
+            onError={() => {
+              console.error('Failed to load iframe:', url);
+            }}
           />
         </div>
 
-        <p className="text-[9px] text-slate-600 text-center">
-          {new URL(url).hostname}
-        </p>
+        <div className="space-y-1">
+          <p className="text-[9px] text-slate-600 text-center">
+            {new URL(url).hostname}
+          </p>
+          <p className="text-[8px] text-slate-700 text-center">
+            Some sites may block embedding. Try different sources if content doesn't load.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -11,6 +11,7 @@ import { findNextPosition, packWidgets } from "../system/layout.ts";
 import WidgetCell from "./WidgetCell.tsx";
 import { trackWidgetInteraction } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const GRID_COLS = 4;
 const CELL_HEIGHT = 100;
@@ -121,14 +122,20 @@ export default function WidgetGrid() {
     return (contentWidth - GAP * (GRID_COLS - 1)) / GRID_COLS;
   }, []);
 
-  // Enhanced save with error handling
+  // Enhanced save with error handling and Supabase sync
   const saveWidgets = useCallback(
-    debounce((next: Widget[]) => {
+    debounce(async (next: Widget[]) => {
       try {
         const sanitized = sanitizeWidgets(next);
         const packed = packWidgets(sanitized);
         setWidgets(packed);
         setPreferences({ ...preferences, widgets: packed });
+        
+        // Save to Supabase for persistence
+        if (user) {
+          await syncWidgetsToSupabase(user.id, packed);
+        }
+        
         setError(null);
       } catch (err) {
         console.error('Failed to save widgets:', err);
@@ -136,40 +143,129 @@ export default function WidgetGrid() {
         showError('Could not save widget layout');
       }
     }, DEBOUNCE_MS),
-    [preferences, setPreferences]
+    [preferences, setPreferences, user]
   );
 
-  // Enhanced initialization with error handling
-  useEffect(() => {
+  // Sync widgets to Supabase
+  const syncWidgetsToSupabase = async (userId: string, widgets: Widget[]) => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const saved = preferences.widgets;
-      let initial: Widget[];
-      
-      if (Array.isArray(saved) && saved.length > 0) {
-        const sanitized = sanitizeWidgets(saved as Widget[]);
-        initial = packWidgets(sanitized);
-      } else {
-        initial = packWidgets(DEFAULT_WIDGETS);
+      // Delete all existing widgets for this user
+      await supabase
+        .from('user_widgets')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert new widgets
+      if (widgets.length > 0) {
+        const widgetData = widgets.map(w => ({
+          user_id: userId,
+          widget_id: w.id,
+          widget_type: w.type,
+          position: { x: w.x, y: w.y },
+          size: { w: w.w, h: w.h },
+          config: {},
+        }));
+
+        await supabase
+          .from('user_widgets')
+          .insert(widgetData);
       }
-      
-      setWidgets(initial);
-      
-      if (JSON.stringify(saved) !== JSON.stringify(initial)) {
-        setPreferences({ ...preferences, widgets: initial });
-      }
-    } catch (err) {
-      console.error('Failed to initialize widgets:', err);
-      setError('Failed to load widgets');
-      const fallback = packWidgets(DEFAULT_WIDGETS);
-      setWidgets(fallback);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to sync widgets to Supabase:', error);
     }
+  };
+
+  // Enhanced initialization with Supabase loading
+  useEffect(() => {
+    const loadWidgets = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        let initial: Widget[];
+        
+        // Try to load from Supabase first
+        if (user) {
+          const { data: savedWidgets, error: loadError } = await supabase
+            .from('user_widgets')
+            .select('*')
+            .eq('user_id', user.id);
+
+          if (!loadError && savedWidgets && savedWidgets.length > 0) {
+            // Convert from Supabase format to Widget format
+            initial = savedWidgets.map(w => ({
+              id: w.widget_id,
+              type: w.widget_type,
+              x: w.position.x,
+              y: w.position.y,
+              w: w.size.w,
+              h: w.size.h,
+            }));
+            
+            const sanitized = sanitizeWidgets(initial);
+            initial = packWidgets(sanitized);
+          } else {
+            // No saved widgets, use defaults
+            initial = packWidgets(DEFAULT_WIDGETS);
+            
+            // Save defaults to Supabase
+            await syncWidgetsToSupabase(user.id, initial);
+          }
+        } else {
+          // Not logged in, use local preferences
+          const saved = preferences.widgets;
+          if (Array.isArray(saved) && saved.length > 0) {
+            const sanitized = sanitizeWidgets(saved as Widget[]);
+            initial = packWidgets(sanitized);
+          } else {
+            initial = packWidgets(DEFAULT_WIDGETS);
+          }
+        }
+        
+        setWidgets(initial);
+        setPreferences({ ...preferences, widgets: initial });
+      } catch (err) {
+        console.error('Failed to initialize widgets:', err);
+        setError('Failed to load widgets');
+        const fallback = packWidgets(DEFAULT_WIDGETS);
+        setWidgets(fallback);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWidgets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
+
+  // Helper function to sync widgets to Supabase
+  const syncWidgetsToSupabase = async (userId: string, widgets: Widget[]) => {
+    try {
+      // Delete all existing widgets for this user
+      await supabase
+        .from('user_widgets')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert new widgets
+      if (widgets.length > 0) {
+        const widgetData = widgets.map(w => ({
+          user_id: userId,
+          widget_id: w.id,
+          widget_type: w.type,
+          position: { x: w.x, y: w.y },
+          size: { w: w.w, h: w.h },
+          config: {},
+        }));
+
+        await supabase
+          .from('user_widgets')
+          .insert(widgetData);
+      }
+    } catch (error) {
+      console.error('Failed to sync widgets to Supabase:', error);
+    }
+  };
 
   const resetLayout = useCallback(() => {
     try {

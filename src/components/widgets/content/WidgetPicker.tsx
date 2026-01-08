@@ -28,7 +28,7 @@ const ICON_MAP: Record<string, any> = {
   Bell,
   FileText,
   Calendar,
-  TrendingUp,
+  TrendingUp, // Used for both "upcoming" and "stocks"
   Users,
   Send,
   MapPin,
