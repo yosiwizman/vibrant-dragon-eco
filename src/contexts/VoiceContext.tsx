@@ -210,6 +210,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             currentAudioRef.current = null;
           }
           setIsSpeaking(false);
+          
+          // Auto-continue conversation mode after speaking
+          if (conversationModeRef.current) {
+            setTimeout(() => startListeningInternal(true), 500);
+          }
         };
 
         audio.onended = () => {
@@ -749,11 +754,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
               
               await speak(response);
               
-              // Continue conversation mode after speaking
-              if (conversationModeRef.current) {
-                console.log("Continuing conversation mode...");
-                setTimeout(() => startListeningInternal(true), 500);
-              }
+              // Note: Auto-continue is now handled in speak() cleanup
             } else {
               setIsProcessing(false);
               // If no speech detected but in conversation mode, keep listening

@@ -69,14 +69,33 @@ export function startWakeWordDetection(wakeWordConfig: WakeWordConfig): boolean 
     const results = event.results;
     
     for (let i = event.resultIndex; i < results.length; i++) {
+      // Only process final results to avoid false triggers
+      if (!results[i].isFinal) continue;
+      
       const transcript = results[i][0].transcript.toLowerCase().trim();
       const wakeWord = config?.wakeWord.toLowerCase() || "echo";
       
-      // Check if wake word is detected
-      if (transcript.includes(wakeWord) || 
-          transcript.includes(`hey ${wakeWord}`) ||
-          transcript.includes(`ok ${wakeWord}`) ||
-          transcript.includes(`okay ${wakeWord}`)) {
+      console.log('[WakeWord] Heard:', transcript);
+      
+      // More flexible wake word matching
+      const wakePatterns = [
+        wakeWord,
+        `hey ${wakeWord}`,
+        `ok ${wakeWord}`,
+        `okay ${wakeWord}`,
+        `hi ${wakeWord}`,
+        `hello ${wakeWord}`,
+      ];
+      
+      const detected = wakePatterns.some(pattern => {
+        // Check if transcript starts with or contains the pattern
+        return transcript.startsWith(pattern) ||
+               transcript.includes(` ${pattern} `) ||
+               transcript.endsWith(` ${pattern}`);
+      });
+      
+      if (detected) {
+        console.log('[WakeWord] Wake word detected!');
         
         // Stop listening temporarily to avoid double triggers
         stopWakeWordDetection();
@@ -84,12 +103,13 @@ export function startWakeWordDetection(wakeWordConfig: WakeWordConfig): boolean 
         // Trigger callback
         config?.onWakeWordDetected();
         
-        // Restart after a delay
+        // Restart after conversation ends (longer delay)
         setTimeout(() => {
-          if (config) {
+          if (config && !isListening) {
+            console.log('[WakeWord] Restarting wake word detection');
             startWakeWordDetection(config);
           }
-        }, 5000);
+        }, 10000); // 10 seconds
         
         return;
       }
