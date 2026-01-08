@@ -113,10 +113,11 @@ export default function OnboardingTour() {
   useEffect(() => {
     if (user) {
       const completed = localStorage.getItem(STORAGE_KEY);
+      const progressiveCompleted = localStorage.getItem(`echo:onboarding:${user.id}`);
+      
       if (!completed) {
-        // Small delay to let the app load first
-        const timer = setTimeout(() => setIsOpen(true), 1000);
-        return () => clearTimeout(timer);
+        // Show immediately (no delay)
+        setIsOpen(true);
       }
     }
   }, [user]);
@@ -149,7 +150,7 @@ export default function OnboardingTour() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+      <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {TOUR_STEPS.map((_, index) => (
@@ -168,7 +169,7 @@ export default function OnboardingTour() {
           </div>
         </DialogHeader>
 
-        <div className="py-6 text-center">
+        <div className="py-6 text-center overflow-y-auto scrollbar-hide flex-1">
           <div className={cn("mx-auto mb-4", step.color)}>
             {step.icon}
           </div>

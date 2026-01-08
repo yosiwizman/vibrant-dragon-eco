@@ -64,6 +64,13 @@ export default function ProgressiveOnboarding() {
 
     // Load completion status
     const loadSteps = () => {
+      // Check if welcome tour is complete first
+      const welcomeComplete = localStorage.getItem('echo:onboarding-completed');
+      if (!welcomeComplete) {
+        setIsVisible(false);
+        return;
+      }
+
       const saved = localStorage.getItem(`echo:onboarding:${user.id}`);
       const completed = saved ? JSON.parse(saved) : {};
 
@@ -80,6 +87,10 @@ export default function ProgressiveOnboarding() {
     };
 
     loadSteps();
+
+    // Re-check when welcome tour completes
+    const interval = setInterval(loadSteps, 1000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const markStepComplete = (stepId: string) => {
@@ -112,8 +123,8 @@ export default function ProgressiveOnboarding() {
 
   return (
     <div className="fixed bottom-24 right-4 w-80 z-40 animate-in slide-in-from-bottom-4">
-      <Card className="border-fuchsia-500/30 bg-slate-900/95 backdrop-blur-lg shadow-2xl">
-        <CardContent className="p-4 space-y-4">
+      <Card className="border-fuchsia-500/30 bg-slate-900/95 backdrop-blur-lg shadow-2xl max-h-[500px] flex flex-col">
+        <CardContent className="p-4 space-y-4 overflow-y-auto scrollbar-hide flex-1">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
