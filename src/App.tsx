@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { trackError } from "@/services/analytics";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import ModelDownloadProgress from "@/components/ModelDownloadProgress";
+import ProgressiveOnboarding from "@/components/ProgressiveOnboarding";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -321,6 +322,7 @@ const App = () => (
             <QuickAccessPanel />
             <ThumbsPanel />
             <ModelDownloadProgress />
+            <ProgressiveOnboarding />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>

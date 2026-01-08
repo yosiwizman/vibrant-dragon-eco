@@ -2,9 +2,13 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
 import { initializeErrorTracking } from "./services/error-tracking";
+import { initializePostHog } from "./services/posthog-analytics";
 
 // Initialize error tracking
 initializeErrorTracking();
+
+// Initialize analytics
+initializePostHog();
 
 // Register service worker for offline support (only in production)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
