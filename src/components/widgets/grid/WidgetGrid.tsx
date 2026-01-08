@@ -151,6 +151,68 @@ export default function WidgetGrid() {
     }
   }, []);
 
+  // Load widgets on mount
+  useEffect(() => {
+    const loadWidgets = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        let initial: Widget[];
+        
+        // Try to load from Supabase first
+        if (user) {
+          const { data: savedWidgets, error: loadError } = await supabase
+            .from('user_widgets')
+            .select('*')
+            .eq('user_id', user.id);
+
+          if (!loadError && savedWidgets && savedWidgets.length > 0) {
+            // Convert from Supabase format to Widget format
+            initial = savedWidgets.map(w => ({
+              id: w.widget_id,
+              type: w.widget_type,
+              x: w.position.x,
+              y: w.position.y,
+              w: w.size.w,
+              h: w.size.h,
+            }));
+            
+            const sanitized = sanitizeWidgets(initial);
+            initial = packWidgets(sanitized);
+          } else {
+            // No saved widgets, use defaults
+            initial = packWidgets(DEFAULT_WIDGETS);
+            
+            // Save defaults to Supabase
+            await syncWidgetsToSupabase(user.id, initial);
+          }
+        } else {
+          // Not logged in, use local preferences
+          const saved = preferences.widgets;
+          if (Array.isArray(saved) && saved.length > 0) {
+            const sanitized = sanitizeWidgets(saved as Widget[]);
+            initial = packWidgets(sanitized);
+          } else {
+            initial = packWidgets(DEFAULT_WIDGETS);
+          }
+        }
+        
+        setWidgets(initial);
+        setPreferences({ ...preferences, widgets: initial });
+      } catch (err) {
+        console.error('Failed to initialize widgets:', err);
+        setError('Failed to load widgets');
+        const fallback = packWidgets(DEFAULT_WIDGETS);
+        setWidgets(fallback);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWidgets();
+  }, [user?.id, syncWidgetsToSupabase, preferences, setPreferences]);
+
   // Enhanced save with error handling and Supabase sync
   const saveWidgets = useCallback(
     debounce(async (next: Widget[]) => {
