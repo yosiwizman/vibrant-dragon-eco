@@ -321,13 +321,15 @@ export default function WidgetGrid() {
     (window as any).addWidgetToDashboard = addWidget;
     (window as any).removeWidgetFromDashboard = removeWidget;
     (window as any).getCurrentWidgets = () => widgets;
+    (window as any).setWidgets = (newWidgets: Widget[]) => saveWidgets(newWidgets);
     
     return () => {
       delete (window as any).addWidgetToDashboard;
       delete (window as any).removeWidgetFromDashboard;
       delete (window as any).getCurrentWidgets;
+      delete (window as any).setWidgets;
     };
-  }, [addWidget, removeWidget, widgets]);
+  }, [addWidget, removeWidget, widgets, saveWidgets]);
 
   const beginResize = useCallback(
     (widget: Widget, dir: ResizeDir, clientX: number, clientY: number) => {

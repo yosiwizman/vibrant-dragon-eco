@@ -103,12 +103,7 @@ export default function Settings() {
   };
 
   const testVoice = async () => {
-    console.log("[Test Voice] Function called");
-    console.log("[Test Voice] API Key present:", !!preferences.openaiApiKey);
-    console.log("[Test Voice] API Key length:", preferences.openaiApiKey?.length || 0);
-    
     if (!preferences.openaiApiKey) {
-      console.error("[Test Voice] No API key found");
       showError("Please enter your OpenAI API key first");
       return;
     }
@@ -121,8 +116,6 @@ export default function Settings() {
       const voiceInfo = OPENAI_VOICES.find(v => v.value === selectedVoice);
       const voiceDescription = voiceInfo ? voiceInfo.description : selectedVoice;
       
-      console.log(`[Voice Test] Starting test with voice: ${selectedVoice}`);
-      console.log(`[Voice Test] Voice description: ${voiceDescription}`);
       showSuccess("Testing voice... Please wait");
       
       // Force OpenAI TTS synthesis
@@ -131,8 +124,6 @@ export default function Settings() {
         preferences.openaiApiKey,
         selectedVoice
       );
-      
-      console.log(`[Voice Test] Audio blob received: ${blob.size} bytes`);
       
       // Stop any currently playing audio first
       const existingAudio = document.querySelectorAll('audio');
@@ -146,17 +137,11 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       audio.src = url;
       
-      audio.onloadedmetadata = () => {
-        console.log(`[Voice Test] Audio loaded, duration: ${audio.duration}s`);
-      };
-      
       audio.onplay = () => {
-        console.log(`[Voice Test] Playback started`);
         showSuccess(`Playing ${voiceInfo?.label || selectedVoice} voice...`);
       };
       
       audio.onended = () => {
-        console.log(`[Voice Test] Playback completed`);
         URL.revokeObjectURL(url);
         showSuccess(`Voice test complete!`);
       };
@@ -517,7 +502,6 @@ export default function Settings() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log("[Test Voice] Button clicked! API Key present:", !!preferences.openaiApiKey);
                     if (preferences.openaiApiKey) {
                       testVoice();
                     } else {

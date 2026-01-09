@@ -9,6 +9,7 @@ import { searchKnowledge, addDocument, getKnowledgeContext } from "./rag-knowled
 import { parseNaturalTime, recurrenceToString } from "./smart-time-parser";
 import { checkScheduleConflicts, getSchedulingSuggestions, getDailyScheduleAnalysis, learnUserPatterns, createPatternBasedReminder } from "./smart-scheduling";
 import { startListeningSession, endListeningSession, addTranscript, getSessionStatus, formatSummaryForVoice as formatListeningSummary, isEnterPhrase, isExitPhrase, getPastSessions } from "./quiet-mode";
+import { executeAddWidget, executeRemoveWidget, executeListWidgets } from "./voice-widget-control";
 
 export interface OrchestrationContext {
   userId: string;
@@ -51,6 +52,8 @@ export const TOOL_CATEGORIES = {
   messages: ["draft_email", "draft_sms", "get_drafts", "delete_draft", "send_draft"],
   recurring: ["get_recurring_items", "cancel_recurring_series"],
   system: ["undo_last_action", "get_daily_summary", "read_tasks", "read_reminders", "read_notes", "get_system_status", "get_productivity_stats"],
+  widgets: ["add_widget", "remove_widget", "list_widgets", "move_widget", "switch_layout"],
+  settings: ["change_voice", "toggle_wake_word", "set_assistant_name", "toggle_memory", "get_settings", "adjust_voice_speed", "toggle_private_mode"],
 };
 
 // Tool definitions for the AI
@@ -495,70 +498,8 @@ export const AVAILABLE_TOOLS = [
   {
     name: "create_pattern_reminder",
     description: "Create an automatic reminder based on a learned pattern (e.g., 'pick up daughter from school every Wednesday at 2pm')",
-    parameters: { activity: "string", day_of_week: "number (0-6, Sunday-Saturday)", time: "HH:mm format", lead_time_minutes: "number (default 30)" },
+    parameters: { activity: "string", day_of_week: "number (0-6, Sunday-Saturday)", time: "HH:mm format", lead_time_minutes: "number (default: 30)" },
     category: "scheduling",
-  },
-  // Settings Control Tools
-  {
-    name: "change_voice",
-    description: "Change the assistant's voice. Use when user says 'change your voice', 'use a different voice', 'sound like [voice name]'.",
-    parameters: { voice: "alloy|echo|fable|onyx|nova|shimmer" },
-    category: "settings",
-  },
-  {
-    name: "toggle_wake_word",
-    description: "Enable or disable wake word detection. Use when user says 'enable wake word', 'turn on hey echo', 'disable wake word'.",
-    parameters: { enabled: "boolean" },
-    category: "settings",
-  },
-  {
-    name: "set_assistant_name",
-    description: "Change the assistant's name. Use when user says 'I'll call you [name]', 'your name is [name]'.",
-    parameters: { name: "string" },
-    category: "settings",
-  },
-  {
-    name: "toggle_memory",
-    description: "Enable or disable memory. Use when user says 'enable memory', 'turn on memory', 'disable memory'.",
-    parameters: { enabled: "boolean" },
-    category: "settings",
-  },
-  {
-    name: "get_settings",
-    description: "Get current settings. Use when user asks 'what are my settings', 'show settings'.",
-    parameters: {},
-    category: "settings",
-  },
-  {
-    name: "adjust_voice_speed",
-    description: "Adjust speaking speed. Use when user says 'speak faster', 'slow down'.",
-    parameters: { speed: "number (0.5 to 2.0)" },
-    category: "settings",
-  },
-  {
-    name: "toggle_private_mode",
-    description: "Enable or disable private mode. Use when user says 'enable private mode', 'go private'.",
-    parameters: { enabled: "boolean" },
-    category: "settings",
-  },
-  // Widget Control Tools
-  {
-    name: "add_widget",
-    description: "Add a widget to the dashboard. Use when user says 'add', 'show', or 'open' followed by a widget name.",
-    parameters: { widget_type: "string (e.g., 'stocks', 'news', 'tasks', 'weather', 'calendar')" },
-    category: "widgets",
-  },
-  {
-    name: "remove_widget",
-    description: "Remove a widget from the dashboard. Use when user says 'remove', 'delete', 'hide', or 'close' followed by a widget name.",
-    parameters: { widget_type: "string" },
-    category: "widgets",
-  },
-  {
-    name: "list_widgets",
-    description: "List all widgets currently on the dashboard. Use when user asks 'what widgets', 'show widgets', or 'list widgets'.",
-    parameters: {},
-    category: "widgets",
   },
   // Quiet/Listening Mode Tools
   {
@@ -584,6 +525,85 @@ export const AVAILABLE_TOOLS = [
     description: "Get past listening sessions with their summaries",
     parameters: { limit: "number (default: 10)" },
     category: "listening",
+  },
+  // Settings Control Tools
+  {
+    name: "change_voice",
+    description: "Change the assistant's voice. Use when user says 'change your voice', 'use a different voice', 'sound like [voice name]'.",
+    parameters: { voice: "alloy|echo|fable|onyx|nova|shimmer" },
+    category: "settings",
+  },
+  {
+    name: "toggle_wake_word",
+    description: "Enable or disable wake word detection. Use when user says 'enable wake word', 'turn on hey echo', 'disable wake word'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  {
+    name: "set_assistant_name",
+    description: "Change the assistant's name. Use when user says 'I'll call you [name]', 'your name is [name]', 'change your name to [name]'.",
+    parameters: { name: "string" },
+    category: "settings",
+  },
+  {
+    name: "toggle_memory",
+    description: "Enable or disable memory. Use when user says 'enable memory', 'turn on memory', 'disable memory'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  {
+    name: "get_settings",
+    description: "Get current settings. Use when user asks 'what are my settings', 'show settings', 'what's configured'.",
+    parameters: {},
+    category: "settings",
+  },
+  {
+    name: "adjust_voice_speed",
+    description: "Adjust speaking speed. Use when user says 'speak faster', 'slow down', 'talk slower', 'speed up'.",
+    parameters: { speed: "number (0.5 to 2.0)" },
+    category: "settings",
+  },
+  {
+    name: "toggle_private_mode",
+    description: "Enable or disable private mode. Use when user says 'enable private mode', 'go private', 'disable private mode'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  // Widget Control Tools
+  {
+    name: "add_widget",
+    description: "Add a widget to the dashboard. Use when user says 'add', 'show', or 'open' followed by a widget name.",
+    parameters: { widget_type: "string (e.g., 'stocks', 'news', 'tasks', 'weather', 'calendar')" },
+    category: "widgets",
+  },
+  {
+    name: "remove_widget",
+    description: "Remove a widget from the dashboard. Use when user says 'remove', 'delete', 'hide', or 'close' followed by a widget name.",
+    parameters: { widget_type: "string" },
+    category: "widgets",
+  },
+  {
+    name: "list_widgets",
+    description: "List all widgets currently on the dashboard. Use when user asks 'what widgets', 'show widgets', or 'list widgets'.",
+    parameters: {},
+    category: "widgets",
+  },
+  {
+    name: "move_widget",
+    description: "Move a widget to a specific position or direction. Use when user says 'move [widget] to [position]' or 'move [widget] [direction]'.",
+    parameters: { 
+      widget_type: "string (e.g., 'stocks', 'clock')",
+      destination: "string (e.g., 'top right', 'bottom', 'up', 'left')" 
+    },
+    category: "widgets",
+  },
+  {
+    name: "switch_layout",
+    description: "Switch dashboard to a preset layout. Use when user says 'switch to [mode] mode', 'reset dashboard', 'use [layout] layout'.",
+    parameters: {
+      layout: "string (e.g. 'productivity', 'finance', 'morning', 'default')"
+    },
+    category: "widgets"
   },
 ];
 
@@ -2184,138 +2204,6 @@ export function executeNavigateTo(page: string): ActionResult {
   };
 }
 
-export function executeAddWidget(widgetType: string): ActionResult {
-  const config = WIDGET_CONFIGS[widgetType];
-  
-  if (!config) {
-    const availableWidgets = Object.values(WIDGET_CONFIGS)
-      .map(c => c.name)
-      .slice(0, 8)
-      .join(", ");
-    
-    return {
-      tool: "add_widget",
-      success: false,
-      error: `Unknown widget: ${widgetType}. Available: ${availableWidgets}`,
-    };
-  }
-
-  // Check if widget already exists
-  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
-  const exists = currentWidgets.some((w: Widget) => w.type === widgetType);
-  
-  if (exists) {
-    return {
-      tool: "add_widget",
-      success: false,
-      error: `${config.name} widget already exists on your dashboard`,
-      data: {
-        voiceText: `You already have a ${config.name} widget on your dashboard.`,
-      },
-    };
-  }
-
-  // Add the widget
-  if ((window as any).addWidgetToDashboard) {
-    (window as any).addWidgetToDashboard(widgetType, config.defaultSize);
-    
-    return {
-      tool: "add_widget",
-      success: true,
-      data: {
-        widgetType,
-        widgetName: config.name,
-        voiceText: `I've added the ${config.name} widget to your dashboard.`,
-      },
-    };
-  }
-
-  return {
-    tool: "add_widget",
-    success: false,
-    error: "Widget system not available",
-  };
-}
-
-export function executeRemoveWidget(widgetType: string): ActionResult {
-  const config = WIDGET_CONFIGS[widgetType];
-  
-  if (!config) {
-    return {
-      tool: "remove_widget",
-      success: false,
-      error: `Unknown widget: ${widgetType}`,
-    };
-  }
-
-  // Find widget to remove
-  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
-  const widget = currentWidgets.find((w: Widget) => w.type === widgetType);
-  
-  if (!widget) {
-    return {
-      tool: "remove_widget",
-      success: false,
-      error: `${config.name} widget not found on dashboard`,
-      data: {
-        voiceText: `You don't have a ${config.name} widget on your dashboard.`,
-      },
-    };
-  }
-
-  // Remove the widget
-  if ((window as any).removeWidgetFromDashboard) {
-    (window as any).removeWidgetFromDashboard(widget.id);
-    
-    return {
-      tool: "remove_widget",
-      success: true,
-      data: {
-        widgetType,
-        widgetName: config.name,
-        voiceText: `I've removed the ${config.name} widget from your dashboard.`,
-      },
-    };
-  }
-
-  return {
-    tool: "remove_widget",
-    success: false,
-    error: "Widget system not available",
-  };
-}
-
-export function executeListWidgets(): ActionResult {
-  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
-  
-  if (currentWidgets.length === 0) {
-    return {
-      tool: "list_widgets",
-      success: true,
-      data: {
-        widgets: [],
-        voiceText: "You don't have any widgets on your dashboard yet. Would you like to add some?",
-      },
-    };
-  }
-
-  const widgetNames = currentWidgets
-    .map((w: Widget) => WIDGET_CONFIGS[w.type]?.name || w.type)
-    .join(", ");
-
-  const count = currentWidgets.length;
-  
-  return {
-    tool: "list_widgets",
-    success: true,
-    data: {
-      widgets: currentWidgets,
-      count,
-      voiceText: `You have ${count} widget${count !== 1 ? 's' : ''} on your dashboard: ${widgetNames}.`,
-    },
-  };
-}
-
 export async function executeGetDailySummary(userId: string): Promise<ActionResult> {
   try {
     const summary = await getDailySummary(userId);
@@ -3190,6 +3078,8 @@ COMPREHENSIVE CAPABILITIES:
 - Get productivity statistics and system status
 - Read out tasks, reminders, notes, and calendar events in voice-friendly format
 - Provide daily summaries of all activities
+- Control dashboard WIDGETS (add, remove, list, move, layout)
+- Control system SETTINGS (voice, wake word, name, memory, speed)
 
 RECURRING ITEMS:
 When user says "every day", "daily", "every week", "weekly", "every Monday", "every month", etc., use the recurring tools:
@@ -3241,18 +3131,24 @@ When user says "open", "go to", "show me", "take me to" followed by a page name,
 Available pages: home, tasks, reminders, notes, calendar, contacts, messages, notifications, knowledge, tools, settings, profile, integrations, history, voice, chat, listening-sessions, appointments, documents
 
 WIDGET CONTROL:
-You have COMPLETE control over the user's dashboard widgets:
+You have COMPLETE control over the user's dashboard widgets. Use these tools:
 - add_widget: When user says "add [widget]", "show me [widget]", "open [widget]"
 - remove_widget: When user says "remove [widget]", "delete [widget]", "hide [widget]"
 - list_widgets: When user asks "what widgets", "show widgets", "list widgets"
+- move_widget: When user says "move [widget] [direction/position]"
+- switch_layout: When user says "switch to [layout] mode", "reset dashboard"
 
 Available widgets: Time, Weather, Tasks, Reminders, Notes, Calendar, Upcoming, Contacts, Messages, Location, Productivity, AI Usage, Quick Actions, Recent Activity, Stocks (enhanced with watchlist), News (enhanced with categories)
+Available layouts: default, productivity, finance, morning
 
 Examples:
 - "Add the stocks widget" → add_widget with widget_type="stocks"
 - "Show me news" → add_widget with widget_type="news"
 - "Remove weather" → remove_widget with widget_type="weather"
 - "What widgets do I have?" → list_widgets
+- "Move stocks to top right" → move_widget with widget_type="stocks", destination="top right"
+- "Switch to productivity mode" → switch_layout with layout="productivity"
+- "Reset my dashboard" → switch_layout with layout="default"
 
 SETTINGS CONTROL:
 You can change ANY setting by voice:
@@ -3271,20 +3167,6 @@ Examples:
 - "Enable wake word" → toggle_wake_word with enabled=true
 - "I'll call you Jarvis" → set_assistant_name with name="Jarvis"
 - "Speak faster" → adjust_voice_speed with speed=1.3
-
-WIDGET CONTROL:
-You have COMPLETE control over the user's dashboard widgets. Use these tools:
-- add_widget: When user says "add", "show", or "open" followed by a widget name (e.g., "add stocks widget", "show me the news")
-- remove_widget: When user says "remove", "delete", "hide", or "close" followed by a widget name (e.g., "remove the weather widget")
-- list_widgets: When user asks "what widgets do I have", "show my widgets", "list widgets"
-
-Available widgets: Time, Weather, Tasks, Reminders, Notes, Calendar, Upcoming, Contacts, Messages, Location, Productivity, AI Usage, Quick Actions, Recent Activity, Stocks, News
-
-Examples:
-- "Add the stocks widget" → add_widget with widget_type="stocks"
-- "Show me news" → add_widget with widget_type="news"
-- "Remove the weather widget" → remove_widget with widget_type="weather"
-- "What widgets do I have?" → list_widgets
 
 READING DATA:
 - Use read_tasks to read tasks aloud
@@ -4238,6 +4120,14 @@ export async function executeTool(
         break;
       case "list_widgets":
         result = executeListWidgets();
+        break;
+      case "move_widget":
+        const { executeMoveWidget } = await import('./orchestrator-advanced-widgets');
+        result = await executeMoveWidget(parameters.widget_type, parameters.destination);
+        break;
+      case "switch_layout":
+        const { executeSwitchLayout } = await import('./orchestrator-layouts');
+        result = await executeSwitchLayout(parameters.layout);
         break;
       
       // Quiet/Listening Mode

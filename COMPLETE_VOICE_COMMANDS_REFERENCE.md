@@ -75,6 +75,22 @@
 - Quick Actions, Recent Activity
 - **Stocks** (Enhanced), **News** (Enhanced)
 
+### **Move Widgets:**
+```
+"Move stocks to top right"
+"Move calendar down"
+"Put weather in the top left"
+"Shift tasks to the right"
+```
+
+### **Layouts & Modes:**
+```
+"Switch to productivity mode" (Tasks, Calendar, Notes)
+"Finance mode" (Stocks, News)
+"Morning mode" (Weather, Time, News, Upcoming)
+"Reset dashboard"
+```
+
 ---
 
 ## ⚙️ SETTINGS COMMANDS
