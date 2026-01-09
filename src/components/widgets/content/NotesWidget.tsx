@@ -47,12 +47,39 @@ export default function NotesWidget() {
   const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
-    if (user) loadNotes();
-  }, [user]);
+    let isMounted = true;
+    
+    const load = async () => {
+      if (!user || !isMounted) return;
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(20);
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Failed to load notes:", error);
+      } else {
+        setNotes(data || []);
+      }
+      setLoading(false);
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const loadNotes = async () => {
     if (!user) return;
-    setLoading(true);
     
     const { data, error } = await supabase
       .from("notes")

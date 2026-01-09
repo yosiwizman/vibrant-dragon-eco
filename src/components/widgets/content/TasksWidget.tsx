@@ -47,12 +47,41 @@ export default function TasksWidget() {
   const [newPriority, setNewPriority] = useState("medium");
 
   useEffect(() => {
-    if (user) loadTasks();
-  }, [user, showCompleted]);
+    let isMounted = true;
+    
+    const load = async () => {
+      if (!user || !isMounted) return;
+      setLoading(true);
+      
+      const status = showCompleted ? "completed" : "pending";
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", status)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("priority", { ascending: false })
+        .limit(10);
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Failed to load tasks:", error);
+      } else {
+        setTasks(data || []);
+      }
+      setLoading(false);
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, showCompleted]);
 
   const loadTasks = async () => {
     if (!user) return;
-    setLoading(true);
     
     const status = showCompleted ? "completed" : "pending";
     const { data, error } = await supabase

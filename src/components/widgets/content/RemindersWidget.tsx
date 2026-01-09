@@ -47,12 +47,40 @@ export default function RemindersWidget() {
   const [newRecurrence, setNewRecurrence] = useState("none");
 
   useEffect(() => {
-    if (user) loadReminders();
-  }, [user, showCompleted]);
+    let isMounted = true;
+    
+    const load = async () => {
+      if (!user || !isMounted) return;
+      setLoading(true);
+      
+      const status = showCompleted ? "completed" : "pending";
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", status)
+        .order("due_time", { ascending: true })
+        .limit(10);
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Failed to load reminders:", error);
+      } else {
+        setReminders(data || []);
+      }
+      setLoading(false);
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, showCompleted]);
 
   const loadReminders = async () => {
     if (!user) return;
-    setLoading(true);
     
     const status = showCompleted ? "completed" : "pending";
     const { data, error } = await supabase

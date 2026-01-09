@@ -164,9 +164,13 @@ export default function WidgetGrid() {
     [preferences, setPreferences, user, syncWidgetsToSupabase]
   );
 
-  // Load widgets on mount
+  // Load widgets on mount - only once per user
   useEffect(() => {
+    let isMounted = true;
+    
     const loadWidgets = async () => {
+      if (!isMounted) return;
+      
       try {
         setIsLoading(true);
         setError(null);
@@ -178,6 +182,8 @@ export default function WidgetGrid() {
             .from('user_widgets')
             .select('*')
             .eq('user_id', user.id);
+
+          if (!isMounted) return;
 
           if (!loadError && savedWidgets && savedWidgets.length > 0) {
             initial = savedWidgets.map(w => ({
@@ -193,7 +199,9 @@ export default function WidgetGrid() {
             initial = packWidgets(sanitized);
           } else {
             initial = packWidgets(DEFAULT_WIDGETS);
-            await syncWidgetsToSupabase(user.id, initial);
+            if (isMounted) {
+              await syncWidgetsToSupabase(user.id, initial);
+            }
           }
         } else {
           const saved = preferences.widgets;
@@ -205,20 +213,29 @@ export default function WidgetGrid() {
           }
         }
         
-        setWidgets(initial);
-        setPreferences({ ...preferences, widgets: initial });
+        if (isMounted) {
+          setWidgets(initial);
+        }
       } catch (err) {
         console.error('Failed to initialize widgets:', err);
-        setError('Failed to load widgets');
-        const fallback = packWidgets(DEFAULT_WIDGETS);
-        setWidgets(fallback);
+        if (isMounted) {
+          setError('Failed to load widgets');
+          const fallback = packWidgets(DEFAULT_WIDGETS);
+          setWidgets(fallback);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadWidgets();
-  }, [user?.id, syncWidgetsToSupabase, preferences, setPreferences]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const resetLayout = useCallback(() => {
     try {

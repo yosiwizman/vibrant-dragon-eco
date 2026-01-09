@@ -57,12 +57,42 @@ export default function CalendarWidget() {
   const [newLocation, setNewLocation] = useState("");
 
   useEffect(() => {
-    if (user) loadEvents();
-  }, [user, currentMonth]);
+    let isMounted = true;
+    
+    const load = async () => {
+      if (!user || !isMounted) return;
+      setLoading(true);
+      
+      const start = startOfMonth(currentMonth);
+      const end = endOfMonth(currentMonth);
+
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("start_time", start.toISOString())
+        .lte("start_time", end.toISOString())
+        .order("start_time", { ascending: true });
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Failed to load events:", error);
+      } else {
+        setEvents(data || []);
+      }
+      setLoading(false);
+    };
+    
+    load();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, currentMonth]);
 
   const loadEvents = async () => {
     if (!user) return;
-    setLoading(true);
     
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
