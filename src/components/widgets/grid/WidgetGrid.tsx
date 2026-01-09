@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, RotateCcw, AlertTriangle } from "lucide-react";
 import type { Widget } from "@/types/widgets";
@@ -28,7 +28,6 @@ const DEFAULT_WIDGETS: Widget[] = [
   { id: "default-4", type: "upcoming", x: 0, y: 2, w: 2, h: 2 },
 ];
 
-// Enhanced validation functions
 function validateWidget(widget: Partial<Widget>): widget is Widget {
   return (
     typeof widget.id === 'string' &&
@@ -75,7 +74,6 @@ function canPlaceAt(widgets: Widget[], x: number, y: number, w: number, h: numbe
   return true;
 }
 
-// Debounce utility
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
   let timeout: NodeJS.Timeout;
   return ((...args: Parameters<T>) => {
@@ -92,7 +90,6 @@ export default function WidgetGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
   const [activeResize, setActiveResize] = useState<{
     widgetId: string;
@@ -122,16 +119,11 @@ export default function WidgetGrid() {
     return (contentWidth - GAP * (GRID_COLS - 1)) / GRID_COLS;
   }, []);
 
-  // Sync widgets to Supabase helper function (defined first)
+  // Sync widgets to Supabase
   const syncWidgetsToSupabase = useCallback(async (userId: string, widgets: Widget[]) => {
     try {
-      // Delete all existing widgets for this user
-      await supabase
-        .from('user_widgets')
-        .delete()
-        .eq('user_id', userId);
+      await supabase.from('user_widgets').delete().eq('user_id', userId);
 
-      // Insert new widgets
       if (widgets.length > 0) {
         const widgetData = widgets.map(w => ({
           user_id: userId,
@@ -142,14 +134,35 @@ export default function WidgetGrid() {
           config: {},
         }));
 
-        await supabase
-          .from('user_widgets')
-          .insert(widgetData);
+        await supabase.from('user_widgets').insert(widgetData);
       }
     } catch (error) {
       console.error('Failed to sync widgets to Supabase:', error);
     }
   }, []);
+
+  // Save widgets with debounce
+  const saveWidgets = useCallback(
+    debounce(async (next: Widget[]) => {
+      try {
+        const sanitized = sanitizeWidgets(next);
+        const packed = packWidgets(sanitized);
+        setWidgets(packed);
+        setPreferences({ ...preferences, widgets: packed });
+        
+        if (user) {
+          await syncWidgetsToSupabase(user.id, packed);
+        }
+        
+        setError(null);
+      } catch (err) {
+        console.error('Failed to save widgets:', err);
+        setError('Failed to save layout');
+        showError('Could not save widget layout');
+      }
+    }, DEBOUNCE_MS),
+    [preferences, setPreferences, user, syncWidgetsToSupabase]
+  );
 
   // Load widgets on mount
   useEffect(() => {
@@ -160,7 +173,6 @@ export default function WidgetGrid() {
         
         let initial: Widget[];
         
-        // Try to load from Supabase first
         if (user) {
           const { data: savedWidgets, error: loadError } = await supabase
             .from('user_widgets')
@@ -168,7 +180,6 @@ export default function WidgetGrid() {
             .eq('user_id', user.id);
 
           if (!loadError && savedWidgets && savedWidgets.length > 0) {
-            // Convert from Supabase format to Widget format
             initial = savedWidgets.map(w => ({
               id: w.widget_id,
               type: w.widget_type,
@@ -181,14 +192,10 @@ export default function WidgetGrid() {
             const sanitized = sanitizeWidgets(initial);
             initial = packWidgets(sanitized);
           } else {
-            // No saved widgets, use defaults
             initial = packWidgets(DEFAULT_WIDGETS);
-            
-            // Save defaults to Supabase
             await syncWidgetsToSupabase(user.id, initial);
           }
         } else {
-          // Not logged in, use local preferences
           const saved = preferences.widgets;
           if (Array.isArray(saved) && saved.length > 0) {
             const sanitized = sanitizeWidgets(saved as Widget[]);
@@ -213,30 +220,6 @@ export default function WidgetGrid() {
     loadWidgets();
   }, [user?.id, syncWidgetsToSupabase, preferences, setPreferences]);
 
-  // Enhanced save with error handling and Supabase sync
-  const saveWidgets = useCallback(
-    debounce(async (next: Widget[]) => {
-      try {
-        const sanitized = sanitizeWidgets(next);
-        const packed = packWidgets(sanitized);
-        setWidgets(packed);
-        setPreferences({ ...preferences, widgets: packed });
-        
-        // Save to Supabase for persistence
-        if (user) {
-          await syncWidgetsToSupabase(user.id, packed);
-        }
-        
-        setError(null);
-      } catch (err) {
-        console.error('Failed to save widgets:', err);
-        setError('Failed to save layout');
-        showError('Could not save widget layout');
-      }
-    loadWidgets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, syncWidgetsToSupabase]);
-
   const resetLayout = useCallback(() => {
     try {
       saveWidgets(DEFAULT_WIDGETS);
@@ -257,7 +240,6 @@ export default function WidgetGrid() {
         saveWidgets(filtered);
         showSuccess("Widget removed");
         
-        // Track widget removal
         if (widget && user) {
           trackWidgetInteraction(widget.type, "remove", {}, user.id);
         }
@@ -307,7 +289,6 @@ export default function WidgetGrid() {
         saveWidgets(next);
         showSuccess(`Added ${type}`);
         
-        // Track widget addition
         if (user) {
           trackWidgetInteraction(type, "add", { w, h }, user.id);
         }
@@ -353,7 +334,6 @@ export default function WidgetGrid() {
     [isEditMode]
   );
 
-  // Enhanced resize with better error handling
   useEffect(() => {
     if (!activeResize) return;
 
@@ -379,7 +359,6 @@ export default function WidgetGrid() {
         let nextX = activeResize.original.x;
         let nextY = activeResize.original.y;
 
-        // Handle width changes
         if (activeResize.dir === "e" || activeResize.dir === "se" || activeResize.dir === "ne") {
           nextW = activeResize.original.w + dCols;
         } else if (activeResize.dir === "w" || activeResize.dir === "sw" || activeResize.dir === "nw") {
@@ -387,7 +366,6 @@ export default function WidgetGrid() {
           nextX = activeResize.original.x + dCols;
         }
 
-        // Handle height changes
         if (activeResize.dir === "s" || activeResize.dir === "se" || activeResize.dir === "sw") {
           nextH = activeResize.original.h + dRows;
         } else if (activeResize.dir === "n" || activeResize.dir === "ne" || activeResize.dir === "nw") {
@@ -402,14 +380,7 @@ export default function WidgetGrid() {
 
         if (nextW === activeResize.original.w && nextH === activeResize.original.h) return;
 
-        const ok = canPlaceAt(
-          widgets,
-          nextX,
-          nextY,
-          nextW,
-          nextH,
-          activeResize.widgetId
-        );
+        const ok = canPlaceAt(widgets, nextX, nextY, nextW, nextH, activeResize.widgetId);
         if (!ok) return;
 
         setWidgets((prev) =>
@@ -426,7 +397,6 @@ export default function WidgetGrid() {
       try {
         saveWidgets(widgets);
         
-        // Track widget resize
         if (user && activeResize) {
           const widget = widgets.find(w => w.id === activeResize.widgetId);
           if (widget) {
@@ -451,9 +421,8 @@ export default function WidgetGrid() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp as any);
     };
-  }, [activeResize, getCellWidth, saveWidgets, widgets]);
+  }, [activeResize, getCellWidth, saveWidgets, widgets, user]);
 
-  // Enhanced drag with better error handling
   useEffect(() => {
     if (!activeDrag) return;
 
@@ -474,15 +443,7 @@ export default function WidgetGrid() {
         nextX = Math.max(0, Math.min(GRID_COLS - activeDrag.original.w, nextX));
         nextY = Math.max(0, nextY);
 
-        const ok = canPlaceAt(
-          widgets,
-          nextX,
-          nextY,
-          activeDrag.original.w,
-          activeDrag.original.h,
-          activeDrag.widgetId
-        );
-
+        const ok = canPlaceAt(widgets, nextX, nextY, activeDrag.original.w, activeDrag.original.h, activeDrag.widgetId);
         if (!ok) return;
 
         setWidgets((prev) =>
@@ -499,7 +460,6 @@ export default function WidgetGrid() {
       try {
         saveWidgets(widgets);
         
-        // Track widget drag
         if (user && activeDrag) {
           const widget = widgets.find(w => w.id === activeDrag.widgetId);
           if (widget) {
@@ -523,16 +483,7 @@ export default function WidgetGrid() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp as any);
     };
-  }, [activeDrag, getCellWidth, saveWidgets, widgets]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [activeDrag, getCellWidth, saveWidgets, widgets, user]);
 
   if (isLoading) {
     return (
@@ -549,7 +500,6 @@ export default function WidgetGrid() {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-300 font-medium">
@@ -594,7 +544,6 @@ export default function WidgetGrid() {
         </div>
       </div>
 
-      {/* Error Display */}
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-red-900/20 border border-red-500/30">
           <AlertTriangle className="h-4 w-4 text-red-400" />
@@ -602,7 +551,6 @@ export default function WidgetGrid() {
         </div>
       )}
 
-      {/* Grid */}
       <div
         ref={containerRef}
         className={`relative rounded-xl border-2 p-3 transition-colors ${
