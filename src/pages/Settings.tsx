@@ -103,7 +103,12 @@ export default function Settings() {
   };
 
   const testVoice = async () => {
+    console.log("[Test Voice] Function called");
+    console.log("[Test Voice] API Key present:", !!preferences.openaiApiKey);
+    console.log("[Test Voice] API Key length:", preferences.openaiApiKey?.length || 0);
+    
     if (!preferences.openaiApiKey) {
+      console.error("[Test Voice] No API key found");
       showError("Please enter your OpenAI API key first");
       return;
     }
@@ -117,6 +122,7 @@ export default function Settings() {
       const voiceDescription = voiceInfo ? voiceInfo.description : selectedVoice;
       
       console.log(`[Voice Test] Starting test with voice: ${selectedVoice}`);
+      console.log(`[Voice Test] Voice description: ${voiceDescription}`);
       showSuccess("Testing voice... Please wait");
       
       // Force OpenAI TTS synthesis
@@ -507,11 +513,22 @@ export default function Settings() {
                 </div>
 
                 <Button
-                  onClick={testVoice}
-                  className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("[Test Voice] Button clicked! API Key present:", !!preferences.openaiApiKey);
+                    if (preferences.openaiApiKey) {
+                      testVoice();
+                    } else {
+                      showError("Please enter your OpenAI API key first");
+                    }
+                  }}
                   disabled={!preferences.openaiApiKey}
+                  className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:bg-slate-600 disabled:text-slate-400 font-semibold px-6 py-3 shadow-lg transition-all"
+                  style={{ opacity: preferences.openaiApiKey ? 1 : 0.5 }}
                 >
-                  <Volume2 className="mr-2 h-4 w-4" />
+                  <Volume2 className="mr-2 h-5 w-5" />
                   Test Voice
                 </Button>
 
