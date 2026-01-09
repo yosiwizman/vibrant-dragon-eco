@@ -507,12 +507,14 @@ export default function Settings() {
                 </div>
 
                 <Button
+                  type="button"
                   onClick={testVoice}
-                  className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
                   disabled={!preferences.openaiApiKey}
+                  className="w-full sm:w-auto bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                  aria-label="Test voice preview"
                 >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Test Voice
+                  <Volume2 className="mr-2 h-5 w-5" />
+                  <span className="font-semibold">Test Voice</span>
                 </Button>
 
                 <Separator className="bg-slate-700" />
