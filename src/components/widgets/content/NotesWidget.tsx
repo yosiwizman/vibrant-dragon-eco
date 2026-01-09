@@ -363,11 +363,14 @@ export default function NotesWidget() {
 
       {/* Note Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md" aria-describedby="note-dialog-description">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingNote ? "Edit Note" : "New Note"}
             </DialogTitle>
+            <p id="note-dialog-description" className="sr-only">
+              {editingNote ? "Edit note details including title, content, and tags" : "Create a new note with title, content, and tags"}
+            </p>
           </DialogHeader>
           <div className="space-y-4">
             <div>

@@ -377,11 +377,14 @@ export default function RemindersWidget() {
 
       {/* Reminder Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md" aria-describedby="reminder-dialog-description">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingReminder ? "Edit Reminder" : "New Reminder"}
             </DialogTitle>
+            <p id="reminder-dialog-description" className="sr-only">
+              {editingReminder ? "Edit reminder details including text, time, channel, and recurrence" : "Create a new reminder with text, time, channel, and recurrence options"}
+            </p>
           </DialogHeader>
           <div className="space-y-4">
             <div>

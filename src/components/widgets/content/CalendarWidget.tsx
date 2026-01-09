@@ -392,11 +392,14 @@ export default function CalendarWidget() {
 
       {/* Event Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md" aria-describedby="event-dialog-description">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingEvent ? "Edit Event" : "New Event"}
             </DialogTitle>
+            <p id="event-dialog-description" className="sr-only">
+              {editingEvent ? "Edit calendar event details including title, description, start time, end time, and location" : "Create a new calendar event with title, description, start time, end time, and location"}
+            </p>
           </DialogHeader>
           <div className="space-y-4">
             <div>

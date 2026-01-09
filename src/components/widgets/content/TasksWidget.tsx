@@ -374,11 +374,14 @@ export default function TasksWidget() {
 
       {/* Task Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md" aria-describedby="task-dialog-description">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingTask ? "Edit Task" : "New Task"}
             </DialogTitle>
+            <p id="task-dialog-description" className="sr-only">
+              {editingTask ? "Edit task details including title, description, due date, and priority" : "Create a new task with title, description, due date, and priority"}
+            </p>
           </DialogHeader>
           <div className="space-y-4">
             <div>
