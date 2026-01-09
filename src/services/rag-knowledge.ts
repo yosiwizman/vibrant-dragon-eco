@@ -140,12 +140,17 @@ export async function initializeRAGKnowledge(userId: string): Promise<void> {
     await offlineKnowledge.initialize(userId);
     
     // Check if RAG architectures knowledge already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from("rag_documents")
       .select("id")
       .eq("user_id", userId)
       .eq("title", "RAG Architectures Guide")
-      .single();
+      .maybeSingle();
+
+    // Ignore PGRST116 error (no rows found)
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error("Error checking RAG document:", checkError);
+    }
 
     if (!existing) {
       // Add the RAG architectures knowledge
