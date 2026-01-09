@@ -3540,7 +3540,7 @@ export async function executeGetListeningStatus(userId: string): Promise<ActionR
       data: {
         isActive: true,
         duration: status.duration,
-        transcript Count: status.transcriptCount,
+        transcriptCount: status.transcriptCount,
         voiceText: `Listening mode has been active for ${status.duration} minutes. I've captured ${status.transcriptCount} segments so far. Say "summarize" when you're ready.`,
       },
     };
