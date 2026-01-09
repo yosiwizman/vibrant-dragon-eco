@@ -127,7 +127,10 @@ class WebLLMService {
   /**
    * Chat with conversation history
    */
-  async chat(messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>): Promise<string> {
+  async chat(
+    messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+    options?: { enableTools?: boolean; userId?: string }
+  ): Promise<string> {
     if (!this.engine) {
       await this.initialize();
     }
@@ -137,6 +140,29 @@ class WebLLMService {
     }
 
     try {
+      // Add tool instructions if enabled
+      if (options?.enableTools) {
+        const toolInstructions = `
+You have access to these tools via JSON commands:
+- add_widget: Add widgets to dashboard
+- remove_widget: Remove widgets
+- navigate_to: Navigate to pages
+- create_task: Create tasks
+- create_reminder: Set reminders
+- web_search: Search the web (via DuckDuckGo, no API key needed)
+
+Respond with JSON when using tools:
+\`\`\`json
+{"tool": "tool_name", "parameters": {...}}
+\`\`\`
+`;
+        messages = [
+          ...messages.slice(0, 1),
+          { role: "system", content: toolInstructions },
+          ...messages.slice(1),
+        ];
+      }
+
       const response = await this.engine.chat.completions.create({
         messages,
         max_tokens: 512,
@@ -147,6 +173,41 @@ class WebLLMService {
     } catch (error) {
       console.error('[WebLLM] Chat failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Clear cached model to free storage
+   */
+  async clearCache(): Promise<void> {
+    try {
+      const modelId = this.getModelId();
+      
+      // Unload engine first
+      if (this.engine) {
+        this.engine = null;
+        this.isInitialized = false;
+        this.initPromise = null;
+      }
+
+      // Clear from cache
+      const cacheKey = `webllm/model/${modelId}`;
+      await caches.delete(cacheKey);
+      
+      // Also try to clear IndexedDB if used
+      if ('indexedDB' in window) {
+        const dbs = await indexedDB.databases();
+        for (const db of dbs) {
+          if (db.name?.includes('webllm') || db.name?.includes(modelId)) {
+            indexedDB.deleteDatabase(db.name);
+          }
+        }
+      }
+      
+      console.log('[WebLLM] Cache cleared successfully');
+    } catch (error: any) {
+      console.error('[WebLLM] Failed to clear cache:', error);
+      throw new Error('Failed to remove local AI model');
     }
   }
 

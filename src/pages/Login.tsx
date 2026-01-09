@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Bot, Mail, Loader2, AlertCircle, Sparkles, Send, ArrowLeft, CheckCircle } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import VoiceWelcomeFlow from "@/components/VoiceWelcomeFlow";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -22,12 +23,35 @@ export default function Login() {
   const [message, setMessage] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
-      navigate("/");
+      // Check if this is first login
+      const hasSeenWelcome = localStorage.getItem("echo:seen-welcome");
+      if (!hasSeenWelcome) {
+        setShowWelcome(true);
+      } else {
+        navigate("/");
+      }
     }
   }, [user, loading, navigate]);
+
+  const handleWelcomeComplete = () => {
+    localStorage.setItem("echo:seen-welcome", "true");
+    setShowWelcome(false);
+    navigate("/");
+  };
+
+  const handleWelcomeSkip = () => {
+    localStorage.setItem("echo:seen-welcome", "true");
+    setShowWelcome(false);
+    navigate("/");
+  };
+
+  if (showWelcome) {
+    return <VoiceWelcomeFlow onComplete={handleWelcomeComplete} onSkip={handleWelcomeSkip} />;
+  }
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();

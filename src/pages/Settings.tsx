@@ -27,12 +27,14 @@ import { OPENAI_VOICES, type OpenAIVoice } from "../types/models";
 import { getMemories, deleteMemory, MemoryItem } from "@/services/memory";
 import { getChatHistoryStats, clearChatHistory } from "@/services/chat-history";
 import { isWakeWordSupported } from "@/services/wake-word-detection";
+import { webLLM } from "@/services/web-llm";
 import {
   Volume2, Key, Mic, Settings2, Brain, Search, MapPin, CloudSun,
   MessageSquare, Calendar, Shield, Zap, Clock, Globe, User, Bell,
   Trash2, Database, History, Sparkles, AlertCircle, ExternalLink,
   CalendarClock, EarOff, CheckCircle2
 } from "lucide-react";
+import { webLLM } from "@/services/web-llm";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ai: Brain,
@@ -368,6 +370,25 @@ export default function Settings() {
                 </div>
 
                 <OfflineAIDownloader />
+
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (!confirm("Are you sure you want to remove the local AI model? This will free up storage space but you'll need to re-download it to use offline features.")) {
+                      return;
+                    }
+                    try {
+                      await webLLM.clearCache();
+                      showSuccess("Local AI model removed successfully");
+                    } catch (error: any) {
+                      showError(error.message || "Failed to remove model");
+                    }
+                  }}
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove Local AI Model
+                </Button>
 
                 <div className="space-y-2">
                   <p className="text-xs text-slate-400 font-medium">How it works:</p>
