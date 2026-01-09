@@ -2,7 +2,7 @@
 
 import { CreateMLCEngine, MLCEngine, hasModelInCache } from '@mlc-ai/web-llm';
 
-// Model configurations
+// Model configurations - v2.0 (cache bust)
 const MODELS = {
   mobile: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', // 1.5GB - for phones
   desktop: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', // 3GB - for computers
