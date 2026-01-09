@@ -278,7 +278,7 @@ export function isWidgetCommand(text: string): boolean {
     lower.includes(config.name.toLowerCase())
   );
   
-  return (hasWidgetKeyword && hasActionKeyword) ||
+  return (hasWidgetKeyword && hasActionKeyword) || 
          (hasActionKeyword && hasWidgetName);
 }
 
