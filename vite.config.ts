@@ -5,13 +5,14 @@ import path from "path";
 export default defineConfig(async () => {
   const plugins: PluginOption[] = [react()];
   
-  // Try to load the dyad component tagger, but don't fail if it's not available
-  try {
-    const { default: dyadComponentTagger } = await import("@dyad-sh/react-vite-component-tagger");
-    plugins.unshift(dyadComponentTagger() as PluginOption);
-  } catch {
-    // Component tagger not available, continue without it
-  }
+  // Disable Dyad component tagger to prevent click blocking
+  // (Can be re-enabled when not actively developing)
+  // try {
+  //   const { default: dyadComponentTagger } = await import("@dyad-sh/react-vite-component-tagger");
+  //   plugins.unshift(dyadComponentTagger() as PluginOption);
+  // } catch {
+  //   // Component tagger not available, continue without it
+  // }
 
   return {
     server: {
