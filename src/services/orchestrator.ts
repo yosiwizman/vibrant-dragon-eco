@@ -2109,7 +2109,7 @@ export function executeNavigateTo(page: string): ActionResult {
       data: {
         path: route.path,
         description: route.description,
-        voiceText: `Navigating to ${route.description}.`,
+        voiceText: `Opening ${route.description}.`,
       },
     };
   }
@@ -2119,6 +2119,138 @@ export function executeNavigateTo(page: string): ActionResult {
     tool: "navigate_to",
     success: false,
     error: `Page "${page}" not found. Try: ${availablePages}`,
+  };
+}
+
+export function executeAddWidget(widgetType: string): ActionResult {
+  const config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    const availableWidgets = Object.values(WIDGET_CONFIGS)
+      .map(c => c.name)
+      .slice(0, 8)
+      .join(", ");
+    
+    return {
+      tool: "add_widget",
+      success: false,
+      error: `Unknown widget: ${widgetType}. Available: ${availableWidgets}`,
+    };
+  }
+
+  // Check if widget already exists
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+  const exists = currentWidgets.some((w: Widget) => w.type === widgetType);
+  
+  if (exists) {
+    return {
+      tool: "add_widget",
+      success: false,
+      error: `${config.name} widget already exists on your dashboard`,
+      data: {
+        voiceText: `You already have a ${config.name} widget on your dashboard.`,
+      },
+    };
+  }
+
+  // Add the widget
+  if ((window as any).addWidgetToDashboard) {
+    (window as any).addWidgetToDashboard(widgetType, config.defaultSize);
+    
+    return {
+      tool: "add_widget",
+      success: true,
+      data: {
+        widgetType,
+        widgetName: config.name,
+        voiceText: `I've added the ${config.name} widget to your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "add_widget",
+    success: false,
+    error: "Widget system not available",
+  };
+}
+
+export function executeRemoveWidget(widgetType: string): ActionResult {
+  const config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    return {
+      tool: "remove_widget",
+      success: false,
+      error: `Unknown widget: ${widgetType}`,
+    };
+  }
+
+  // Find widget to remove
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+  const widget = currentWidgets.find((w: Widget) => w.type === widgetType);
+  
+  if (!widget) {
+    return {
+      tool: "remove_widget",
+      success: false,
+      error: `${config.name} widget not found on dashboard`,
+      data: {
+        voiceText: `You don't have a ${config.name} widget on your dashboard.`,
+      },
+    };
+  }
+
+  // Remove the widget
+  if ((window as any).removeWidgetFromDashboard) {
+    (window as any).removeWidgetFromDashboard(widget.id);
+    
+    return {
+      tool: "remove_widget",
+      success: true,
+      data: {
+        widgetType,
+        widgetName: config.name,
+        voiceText: `I've removed the ${config.name} widget from your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "remove_widget",
+    success: false,
+    error: "Widget system not available",
+  };
+}
+
+export function executeListWidgets(): ActionResult {
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+  
+  if (currentWidgets.length === 0) {
+    return {
+      tool: "list_widgets",
+      success: true,
+      data: {
+        widgets: [],
+        voiceText: "You don't have any widgets on your dashboard yet. Would you like to add some?",
+      },
+    };
+  }
+
+  const widgetNames = currentWidgets
+    .map((w: Widget) => WIDGET_CONFIGS[w.type]?.name || w.type)
+    .join(", ");
+
+  const count = currentWidgets.length;
+  
+  return {
+    tool: "list_widgets",
+    success: true,
+    data: {
+      widgets: currentWidgets,
+      count,
+      voiceText: `You have ${count} widget${count !== 1 ? 's' : ''} on your dashboard: ${widgetNames}.`,
+    },
   };
 }
 
@@ -3045,6 +3177,20 @@ Example flow:
 NAVIGATION:
 When user says "open", "go to", "show me", "take me to" followed by a page name, use the navigate_to tool.
 Available pages: home, tasks, reminders, notes, calendar, contacts, messages, notifications, knowledge, tools, settings, profile, integrations, history, voice, chat, listening-sessions, appointments, documents
+
+WIDGET CONTROL:
+You have COMPLETE control over the user's dashboard widgets. Use these tools:
+- add_widget: When user says "add", "show", or "open" followed by a widget name (e.g., "add stocks widget", "show me the news")
+- remove_widget: When user says "remove", "delete", "hide", or "close" followed by a widget name (e.g., "remove the weather widget")
+- list_widgets: When user asks "what widgets do I have", "show my widgets", "list widgets"
+
+Available widgets: Time, Weather, Tasks, Reminders, Notes, Calendar, Upcoming, Contacts, Messages, Location, Productivity, AI Usage, Quick Actions, Recent Activity, Stocks, News
+
+Examples:
+- "Add the stocks widget" → add_widget with widget_type="stocks"
+- "Show me news" → add_widget with widget_type="news"
+- "Remove the weather widget" → remove_widget with widget_type="weather"
+- "What widgets do I have?" → list_widgets
 
 READING DATA:
 - Use read_tasks to read tasks aloud

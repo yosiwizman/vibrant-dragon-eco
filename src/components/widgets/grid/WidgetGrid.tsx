@@ -319,10 +319,15 @@ export default function WidgetGrid() {
 
   useEffect(() => {
     (window as any).addWidgetToDashboard = addWidget;
+    (window as any).removeWidgetFromDashboard = removeWidget;
+    (window as any).getCurrentWidgets = () => widgets;
+    
     return () => {
       delete (window as any).addWidgetToDashboard;
+      delete (window as any).removeWidgetFromDashboard;
+      delete (window as any).getCurrentWidgets;
     };
-  }, [addWidget]);
+  }, [addWidget, removeWidget, widgets]);
 
   const beginResize = useCallback(
     (widget: Widget, dir: ResizeDir, clientX: number, clientY: number) => {
