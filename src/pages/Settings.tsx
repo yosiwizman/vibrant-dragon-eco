@@ -505,12 +505,15 @@ export default function Settings() {
                     if (preferences.openaiApiKey) {
                       testVoice();
                     } else {
-                      showError("Please enter your OpenAI API key first");
+                      showError("Please enter your OpenAI API key first in the General tab");
                     }
                   }}
-                  disabled={!preferences.openaiApiKey}
-                  className="bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:bg-slate-600 disabled:text-slate-400 font-semibold px-6 py-3 shadow-lg transition-all"
-                  style={{ opacity: preferences.openaiApiKey ? 1 : 0.5 }}
+                  className={`font-semibold px-6 py-3 shadow-lg transition-all ${
+                    preferences.openaiApiKey
+                      ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-500 cursor-pointer'
+                      : 'bg-slate-700 text-slate-400 hover:bg-slate-600 cursor-pointer'
+                  }`}
+                  style={{ pointerEvents: 'auto', zIndex: 10 }}
                 >
                   <Volume2 className="mr-2 h-5 w-5" />
                   Test Voice
