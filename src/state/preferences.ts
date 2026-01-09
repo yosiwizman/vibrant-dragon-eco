@@ -14,6 +14,7 @@ const DEFAULT: Preferences = {
   authToken: undefined,
   openaiApiKey: undefined,
   openaiVoice: "nova",
+  preferOpenAIVoice: true,
   conversationMode: true,
   silenceThreshold: 0.01,
   silenceTimeout: 1500,

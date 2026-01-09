@@ -45,6 +45,7 @@ export interface Preferences {
   authToken?: string;
   openaiApiKey?: string;
   openaiVoice: OpenAIVoice;
+  preferOpenAIVoice?: boolean;
   conversationMode: boolean;
   silenceThreshold: number;
   silenceTimeout: number;

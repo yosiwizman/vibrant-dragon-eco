@@ -109,14 +109,15 @@ export default function Settings() {
     }
     
     try {
-      showSuccess("Testing voice... Please wait");
-      
       const name = preferences.assistantName || "Echo";
       const selectedVoice = preferences.openaiVoice || "nova";
       
       // Get voice description for feedback
       const voiceInfo = OPENAI_VOICES.find(v => v.value === selectedVoice);
       const voiceDescription = voiceInfo ? voiceInfo.description : selectedVoice;
+      
+      console.log(`[Voice Test] Starting test with voice: ${selectedVoice}`);
+      showSuccess("Testing voice... Please wait");
       
       // Force OpenAI TTS synthesis
       const blob = await synthesizeSpeech(
@@ -125,14 +126,48 @@ export default function Settings() {
         selectedVoice
       );
       
-      // Play the audio
-      await playAudioBlob(blob);
+      console.log(`[Voice Test] Audio blob received: ${blob.size} bytes`);
       
-      showSuccess(`Voice test successful! Playing ${voiceInfo?.label || selectedVoice} voice`);
+      // Stop any currently playing audio first
+      const existingAudio = document.querySelectorAll('audio');
+      existingAudio.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      
+      // Play the audio with better error handling
+      const audio = new Audio();
+      const url = URL.createObjectURL(blob);
+      audio.src = url;
+      
+      audio.onloadedmetadata = () => {
+        console.log(`[Voice Test] Audio loaded, duration: ${audio.duration}s`);
+      };
+      
+      audio.onplay = () => {
+        console.log(`[Voice Test] Playback started`);
+        showSuccess(`Playing ${voiceInfo?.label || selectedVoice} voice...`);
+      };
+      
+      audio.onended = () => {
+        console.log(`[Voice Test] Playback completed`);
+        URL.revokeObjectURL(url);
+        showSuccess(`Voice test complete!`);
+      };
+      
+      audio.onerror = (e) => {
+        console.error(`[Voice Test] Playback error:`, e);
+        URL.revokeObjectURL(url);
+        showError("Failed to play audio. Please try again.");
+      };
+      
+      // Attempt to play
+      await audio.play();
+      
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Voice test failed";
-      console.error("Voice test error:", e);
-      showError(errorMessage);
+      console.error("[Voice Test] Error:", e);
+      showError(`Voice test failed: ${errorMessage}`);
     }
   };
 
@@ -479,6 +514,23 @@ export default function Settings() {
                   <Volume2 className="mr-2 h-4 w-4" />
                   Test Voice
                 </Button>
+
+                <Separator className="bg-slate-700" />
+
+                <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+                  <div>
+                    <Label className="text-white">Prefer OpenAI Voice</Label>
+                    <p className="text-sm text-slate-400">
+                      Always use OpenAI TTS instead of browser's built-in voice (recommended for best quality)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={preferences.preferOpenAIVoice !== false}
+                    onCheckedChange={(checked) =>
+                      setPreferences({ ...preferences, preferOpenAIVoice: checked })
+                    }
+                  />
+                </div>
 
                 <Separator className="bg-slate-700" />
 

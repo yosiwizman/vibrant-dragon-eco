@@ -152,9 +152,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const isOnline = navigator.onLine;
     const hasOpenAI = !!openaiApiKey;
     const hasOfflineVoice = isOfflineVoiceSupported();
+    const preferOpenAI = preferences.preferOpenAIVoice !== false; // Default to true
 
-    // Use offline voice if offline or no API key
-    if ((!isOnline || !hasOpenAI) && hasOfflineVoice) {
+    // Use offline voice ONLY if offline OR no API key OR user explicitly disabled OpenAI preference
+    if ((!isOnline || !hasOpenAI || !preferOpenAI) && hasOfflineVoice && !hasOpenAI) {
       try {
         setIsSpeaking(true);
         console.log('[Voice] Using offline TTS (Web Speech API)');
