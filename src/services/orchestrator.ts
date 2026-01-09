@@ -498,6 +498,68 @@ export const AVAILABLE_TOOLS = [
     parameters: { activity: "string", day_of_week: "number (0-6, Sunday-Saturday)", time: "HH:mm format", lead_time_minutes: "number (default 30)" },
     category: "scheduling",
   },
+  // Settings Control Tools
+  {
+    name: "change_voice",
+    description: "Change the assistant's voice. Use when user says 'change your voice', 'use a different voice', 'sound like [voice name]'.",
+    parameters: { voice: "alloy|echo|fable|onyx|nova|shimmer" },
+    category: "settings",
+  },
+  {
+    name: "toggle_wake_word",
+    description: "Enable or disable wake word detection. Use when user says 'enable wake word', 'turn on hey echo', 'disable wake word'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  {
+    name: "set_assistant_name",
+    description: "Change the assistant's name. Use when user says 'I'll call you [name]', 'your name is [name]'.",
+    parameters: { name: "string" },
+    category: "settings",
+  },
+  {
+    name: "toggle_memory",
+    description: "Enable or disable memory. Use when user says 'enable memory', 'turn on memory', 'disable memory'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  {
+    name: "get_settings",
+    description: "Get current settings. Use when user asks 'what are my settings', 'show settings'.",
+    parameters: {},
+    category: "settings",
+  },
+  {
+    name: "adjust_voice_speed",
+    description: "Adjust speaking speed. Use when user says 'speak faster', 'slow down'.",
+    parameters: { speed: "number (0.5 to 2.0)" },
+    category: "settings",
+  },
+  {
+    name: "toggle_private_mode",
+    description: "Enable or disable private mode. Use when user says 'enable private mode', 'go private'.",
+    parameters: { enabled: "boolean" },
+    category: "settings",
+  },
+  // Widget Control Tools
+  {
+    name: "add_widget",
+    description: "Add a widget to the dashboard. Use when user says 'add', 'show', or 'open' followed by a widget name.",
+    parameters: { widget_type: "string (e.g., 'stocks', 'news', 'tasks', 'weather', 'calendar')" },
+    category: "widgets",
+  },
+  {
+    name: "remove_widget",
+    description: "Remove a widget from the dashboard. Use when user says 'remove', 'delete', 'hide', or 'close' followed by a widget name.",
+    parameters: { widget_type: "string" },
+    category: "widgets",
+  },
+  {
+    name: "list_widgets",
+    description: "List all widgets currently on the dashboard. Use when user asks 'what widgets', 'show widgets', or 'list widgets'.",
+    parameters: {},
+    category: "widgets",
+  },
   // Quiet/Listening Mode Tools
   {
     name: "start_listening_mode",
@@ -3179,6 +3241,38 @@ When user says "open", "go to", "show me", "take me to" followed by a page name,
 Available pages: home, tasks, reminders, notes, calendar, contacts, messages, notifications, knowledge, tools, settings, profile, integrations, history, voice, chat, listening-sessions, appointments, documents
 
 WIDGET CONTROL:
+You have COMPLETE control over the user's dashboard widgets:
+- add_widget: When user says "add [widget]", "show me [widget]", "open [widget]"
+- remove_widget: When user says "remove [widget]", "delete [widget]", "hide [widget]"
+- list_widgets: When user asks "what widgets", "show widgets", "list widgets"
+
+Available widgets: Time, Weather, Tasks, Reminders, Notes, Calendar, Upcoming, Contacts, Messages, Location, Productivity, AI Usage, Quick Actions, Recent Activity, Stocks (enhanced with watchlist), News (enhanced with categories)
+
+Examples:
+- "Add the stocks widget" → add_widget with widget_type="stocks"
+- "Show me news" → add_widget with widget_type="news"
+- "Remove weather" → remove_widget with widget_type="weather"
+- "What widgets do I have?" → list_widgets
+
+SETTINGS CONTROL:
+You can change ANY setting by voice:
+- change_voice: When user says "change voice to [voice]", "use [voice] voice"
+- toggle_wake_word: When user says "enable/disable wake word"
+- set_assistant_name: When user says "call you [name]", "your name is [name]"
+- toggle_memory: When user says "enable/disable memory"
+- adjust_voice_speed: When user says "speak faster/slower"
+- toggle_private_mode: When user says "enable/disable private mode"
+- get_settings: When user asks "what are my settings"
+
+Available voices: alloy (neutral), echo (warm), fable (British), onyx (deep), nova (energetic), shimmer (soft)
+
+Examples:
+- "Change your voice to Nova" → change_voice with voice="nova"
+- "Enable wake word" → toggle_wake_word with enabled=true
+- "I'll call you Jarvis" → set_assistant_name with name="Jarvis"
+- "Speak faster" → adjust_voice_speed with speed=1.3
+
+WIDGET CONTROL:
 You have COMPLETE control over the user's dashboard widgets. Use these tools:
 - add_widget: When user says "add", "show", or "open" followed by a widget name (e.g., "add stocks widget", "show me the news")
 - remove_widget: When user says "remove", "delete", "hide", or "close" followed by a widget name (e.g., "remove the weather widget")
@@ -4068,6 +4162,82 @@ export async function executeTool(
         break;
       case "create_pattern_reminder":
         result = await executeCreatePatternReminder(userId, parameters.activity, parameters.day_of_week, parameters.time, parameters.lead_time_minutes);
+        break;
+      
+      // Settings Control
+      case "change_voice":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeChangeVoice } = await import('./orchestrator-settings-extension');
+          result = await executeChangeVoice(parameters.voice, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "change_voice", success: false, error: "Settings not available" };
+        }
+        break;
+      case "toggle_wake_word":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeToggleWakeWord } = await import('./orchestrator-settings-extension');
+          result = await executeToggleWakeWord(parameters.enabled, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "toggle_wake_word", success: false, error: "Settings not available" };
+        }
+        break;
+      case "set_assistant_name":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeSetAssistantName } = await import('./orchestrator-settings-extension');
+          result = await executeSetAssistantName(parameters.name, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "set_assistant_name", success: false, error: "Settings not available" };
+        }
+        break;
+      case "toggle_memory":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeToggleMemory } = await import('./orchestrator-settings-extension');
+          result = await executeToggleMemory(parameters.enabled, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "toggle_memory", success: false, error: "Settings not available" };
+        }
+        break;
+      case "get_settings":
+        if ((window as any).getVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeGetSettings } = await import('./orchestrator-settings-extension');
+          result = await executeGetSettings(prefs);
+        } else {
+          result = { tool: "get_settings", success: false, error: "Settings not available" };
+        }
+        break;
+      case "adjust_voice_speed":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeAdjustVoiceSpeed } = await import('./orchestrator-settings-extension');
+          result = await executeAdjustVoiceSpeed(parameters.speed, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "adjust_voice_speed", success: false, error: "Settings not available" };
+        }
+        break;
+      case "toggle_private_mode":
+        if ((window as any).setVoicePreferences) {
+          const prefs = (window as any).getVoicePreferences();
+          const { executeTogglePrivateMode } = await import('./orchestrator-settings-extension');
+          result = await executeTogglePrivateMode(parameters.enabled, prefs, (window as any).setVoicePreferences);
+        } else {
+          result = { tool: "toggle_private_mode", success: false, error: "Settings not available" };
+        }
+        break;
+      
+      // Widget Control
+      case "add_widget":
+        result = executeAddWidget(parameters.widget_type);
+        break;
+      case "remove_widget":
+        result = executeRemoveWidget(parameters.widget_type);
+        break;
+      case "list_widgets":
+        result = executeListWidgets();
         break;
       
       // Quiet/Listening Mode

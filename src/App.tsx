@@ -11,6 +11,7 @@ import { usePageTracking } from "@/hooks/usePageTracking";
 import ModelDownloadProgress from "@/components/ModelDownloadProgress";
 import ProgressiveOnboarding from "@/components/ProgressiveOnboarding";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useVoicePreferences } from "@/hooks/useVoicePreferences";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
 import QuickAddModal, { useQuickAdd } from "@/components/QuickAddModal";
@@ -84,6 +85,12 @@ function GlobalShortcutsWrapper() {
   return null;
 }
 
+// Wrapper component for voice preferences
+function VoicePreferencesWrapper() {
+  useVoicePreferences();
+  return null;
+}
+
 // Wrapper component for page tracking
 function PageTrackingWrapper() {
   usePageTracking();
@@ -114,6 +121,7 @@ const App = () => (
             <VoiceStatusIndicator />
             <CommandPaletteWrapper />
             <GlobalShortcutsWrapper />
+            <VoicePreferencesWrapper />
             <PageTrackingWrapper />
             <KeyboardShortcutsHelp />
             <OnboardingTour />
