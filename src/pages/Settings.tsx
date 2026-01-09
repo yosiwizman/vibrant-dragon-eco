@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { usePreferences } from "../state/preferences";
 import { useProviders } from "@/hooks/useProviders";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ export default function Settings() {
   const { user } = useAuth();
   const { preferences, setPreferences } = usePreferences();
   const { providers, saveProvider, toggleProvider } = useProviders();
+  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
   const [activeTab, setActiveTab] = useState("general");
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [chatStats, setChatStats] = useState<{
@@ -103,8 +105,8 @@ export default function Settings() {
   };
 
   const testVoice = async () => {
-    if (!preferences.openaiApiKey) {
-      showError("Please enter your OpenAI API key first");
+    if (!openaiApiKey) {
+      showError("Please enter your OpenAI API key first in the General tab");
       return;
     }
     
@@ -118,12 +120,16 @@ export default function Settings() {
       
       showSuccess("Testing voice... Please wait");
       
+      console.log('[Test Voice] Using API key, voice:', selectedVoice);
+      
       // Force OpenAI TTS synthesis
       const blob = await synthesizeSpeech(
         `Hello! I'm ${name}, your personal AI assistant. This is the ${voiceDescription} voice. How can I help you today?`,
-        preferences.openaiApiKey,
+        openaiApiKey,
         selectedVoice
       );
+      
+      console.log('[Test Voice] Speech blob received, size:', blob.size);
       
       // Stop any currently playing audio first
       const existingAudio = document.querySelectorAll('audio');
@@ -502,14 +508,10 @@ export default function Settings() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (preferences.openaiApiKey) {
-                      testVoice();
-                    } else {
-                      showError("Please enter your OpenAI API key first in the General tab");
-                    }
+                    testVoice();
                   }}
                   className={`font-semibold px-6 py-3 shadow-lg transition-all ${
-                    preferences.openaiApiKey
+                    hasOpenAIKey
                       ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-500 cursor-pointer'
                       : 'bg-slate-700 text-slate-400 hover:bg-slate-600 cursor-pointer'
                   }`}
