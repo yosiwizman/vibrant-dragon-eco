@@ -36,6 +36,8 @@ export async function synthesizeSpeech(
   apiKey: string,
   voice: OpenAIVoice = "nova"
 ): Promise<Blob> {
+  console.log(`[OpenAI TTS] Synthesizing speech with voice: ${voice}`);
+  
   const response = await fetch(`${OPENAI_API_BASE}/audio/speech`, {
     method: "POST",
     headers: {
@@ -43,19 +45,24 @@ export async function synthesizeSpeech(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "tts-1",
+      model: "tts-1-hd", // Use HD model for better quality
       input: text,
       voice: voice,
       response_format: "mp3",
+      speed: 1.0,
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(`[OpenAI TTS] Synthesis failed:`, error);
     throw new Error(`Speech synthesis failed: ${error}`);
   }
 
-  return response.blob();
+  const blob = await response.blob();
+  console.log(`[OpenAI TTS] Successfully synthesized ${blob.size} bytes with ${voice} voice`);
+  
+  return blob;
 }
 
 export async function chatWithOpenAI(
@@ -90,16 +97,34 @@ export function createAudioContext(): AudioContext {
 
 export async function playAudioBlob(blob: Blob): Promise<void> {
   return new Promise((resolve, reject) => {
+    console.log(`[Audio Player] Playing audio blob of size: ${blob.size} bytes`);
+    
     const audio = new Audio();
-    audio.src = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    audio.src = url;
+    
+    audio.onloadedmetadata = () => {
+      console.log(`[Audio Player] Audio loaded, duration: ${audio.duration}s`);
+    };
+    
     audio.onended = () => {
-      URL.revokeObjectURL(audio.src);
+      console.log(`[Audio Player] Playback completed`);
+      URL.revokeObjectURL(url);
       resolve();
     };
-    audio.onerror = () => {
-      URL.revokeObjectURL(audio.src);
+    
+    audio.onerror = (e) => {
+      console.error(`[Audio Player] Playback error:`, e);
+      URL.revokeObjectURL(url);
       reject(new Error("Audio playback failed"));
     };
-    audio.play().catch(reject);
+    
+    audio.play()
+      .then(() => console.log(`[Audio Player] Playback started`))
+      .catch((e) => {
+        console.error(`[Audio Player] Play failed:`, e);
+        URL.revokeObjectURL(url);
+        reject(e);
+      });
   });
 }

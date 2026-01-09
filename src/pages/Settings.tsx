@@ -107,17 +107,31 @@ export default function Settings() {
       showError("Please enter your OpenAI API key first");
       return;
     }
+    
     try {
+      showSuccess("Testing voice... Please wait");
+      
       const name = preferences.assistantName || "Echo";
+      const selectedVoice = preferences.openaiVoice || "nova";
+      
+      // Get voice description for feedback
+      const voiceInfo = OPENAI_VOICES.find(v => v.value === selectedVoice);
+      const voiceDescription = voiceInfo ? voiceInfo.description : selectedVoice;
+      
+      // Force OpenAI TTS synthesis
       const blob = await synthesizeSpeech(
-        `Hello! I'm ${name}, your personal AI assistant. How can I help you today?`,
+        `Hello! I'm ${name}, your personal AI assistant. This is the ${voiceDescription} voice. How can I help you today?`,
         preferences.openaiApiKey,
-        preferences.openaiVoice
+        selectedVoice
       );
+      
+      // Play the audio
       await playAudioBlob(blob);
-      showSuccess("Voice test successful!");
+      
+      showSuccess(`Voice test successful! Playing ${voiceInfo?.label || selectedVoice} voice`);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Voice test failed";
+      console.error("Voice test error:", e);
       showError(errorMessage);
     }
   };
@@ -426,9 +440,11 @@ export default function Settings() {
                   <Label className="text-slate-300">Assistant Voice</Label>
                   <Select
                     value={preferences.openaiVoice}
-                    onValueChange={(value: OpenAIVoice) =>
-                      setPreferences({ ...preferences, openaiVoice: value })
-                    }
+                    onValueChange={(value: OpenAIVoice) => {
+                      setPreferences({ ...preferences, openaiVoice: value });
+                      const voiceInfo = OPENAI_VOICES.find(v => v.value === value);
+                      showSuccess(`Voice changed to ${voiceInfo?.label || value}. Click "Test Voice" to hear it!`);
+                    }}
                   >
                     <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue placeholder="Select a voice" />
@@ -448,6 +464,11 @@ export default function Settings() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-slate-500">
+                    Current voice: <span className="text-fuchsia-400 font-medium">
+                      {OPENAI_VOICES.find(v => v.value === preferences.openaiVoice)?.label || preferences.openaiVoice}
+                    </span>
+                  </p>
                 </div>
 
                 <Button

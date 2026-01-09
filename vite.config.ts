@@ -17,6 +17,13 @@ export default defineConfig(async () => {
     server: {
       host: "::",
       port: 8080,
+      hmr: {
+        overlay: true,
+      },
+      watch: {
+        // Ignore node_modules and specific files that cause infinite reloads
+        ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
+      },
     },
     plugins,
     resolve: {
@@ -33,5 +40,8 @@ export default defineConfig(async () => {
     },
     // Ensure service worker is copied to dist
     publicDir: 'public',
+    optimizeDeps: {
+      exclude: ['lucide-react'],
+    },
   };
 });
