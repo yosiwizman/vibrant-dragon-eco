@@ -470,8 +470,8 @@ export default function Settings() {
                   Configure how {preferences.assistantName || "Echo"} speaks and listens
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-2">
+              <CardContent className="space-y-6 relative">
+                <div className="grid gap-2 relative z-0">
                   <Label className="text-slate-300">Assistant Voice</Label>
                   <Select
                     value={preferences.openaiVoice}
@@ -508,13 +508,19 @@ export default function Settings() {
 
                 <Button
                   type="button"
-                  onClick={testVoice}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("[Test Voice] Button clicked!");
+                    testVoice();
+                  }}
                   disabled={!preferences.openaiApiKey}
-                  className="w-full sm:w-auto bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                  className="w-full sm:w-auto bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all relative z-10 pointer-events-auto cursor-pointer"
                   aria-label="Test voice preview"
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <Volume2 className="mr-2 h-5 w-5" />
-                  <span className="font-semibold">Test Voice</span>
+                  <Volume2 className="mr-2 h-5 w-5 pointer-events-none" />
+                  <span className="font-semibold pointer-events-none">Test Voice</span>
                 </Button>
 
                 <Separator className="bg-slate-700" />
