@@ -131,13 +131,24 @@ Highly customizable architecture with interchangeable components.
 8. Implement fallback mechanisms
 `;
 
+// Track initialization to prevent duplicates
+const initializationCache = new Map<string, Promise<void>>();
+
 /**
  * Initialize RAG knowledge base with built-in knowledge
  */
 export async function initializeRAGKnowledge(userId: string): Promise<void> {
-  try {
-    // Initialize offline knowledge cache
-    await offlineKnowledge.initialize(userId);
+  // Check if already initializing or initialized
+  if (initializationCache.has(userId)) {
+    return initializationCache.get(userId);
+  }
+  
+  const initPromise = (async () => {
+    try {
+      console.log(`[RAG] Initializing knowledge base for user: ${userId}`);
+      
+      // Initialize offline knowledge cache
+      await offlineKnowledge.initialize(userId);
     
     // Check if RAG architectures knowledge already exists
     const { data: existing, error: checkError } = await supabase
@@ -168,9 +179,16 @@ export async function initializeRAGKnowledge(userId: string): Promise<void> {
     // Cache all documents for offline use
     const documents = await listDocuments(userId);
     await offlineKnowledge.cacheDocuments(userId, documents);
+    
+    console.log(`[RAG] Knowledge base initialized successfully`);
   } catch (error) {
     console.error("Failed to initialize RAG knowledge:", error);
+    initializationCache.delete(userId); // Allow retry on error
   }
+  })();
+  
+  initializationCache.set(userId, initPromise);
+  return initPromise;
 }
 
 /**

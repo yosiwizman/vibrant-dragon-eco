@@ -572,13 +572,28 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         silenceStartRef.current = null;
       }
       
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
+      // Force WebM format for OpenAI Whisper compatibility
+      let mimeType = "audio/webm";
+      
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+      } else if (MediaRecorder.isTypeSupported("audio/mpeg")) {
+        mimeType = "audio/mpeg";
+      } else {
+        console.warn("[Voice] No supported audio format found, using default");
+        mimeType = "audio/webm"; // Fallback
+      }
+      
+      console.log(`[Voice] Using audio format: ${mimeType}`);
 
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000 // 128kbps for good quality
+      });
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
