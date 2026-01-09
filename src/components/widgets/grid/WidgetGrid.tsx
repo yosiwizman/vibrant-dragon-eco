@@ -530,6 +530,8 @@ export default function WidgetGrid() {
             size="sm"
             variant={isEditMode ? "default" : "outline"}
             onClick={() => setIsEditMode(!isEditMode)}
+            aria-label={isEditMode ? "Finish editing widgets" : "Edit widget layout"}
+            aria-pressed={isEditMode}
             className={isEditMode ? "bg-fuchsia-600 hover:bg-fuchsia-500" : "border-slate-600 text-slate-300"}
           >
             {isEditMode ? (
