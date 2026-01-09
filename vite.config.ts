@@ -19,7 +19,10 @@ export default defineConfig(async () => {
       port: 8080,
       hmr: {
         overlay: true,
-        clientPort: 8080,
+        protocol: 'ws',
+        host: 'localhost',
+        port: 8080,
+        timeout: 30000,
       },
       watch: {
         // Ignore node_modules and specific files that cause infinite reloads
