@@ -22,6 +22,32 @@ export interface VoiceWidgetResult {
 }
 
 /**
+ * Get widget aliases for voice recognition
+ */
+function getWidgetAliases(type: string): string[] {
+  const aliases: Record<string, string[]> = {
+    time: ["clock", "time widget"],
+    weather: ["weather widget", "forecast"],
+    tasks: ["task widget", "to do", "todo", "task list"],
+    reminders: ["reminder widget", "reminder list", "alerts"],
+    notes: ["note widget", "note pad", "notepad"],
+    calendar: ["calendar widget", "schedule", "events"],
+    upcoming: ["coming up", "upcoming widget", "what's next"],
+    contacts: ["contact widget", "contact list", "address book"],
+    messages: ["message widget", "inbox", "messages"],
+    location: ["map widget", "map", "location"],
+    productivity: ["productivity widget", "stats", "productivity stats"],
+    "ai-usage": ["ai usage", "ai widget", "ai stats"],
+    "quick-actions": ["quick actions", "shortcuts"],
+    "recent-activity": ["recent activity", "activity widget", "recent"],
+    stocks: ["stock widget", "stock market", "stocks", "stock prices"],
+    news: ["news widget", "news feed", "headlines"],
+  };
+
+  return aliases[type] || [];
+}
+
+/**
  * Parse voice command for widget operations
  */
 export function parseWidgetVoiceCommand(text: string): VoiceWidgetCommand | null {
@@ -76,55 +102,6 @@ export function parseWidgetVoiceCommand(text: string): VoiceWidgetCommand | null
   }
 
   return null;
-}
-
-/**
- * Get widget aliases for voice recognition
- */
-function getWidgetAliases(type: string): string[] {
-  const aliases: Record<string, string[]> = {
-    time: ["clock", "time widget"],
-    weather: ["weather widget", "forecast"],
-    tasks: ["task widget", "to do", "todo", "task list"],
-    reminders: ["reminder widget", "reminder list", "alerts"],
-    notes: ["note widget", "note pad", "notepad"],
-    calendar: ["calendar widget", "schedule", "events"],
-    upcoming: ["coming up", "upcoming widget", "what's next"],
-    contacts: ["contact widget", "contact list", "address book"],
-    messages: ["message widget", "inbox", "messages"],
-    location: ["map widget", "map", "location"],
-    productivity: ["productivity widget", "stats", "productivity stats"],
-    "ai-usage": ["ai usage", "ai widget", "ai stats"],
-    "quick-actions": ["quick actions", "shortcuts"],
-    "recent-activity": ["recent activity", "activity widget", "recent"],
-    stocks: ["stock widget", "stock market", "stocks", "stock prices"],
-    news: ["news widget", "news feed", "headlines"],
-  };
-
-  return aliases[type] || [];
-}
-
-/**
- * Execute voice widget command
- */
-export function executeVoiceWidgetCommand(
-  command: VoiceWidgetCommand,
-  currentWidgets: Widget[]
-): VoiceWidgetResult {
-  switch (command.action) {
-    case "add":
-      return handleAddWidget(command, currentWidgets);
-    case "remove":
-      return handleRemoveWidget(command, currentWidgets);
-    case "list":
-      return handleListWidgets(currentWidgets);
-    default:
-      return {
-        success: false,
-        message: "Unknown widget command",
-        voiceResponse: "I didn't understand that widget command.",
-      };
-  }
 }
 
 /**
@@ -248,6 +225,29 @@ function handleListWidgets(currentWidgets: Widget[]): VoiceWidgetResult {
     message: `${count} widgets found`,
     voiceResponse,
   };
+}
+
+/**
+ * Execute voice widget command
+ */
+export function executeVoiceWidgetCommand(
+  command: VoiceWidgetCommand,
+  currentWidgets: Widget[]
+): VoiceWidgetResult {
+  switch (command.action) {
+    case "add":
+      return handleAddWidget(command, currentWidgets);
+    case "remove":
+      return handleRemoveWidget(command, currentWidgets);
+    case "list":
+      return handleListWidgets(currentWidgets);
+    default:
+      return {
+        success: false,
+        message: "Unknown widget command",
+        voiceResponse: "I didn't understand that widget command.",
+      };
+  }
 }
 
 /**
