@@ -278,6 +278,318 @@ export function isWidgetCommand(text: string): boolean {
     lower.includes(config.name.toLowerCase())
   );
   
-  return (hasWidgetKeyword && hasActionKeyword) || 
+  return (hasWidgetKeyword && hasActionKeyword) ||
          (hasActionKeyword && hasWidgetName);
+}
+
+/**
+ * Execute add widget command (for orchestrator)
+ */
+export function executeAddWidget(widgetType: string): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  let resolvedType = widgetType;
+  let config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    // Try to find by name
+    const entry = Object.entries(WIDGET_CONFIGS).find(
+      ([, cfg]) => cfg.name.toLowerCase() === widgetType.toLowerCase()
+    );
+    
+    if (!entry) {
+      return {
+        tool: "add_widget",
+        success: false,
+        error: `Unknown widget type: ${widgetType}. Available widgets: ${Object.values(WIDGET_CONFIGS).map(c => c.name).join(", ")}`,
+      };
+    }
+    
+    resolvedType = entry[0];
+    config = entry[1];
+  }
+
+  // Trigger add widget via global function
+  if ((window as any).addWidgetToDashboard) {
+    (window as any).addWidgetToDashboard(resolvedType, config.defaultSize);
+    
+    return {
+      tool: "add_widget",
+      success: true,
+      data: {
+        widgetType: resolvedType,
+        voiceText: `Added ${config.name} widget to your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "add_widget",
+    success: false,
+    error: "Widget system not available. Please navigate to the dashboard first.",
+  };
+}
+
+/**
+ * Execute remove widget command (for orchestrator)
+ */
+export function executeRemoveWidget(widgetType: string): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  let resolvedType = widgetType;
+  let config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    // Try to find by name
+    const entry = Object.entries(WIDGET_CONFIGS).find(
+      ([, cfg]) => cfg.name.toLowerCase() === widgetType.toLowerCase()
+    );
+    
+    if (!entry) {
+      return {
+        tool: "remove_widget",
+        success: false,
+        error: `Unknown widget type: ${widgetType}`,
+      };
+    }
+    
+    resolvedType = entry[0];
+    config = entry[1];
+  }
+
+  // Get current widgets to find the one to remove
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+  const widget = currentWidgets.find((w: Widget) => w.type === resolvedType);
+
+  if (!widget) {
+    return {
+      tool: "remove_widget",
+      success: false,
+      error: `You don't have a ${config.name} widget on your dashboard.`,
+    };
+  }
+
+  // Trigger remove widget via global function
+  if ((window as any).removeWidgetFromDashboard) {
+    (window as any).removeWidgetFromDashboard(widget.id);
+    
+    return {
+      tool: "remove_widget",
+      success: true,
+      data: {
+        widgetType: resolvedType,
+        voiceText: `Removed ${config.name} widget from your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "remove_widget",
+    success: false,
+    error: "Widget system not available. Please navigate to the dashboard first.",
+  };
+}
+
+/**
+ * Execute list widgets command (for orchestrator)
+ */
+export function executeListWidgets(): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+
+  if (currentWidgets.length === 0) {
+    return {
+      tool: "list_widgets",
+      success: true,
+      data: {
+        widgets: [],
+        voiceText: "You don't have any widgets on your dashboard yet. Would you like to add some?",
+      },
+    };
+  }
+
+  const widgetNames = currentWidgets
+    .map((w: Widget) => WIDGET_CONFIGS[w.type]?.name || w.type)
+    .join(", ");
+
+  const count = currentWidgets.length;
+
+  return {
+    tool: "list_widgets",
+    success: true,
+    data: {
+      widgets: currentWidgets.map((w: Widget) => ({
+        id: w.id,
+        type: w.type,
+        name: WIDGET_CONFIGS[w.type]?.name || w.type,
+      })),
+      voiceText: `You have ${count} widget${count !== 1 ? "s" : ""} on your dashboard: ${widgetNames}.`,
+    },
+  };
+}
+
+/**
+ * Execute add widget command (for orchestrator)
+ */
+export function executeAddWidget(widgetType: string): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  const config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    // Try to find by name
+    const entry = Object.entries(WIDGET_CONFIGS).find(
+      ([, cfg]) => cfg.name.toLowerCase() === widgetType.toLowerCase()
+    );
+    
+    if (!entry) {
+      return {
+        tool: "add_widget",
+        success: false,
+        error: `Unknown widget type: ${widgetType}. Available widgets: ${Object.values(WIDGET_CONFIGS).map(c => c.name).join(", ")}`,
+      };
+    }
+    
+    widgetType = entry[0];
+  }
+
+  const finalConfig = WIDGET_CONFIGS[widgetType];
+
+  // Trigger add widget via global function
+  if ((window as any).addWidgetToDashboard) {
+    (window as any).addWidgetToDashboard(widgetType, finalConfig.defaultSize);
+    
+    return {
+      tool: "add_widget",
+      success: true,
+      data: {
+        widgetType,
+        voiceText: `Added ${finalConfig.name} widget to your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "add_widget",
+    success: false,
+    error: "Widget system not available. Please navigate to the dashboard first.",
+  };
+}
+
+/**
+ * Execute remove widget command (for orchestrator)
+ */
+export function executeRemoveWidget(widgetType: string): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  const config = WIDGET_CONFIGS[widgetType];
+  
+  if (!config) {
+    // Try to find by name
+    const entry = Object.entries(WIDGET_CONFIGS).find(
+      ([, cfg]) => cfg.name.toLowerCase() === widgetType.toLowerCase()
+    );
+    
+    if (!entry) {
+      return {
+        tool: "remove_widget",
+        success: false,
+        error: `Unknown widget type: ${widgetType}`,
+      };
+    }
+    
+    widgetType = entry[0];
+  }
+
+  const finalConfig = WIDGET_CONFIGS[widgetType];
+
+  // Get current widgets to find the one to remove
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+  const widget = currentWidgets.find((w: Widget) => w.type === widgetType);
+
+  if (!widget) {
+    return {
+      tool: "remove_widget",
+      success: false,
+      error: `You don't have a ${finalConfig.name} widget on your dashboard.`,
+    };
+  }
+
+  // Trigger remove widget via global function
+  if ((window as any).removeWidgetFromDashboard) {
+    (window as any).removeWidgetFromDashboard(widget.id);
+    
+    return {
+      tool: "remove_widget",
+      success: true,
+      data: {
+        widgetType,
+        voiceText: `Removed ${finalConfig.name} widget from your dashboard.`,
+      },
+    };
+  }
+
+  return {
+    tool: "remove_widget",
+    success: false,
+    error: "Widget system not available. Please navigate to the dashboard first.",
+  };
+}
+
+/**
+ * Execute list widgets command (for orchestrator)
+ */
+export function executeListWidgets(): {
+  tool: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+} {
+  const currentWidgets = (window as any).getCurrentWidgets?.() || [];
+
+  if (currentWidgets.length === 0) {
+    return {
+      tool: "list_widgets",
+      success: true,
+      data: {
+        widgets: [],
+        voiceText: "You don't have any widgets on your dashboard yet. Would you like to add some?",
+      },
+    };
+  }
+
+  const widgetNames = currentWidgets
+    .map((w: Widget) => WIDGET_CONFIGS[w.type]?.name || w.type)
+    .join(", ");
+
+  const count = currentWidgets.length;
+
+  return {
+    tool: "list_widgets",
+    success: true,
+    data: {
+      widgets: currentWidgets.map((w: Widget) => ({
+        id: w.id,
+        type: w.type,
+        name: WIDGET_CONFIGS[w.type]?.name || w.type,
+      })),
+      voiceText: `You have ${count} widget${count !== 1 ? "s" : ""} on your dashboard: ${widgetNames}.`,
+    },
+  };
 }
