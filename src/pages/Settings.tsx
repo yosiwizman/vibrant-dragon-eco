@@ -481,10 +481,10 @@ export default function Settings() {
                       showSuccess(`Voice changed to ${voiceInfo?.label || value}. Click "Test Voice" to hear it!`);
                     }}
                   >
-                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white relative z-0">
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue placeholder="Select a voice" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 relative z-50">
+                    <SelectContent className="bg-slate-900 border-slate-700">
                       {OPENAI_VOICES.map((voice) => (
                         <SelectItem
                           key={voice.value}
@@ -506,24 +506,14 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="relative z-50 w-full sm:w-auto">
-                  <Button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log("[Test Voice] Button clicked!");
-                      testVoice();
-                    }}
-                    disabled={!preferences.openaiApiKey}
-                    className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all pointer-events-auto cursor-pointer"
-                    aria-label="Test voice preview"
-                    style={{ pointerEvents: 'auto', position: 'relative', zIndex: 100 }}
-                  >
-                    <Volume2 className="mr-2 h-5 w-5 pointer-events-none" />
-                    <span className="font-semibold pointer-events-none">Test Voice</span>
-                  </Button>
-                </div>
+                <Button
+                  onClick={testVoice}
+                  className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                  disabled={!preferences.openaiApiKey}
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  Test Voice
+                </Button>
 
                 <Separator className="bg-slate-700" />
 
