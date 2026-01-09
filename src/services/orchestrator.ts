@@ -501,31 +501,6 @@ export const AVAILABLE_TOOLS = [
     parameters: { activity: "string", day_of_week: "number (0-6, Sunday-Saturday)", time: "HH:mm format", lead_time_minutes: "number (default: 30)" },
     category: "scheduling",
   },
-  // Quiet/Listening Mode Tools
-  {
-    name: "start_listening_mode",
-    description: "Enter quiet/listening mode where the assistant only listens and records without interrupting. Use when user says 'go quiet', 'listening mode', 'just listen', 'meeting mode', etc.",
-    parameters: { context: "string (optional, e.g., 'team meeting', 'doctor appointment')" },
-    category: "listening",
-  },
-  {
-    name: "end_listening_mode",
-    description: "Exit quiet mode and get a summary of the recorded conversation. Use when user says 'summarize', 'what did you hear', 'end listening mode', etc.",
-    parameters: {},
-    category: "listening",
-  },
-  {
-    name: "get_listening_status",
-    description: "Check if listening mode is active and get current session info",
-    parameters: {},
-    category: "listening",
-  },
-  {
-    name: "get_listening_sessions",
-    description: "Get past listening sessions with their summaries",
-    parameters: { limit: "number (default: 10)" },
-    category: "listening",
-  },
   // Settings Control Tools
   {
     name: "change_voice",
@@ -604,6 +579,31 @@ export const AVAILABLE_TOOLS = [
       layout: "string (e.g. 'productivity', 'finance', 'morning', 'default')"
     },
     category: "widgets"
+  },
+  // Quiet/Listening Mode Tools
+  {
+    name: "start_listening_mode",
+    description: "Enter quiet/listening mode where the assistant only listens and records without interrupting. Use when user says 'go quiet', 'listening mode', 'just listen', 'meeting mode', etc.",
+    parameters: { context: "string (optional, e.g., 'team meeting', 'doctor appointment')" },
+    category: "listening",
+  },
+  {
+    name: "end_listening_mode",
+    description: "Exit quiet mode and get a summary of the recorded conversation. Use when user says 'summarize', 'what did you hear', 'end listening mode', etc.",
+    parameters: {},
+    category: "listening",
+  },
+  {
+    name: "get_listening_status",
+    description: "Check if listening mode is active and get current session info",
+    parameters: {},
+    category: "listening",
+  },
+  {
+    name: "get_listening_sessions",
+    description: "Get past listening sessions with their summaries",
+    parameters: { limit: "number (default: 10)" },
+    category: "listening",
   },
 ];
 
@@ -2798,194 +2798,6 @@ export async function executeGetUpcomingReminders(
       success: false,
       error: error.message,
     };
-  }
-}
-
-// Appointment management functions
-export async function executeCreateAppointment(
-  userId: string,
-  startTime: string,
-  contactName?: string,
-  contactPhone?: string,
-  endTime?: string,
-  notes?: string
-): Promise<ActionResult> {
-  try {
-    const { data, error } = await supabase.from("appointments").insert({
-      user_id: userId,
-      contact_name: contactName || null,
-      contact_phone: contactPhone || null,
-      start_time: startTime,
-      end_time: endTime || null,
-      notes: notes || null,
-      status: "scheduled",
-      source: "voice",
-    }).select().single();
-
-    if (error) throw error;
-
-    const appointmentDate = new Date(startTime).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-    const appointmentTime = new Date(startTime).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-
-    return {
-      tool: "create_appointment",
-      success: true,
-      data: {
-        appointment: data,
-        voiceText: `Appointment scheduled for ${appointmentDate} at ${appointmentTime}${contactName ? ` with ${contactName}` : ""}.`,
-      },
-    };
-  } catch (error: any) {
-    return { tool: "create_appointment", success: false, error: error.message };
-  }
-}
-
-export async function executeGetAppointments(
-  userId: string,
-  days: number = 7
-): Promise<ActionResult> {
-  try {
-    const now = new Date();
-    const future = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("*")
-      .eq("user_id", userId)
-      .gte("start_time", now.toISOString())
-      .lte("start_time", future.toISOString())
-      .neq("status", "cancelled")
-      .order("start_time", { ascending: true });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      return {
-        tool: "get_appointments",
-        success: true,
-        data: {
-          appointments: [],
-          voiceText: `You have no appointments scheduled in the next ${days} days.`,
-        },
-      };
-    }
-
-    const voiceText = `You have ${data.length} appointment${data.length > 1 ? 's' : ''} coming up. ${data.slice(0, 3).map((a, i) => {
-      const date = new Date(a.start_time);
-      const dateStr = date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-      const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-      return `${i + 1}. ${dateStr} at ${timeStr}${a.contact_name ? ` with ${a.contact_name}` : ""}`;
-    }).join(". ")}`;
-
-    return {
-      tool: "get_appointments",
-      success: true,
-      data: { appointments: data, voiceText },
-    };
-  } catch (error: any) {
-    return { tool: "get_appointments", success: false, error: error.message };
-  }
-}
-
-export async function executeCancelAppointment(
-  userId: string,
-  appointmentId?: string,
-  contactName?: string
-): Promise<ActionResult> {
-  try {
-    let query = supabase.from("appointments").select("*").eq("user_id", userId).neq("status", "cancelled");
-
-    if (appointmentId) {
-      query = query.eq("id", appointmentId);
-    } else if (contactName) {
-      query = query.ilike("contact_name", `%${contactName}%`);
-    } else {
-      return { tool: "cancel_appointment", success: false, error: "Either appointment_id or contact_name is required" };
-    }
-
-    const { data: appointment, error: fetchError } = await query.single();
-    if (fetchError || !appointment) {
-      return { tool: "cancel_appointment", success: false, error: "Appointment not found" };
-    }
-
-    const { data, error } = await supabase
-      .from("appointments")
-      .update({ status: "cancelled" })
-      .eq("id", appointment.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      tool: "cancel_appointment",
-      success: true,
-      data: {
-        appointment: data,
-        voiceText: `Appointment${data.contact_name ? ` with ${data.contact_name}` : ""} has been cancelled.`,
-      },
-    };
-  } catch (error: any) {
-    return { tool: "cancel_appointment", success: false, error: error.message };
-  }
-}
-
-export async function executeRescheduleAppointment(
-  userId: string,
-  newStartTime: string,
-  appointmentId?: string,
-  contactName?: string,
-  newEndTime?: string
-): Promise<ActionResult> {
-  try {
-    let query = supabase.from("appointments").select("*").eq("user_id", userId).neq("status", "cancelled");
-
-    if (appointmentId) {
-      query = query.eq("id", appointmentId);
-    } else if (contactName) {
-      query = query.ilike("contact_name", `%${contactName}%`);
-    } else {
-      return { tool: "reschedule_appointment", success: false, error: "Either appointment_id or contact_name is required" };
-    }
-
-    const { data: appointment, error: fetchError } = await query.single();
-    if (fetchError || !appointment) {
-      return { tool: "reschedule_appointment", success: false, error: "Appointment not found" };
-    }
-
-    const updates: any = { start_time: newStartTime };
-    if (newEndTime) updates.end_time = newEndTime;
-
-    const { data, error } = await supabase
-      .from("appointments")
-      .update(updates)
-      .eq("id", appointment.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const newDate = new Date(newStartTime);
-    const dateStr = newDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-    const timeStr = newDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-
-    return {
-      tool: "reschedule_appointment",
-      success: true,
-      data: {
-        appointment: data,
-        voiceText: `Appointment${data.contact_name ? ` with ${data.contact_name}` : ""} rescheduled to ${dateStr} at ${timeStr}.`,
-      },
-    };
-  } catch (error: any) {
-    return { tool: "reschedule_appointment", success: false, error: error.message };
   }
 }
 
