@@ -149,9 +149,21 @@ export default function OnboardingTour() {
   const step = TOUR_STEPS[currentStep];
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        handleSkip();
+      }
+      setIsOpen(open);
+    }}>
+      <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[90vh] overflow-hidden flex flex-col" aria-describedby="onboarding-description">
         <DialogHeader>
+          <button
+            onClick={handleSkip}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4 text-slate-400 hover:text-white" />
+            <span className="sr-only">Close</span>
+          </button>
           <div className="flex items-center gap-2">
             {TOUR_STEPS.map((_, index) => (
               <div
@@ -176,7 +188,7 @@ export default function OnboardingTour() {
           <DialogTitle className="text-xl text-white mb-2">
             {step.title}
           </DialogTitle>
-          <p className="text-slate-400 mb-6">{step.description}</p>
+          <p id="onboarding-description" className="text-slate-400 mb-6">{step.description}</p>
 
           <div className="space-y-2 text-left">
             {step.tips.map((tip, index) => (
@@ -196,16 +208,25 @@ export default function OnboardingTour() {
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between">
-          <Button
-            variant="ghost"
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+        <DialogFooter className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSkip}
+              className="text-slate-500 hover:text-slate-300"
+            >
+              Skip Tour
+            </Button>
+          </div>
           <Button
             onClick={handleNext}
             className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white"
