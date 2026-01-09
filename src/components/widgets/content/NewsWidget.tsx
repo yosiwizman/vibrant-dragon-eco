@@ -5,21 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, RefreshCw, Newspaper } from "lucide-react";
+import { ExternalLink, RefreshCw, Newspaper, Loader2 } from "lucide-react";
 
 export default function NewsWidget() {
   const [url, setUrl] = useState('https://news.google.com/topstories');
   const [inputUrl, setInputUrl] = useState(url);
   const [isEditing, setIsEditing] = useState(false);
   const [key, setKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleUrlChange = () => {
     setUrl(inputUrl);
     setIsEditing(false);
+    setIsLoading(true);
     setKey((prev) => prev + 1);
   };
 
   const handleRefresh = () => {
+    setIsLoading(true);
     setKey((prev) => prev + 1);
   };
 
@@ -103,6 +106,11 @@ export default function NewsWidget() {
         )}
 
         <div className="flex-1 relative bg-slate-900 rounded-lg overflow-hidden min-h-0">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+              <Loader2 className="h-6 w-6 animate-spin text-fuchsia-400" />
+            </div>
+          )}
           <iframe
             key={key}
             src={url}
@@ -110,8 +118,10 @@ export default function NewsWidget() {
             title="News Feed"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             loading="lazy"
+            onLoad={() => setIsLoading(false)}
             onError={() => {
               console.error('Failed to load iframe:', url);
+              setIsLoading(false);
             }}
           />
         </div>

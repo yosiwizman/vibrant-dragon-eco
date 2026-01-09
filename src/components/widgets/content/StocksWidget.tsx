@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, RefreshCw, DollarSign } from "lucide-react";
+import WidgetSkeleton from "../WidgetSkeleton";
 
 interface Stock {
   symbol: string;
@@ -66,19 +67,7 @@ export default function StocksWidget() {
   }, []);
 
   if (loading && stocks.length === 0) {
-    return (
-      <Card className="border-slate-700 bg-slate-800/50 backdrop-blur h-full w-full overflow-hidden flex flex-col">
-        <CardHeader className="p-3 pb-2 shrink-0">
-          <CardTitle className="text-sm text-white flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-green-400" />
-            Stocks
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 flex-1 min-h-0 flex items-center justify-center">
-          <RefreshCw className="h-6 w-6 animate-spin text-fuchsia-400" />
-        </CardContent>
-      </Card>
-    );
+    return <WidgetSkeleton />;
   }
 
   return (

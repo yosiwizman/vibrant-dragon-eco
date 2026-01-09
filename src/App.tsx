@@ -14,37 +14,53 @@ import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
 import QuickAddModal, { useQuickAdd } from "@/components/QuickAddModal";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { lazy, Suspense } from "react";
 import NavBar from "@/components/NavBar";
-import Chat from "./pages/Chat";
-import VoiceChat from "./pages/VoiceChat";
-import Settings from "./pages/Settings";
-import Tools from "./pages/Tools";
-import History from "./pages/History";
-import Debug from "./pages/Debug";
-import Knowledge from "./pages/Knowledge";
-import KnowledgeBase from "./pages/KnowledgeBase";
+import { Loader2 } from "lucide-react";
+
+// Eager load critical pages
+import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import Integrations from "./pages/Integrations";
-import Tasks from "./pages/Tasks";
-import Reminders from "./pages/Reminders";
-import Notes from "./pages/Notes";
-import Calendar from "./pages/Calendar";
-import Notifications from "./pages/Notifications";
-import Contacts from "./pages/Contacts";
-import Messages from "./pages/Messages";
-import Appointments from "./pages/Appointments";
-import AILogs from "./pages/AILogs";
-import Drafts from "./pages/Drafts";
-import BookingTasks from "./pages/BookingTasks";
-import Documents from "./pages/Documents";
-import ListeningSessions from "./pages/ListeningSessions";
-import DataManagement from "./pages/DataManagement";
-import Analytics from "./pages/Analytics";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
+
+// Lazy load all other pages
+const Chat = lazy(() => import("./pages/Chat"));
+const VoiceChat = lazy(() => import("./pages/VoiceChat"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Tools = lazy(() => import("./pages/Tools"));
+const History = lazy(() => import("./pages/History"));
+const Debug = lazy(() => import("./pages/Debug"));
+const Knowledge = lazy(() => import("./pages/Knowledge"));
+const KnowledgeBase = lazy(() => import("./pages/KnowledgeBase"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Integrations = lazy(() => import("./pages/Integrations"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Reminders = lazy(() => import("./pages/Reminders"));
+const Notes = lazy(() => import("./pages/Notes"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const AILogs = lazy(() => import("./pages/AILogs"));
+const Drafts = lazy(() => import("./pages/Drafts"));
+const BookingTasks = lazy(() => import("./pages/BookingTasks"));
+const Documents = lazy(() => import("./pages/Documents"));
+const ListeningSessions = lazy(() => import("./pages/ListeningSessions"));
+const DataManagement = lazy(() => import("./pages/DataManagement"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center">
+    <div className="text-center">
+      <Loader2 className="h-8 w-8 text-fuchsia-400 animate-spin mx-auto mb-3" />
+      <p className="text-sm text-slate-400">Loading...</p>
+    </div>
+  </div>
+);
 import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
@@ -102,24 +118,25 @@ const App = () => (
             <KeyboardShortcutsHelp />
             <OnboardingTour />
             <QuickAddWrapper />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/voice"
-                element={
-                  <ProtectedRoute>
-                    <VoiceChat />
-                  </ProtectedRoute>
-                }
-              />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Index />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/voice"
+                  element={
+                    <ProtectedRoute>
+                      <VoiceChat />
+                    </ProtectedRoute>
+                  }
+                />
               <Route
                 path="/chat"
                 element={
@@ -316,6 +333,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
             <MicButton />
             <FloatingVoiceWidget />
             <ListeningModeIndicator />
