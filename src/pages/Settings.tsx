@@ -34,7 +34,6 @@ import {
   Trash2, Database, History, Sparkles, AlertCircle, ExternalLink,
   CalendarClock, EarOff, CheckCircle2
 } from "lucide-react";
-import { webLLM } from "@/services/web-llm";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ai: Brain,
