@@ -7,6 +7,7 @@ import { useVoice } from "@/contexts/VoiceContext";
 import UserMenu from "./UserMenu";
 import LiveVoiceIndicator from "./LiveVoiceIndicator";
 import OfflineModeToggle from "./OfflineModeToggle";
+import OfflineIndicator from "./OfflineIndicator";
 import {
   Home,
   MessageSquare,
@@ -88,6 +89,9 @@ export default function NavBar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {/* Offline Indicator */}
+          <OfflineIndicator />
+
           {/* Keyboard Shortcuts Hint */}
           {showShortcutsHint && (
             <div className="hidden md:flex items-center gap-1 text-xs text-slate-400 animate-pulse">
