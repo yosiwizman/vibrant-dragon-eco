@@ -17,6 +17,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isMagicLinkLoading, setIsMagicLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +26,21 @@ export default function Login() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
+
+  // Check if user arrived from password reset link
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    
+    if (type === 'recovery') {
+      console.log('[Password Reset] User arrived from password reset link');
+      setIsPasswordReset(true);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !isPasswordReset) {
       // Check if this is first login
       const hasSeenWelcome = localStorage.getItem("echo:seen-welcome");
       if (!hasSeenWelcome) {
@@ -35,7 +49,7 @@ export default function Login() {
         navigate("/");
       }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isPasswordReset]);
 
   const handleWelcomeComplete = () => {
     localStorage.setItem("echo:seen-welcome", "true");
@@ -66,7 +80,7 @@ export default function Login() {
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: `${window.location.origin}/login`,
       });
 
       if (resetError) {
@@ -78,6 +92,56 @@ export default function Login() {
       showSuccess("Password reset email sent! Check your inbox.");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to send reset email";
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    if (!newPassword || !confirmPassword) {
+      setError("Please enter and confirm your new password");
+      setIsLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      setIsLoading(false);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      showSuccess("Password updated successfully!");
+      setIsPasswordReset(false);
+      
+      // Clear the hash from URL
+      window.history.replaceState(null, '', window.location.pathname);
+      
+      // Navigate to home
+      navigate("/");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update password";
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -221,6 +285,94 @@ export default function Login() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-fuchsia-400 animate-spin" />
+      </div>
+    );
+  }
+
+  // Password Reset View (when user clicks link from email)
+  if (isPasswordReset) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-fuchsia-600/30 flex items-center justify-center ring-2 ring-fuchsia-400/40 mx-auto mb-4">
+                <Mail className="h-6 w-6 text-fuchsia-300" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-white">Reset Your Password</CardTitle>
+              <CardDescription className="text-slate-400">
+                Enter your new password below
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-slate-300">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Enter new password (min 6 characters)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  disabled={isLoading}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-slate-300">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  disabled={isLoading}
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating Password...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Update Password
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setIsPasswordReset(false);
+                  window.history.replaceState(null, '', window.location.pathname);
+                }}
+                className="w-full text-slate-400 hover:text-white"
+              >
+                Cancel
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
