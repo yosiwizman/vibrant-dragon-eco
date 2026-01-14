@@ -583,23 +583,59 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    testVoice();
-                  }}
-                  className={`font-semibold px-6 py-3 shadow-lg transition-all ${
-                    hasOpenAIKey
-                      ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-500 cursor-pointer'
-                      : 'bg-slate-700 text-slate-400 hover:bg-slate-600 cursor-pointer'
-                  }`}
-                  style={{ pointerEvents: 'auto', zIndex: 10 }}
-                >
-                  <Volume2 className="mr-2 h-5 w-5" />
-                  Test Voice
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      
+                      // User interaction required for autoplay
+                      console.log('[Test Voice] Button clicked - user interaction registered');
+                      
+                      await testVoice();
+                    }}
+                    className={`w-full font-semibold px-6 py-3 shadow-lg transition-all ${
+                      hasOpenAIKey
+                        ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-500 cursor-pointer'
+                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600 cursor-pointer'
+                    }`}
+                    style={{ pointerEvents: 'auto', zIndex: 10 }}
+                  >
+                    <Volume2 className="mr-2 h-5 w-5" />
+                    Test Voice
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      // Simple beep test to verify audio works
+                      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                      const oscillator = audioContext.createOscillator();
+                      const gainNode = audioContext.createGain();
+                      
+                      oscillator.connect(gainNode);
+                      gainNode.connect(audioContext.destination);
+                      
+                      oscillator.frequency.value = 440; // A4 note
+                      gainNode.gain.value = 0.3;
+                      
+                      oscillator.start();
+                      setTimeout(() => {
+                        oscillator.stop();
+                        showSuccess('If you heard a beep, your audio is working!');
+                      }, 200);
+                    }}
+                    className="w-full border-slate-600 text-slate-300 hover:bg-slate-800"
+                  >
+                    🔊 Test Audio (Beep)
+                  </Button>
+                  
+                  <p className="text-xs text-slate-500 text-center">
+                    🔊 Make sure your volume is up and browser tab is not muted
+                  </p>
+                </div>
 
                 <Separator className="bg-slate-700" />
 
