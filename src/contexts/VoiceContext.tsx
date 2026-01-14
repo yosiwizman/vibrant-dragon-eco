@@ -193,7 +193,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         preferences.openaiVoice || "nova"
       );
       
-      console.log("Speech blob received, size:", speechBlob.size);
+      console.log("[Voice] Speech blob received:", {
+        size: speechBlob.size,
+        type: speechBlob.type
+      });
       
       if (speechBlob.size === 0) {
         throw new Error("Empty audio blob received");
@@ -202,13 +205,19 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       const audio = new Audio();
       currentAudioRef.current = audio;
       const audioUrl = URL.createObjectURL(speechBlob);
-      audio.src = audioUrl;
       
-      // Set volume
+      // Set the type explicitly for better browser compatibility
+      audio.src = audioUrl;
       audio.volume = 1.0;
       
+      console.log("[Voice] Audio element created, attempting playback...");
+      
       await new Promise<void>((resolve, reject) => {
+        let resolved = false;
+        
         const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
           URL.revokeObjectURL(audioUrl);
           if (currentAudioRef.current === audio) {
             currentAudioRef.current = null;
@@ -222,41 +231,79 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         };
 
         audio.onended = () => {
-          console.log("Audio playback ended");
+          console.log("[Voice] Audio playback ended successfully");
           cleanup();
           resolve();
         };
         
         audio.onerror = (e) => {
-          console.error("Audio playback error:", e);
+          console.error("[Voice] Audio playback error:", e);
+          console.error("[Voice] Audio error code:", audio.error?.code);
+          console.error("[Voice] Audio error message:", audio.error?.message);
           cleanup();
-          reject(new Error("Audio playback failed"));
+          reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown error'}`));
         };
 
-        audio.oncanplaythrough = () => {
-          console.log("Audio can play through, starting playback");
-          audio.play().catch((err) => {
-            console.error("Play failed:", err);
-            cleanup();
-            reject(err);
-          });
+        audio.onloadeddata = () => {
+          console.log("[Voice] Audio data loaded, duration:", audio.duration);
         };
 
-        // Fallback if oncanplaythrough doesn't fire
-        setTimeout(() => {
-          if (audio.readyState >= 3) {
-            audio.play().catch((err) => {
-              console.error("Fallback play failed:", err);
+        audio.oncanplay = () => {
+          console.log("[Voice] Audio can play, starting playback...");
+          audio.play()
+            .then(() => console.log("[Voice] Playback started successfully"))
+            .catch((err) => {
+              console.error("[Voice] Play failed:", err);
               cleanup();
               reject(err);
             });
+        };
+
+        // Timeout fallback - if nothing happens in 5 seconds, try to play anyway
+        setTimeout(() => {
+          if (!resolved && audio.readyState >= 2) {
+            console.log("[Voice] Timeout fallback - attempting play");
+            audio.play()
+              .then(() => console.log("[Voice] Fallback playback started"))
+              .catch((err) => {
+                console.error("[Voice] Fallback play failed:", err);
+                cleanup();
+                reject(err);
+              });
+          } else if (!resolved) {
+            console.error("[Voice] Audio not ready after timeout, readyState:", audio.readyState);
+            cleanup();
+            reject(new Error("Audio loading timeout"));
           }
-        }, 100);
+        }, 5000);
       });
     } catch (error: any) {
-      console.error("Speech synthesis error:", error);
+      console.error("[Voice] OpenAI TTS error:", error);
       setIsSpeaking(false);
-      // Don't show error toast for every TTS failure, just log it
+      
+      // Fallback to Web Speech API if OpenAI TTS fails
+      const hasOfflineVoice = isOfflineVoiceSupported();
+      if (hasOfflineVoice) {
+        console.log("[Voice] Falling back to Web Speech API...");
+        try {
+          setIsSpeaking(true);
+          await offlineVoice.speak(text, {
+            rate: preferences.voiceSpeed || 1.0,
+          });
+          setIsSpeaking(false);
+          
+          // Auto-continue conversation mode after speaking
+          if (conversationModeRef.current) {
+            setTimeout(() => startListeningInternal(true), 500);
+          }
+        } catch (fallbackError) {
+          console.error("[Voice] Web Speech API fallback also failed:", fallbackError);
+          setIsSpeaking(false);
+          showError("Voice playback failed. Please check your audio settings.");
+        }
+      } else {
+        showError("Voice playback failed. Please try again.");
+      }
     }
   }, [openaiApiKey, preferences.openaiVoice, preferences.voiceSpeed, stopSpeaking]);
 

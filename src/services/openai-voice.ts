@@ -95,6 +95,11 @@ export async function synthesizeSpeech(
   voice: OpenAIVoice = "nova"
 ): Promise<Blob> {
   console.log(`[OpenAI TTS] Synthesizing speech with voice: ${voice}`);
+  console.log(`[OpenAI TTS] Text length: ${text.length} characters`);
+  
+  // Truncate very long text to avoid API issues
+  const maxLength = 4096;
+  const truncatedText = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   
   const response = await fetch(`${OPENAI_API_BASE}/audio/speech`, {
     method: "POST",
@@ -103,8 +108,8 @@ export async function synthesizeSpeech(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "tts-1-hd", // Use HD model for better quality
-      input: text,
+      model: "tts-1", // Use standard model for faster response
+      input: truncatedText,
       voice: voice,
       response_format: "mp3",
       speed: 1.0,
@@ -117,8 +122,17 @@ export async function synthesizeSpeech(
     throw new Error(`Speech synthesis failed: ${error}`);
   }
 
-  const blob = await response.blob();
-  console.log(`[OpenAI TTS] Successfully synthesized ${blob.size} bytes with ${voice} voice`);
+  // Get the raw array buffer first
+  const arrayBuffer = await response.arrayBuffer();
+  console.log(`[OpenAI TTS] Received ${arrayBuffer.byteLength} bytes`);
+  
+  // Create blob with explicit MP3 MIME type
+  const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+  console.log(`[OpenAI TTS] Created blob with type: ${blob.type}, size: ${blob.size} bytes`);
+  
+  if (blob.size === 0) {
+    throw new Error('Empty audio response from TTS API');
+  }
   
   return blob;
 }
