@@ -584,6 +584,14 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-2">
+                  {/* Debug info */}
+                  <div className="p-2 rounded bg-slate-900/50 border border-slate-700">
+                    <p className="text-xs text-slate-400">
+                      Debug: API Key {hasOpenAIKey ? '✅ Detected' : '❌ Missing'}
+                      {openaiApiKey && ` (${openaiApiKey.substring(0, 10)}...)`}
+                    </p>
+                  </div>
+                  
                   <Button
                     type="button"
                     onClick={async (e) => {
@@ -592,6 +600,8 @@ export default function Settings() {
                       
                       // User interaction required for autoplay
                       console.log('[Test Voice] Button clicked - user interaction registered');
+                      console.log('[Test Voice] hasOpenAIKey:', hasOpenAIKey);
+                      console.log('[Test Voice] openaiApiKey exists:', !!openaiApiKey);
                       
                       await testVoice();
                     }}
