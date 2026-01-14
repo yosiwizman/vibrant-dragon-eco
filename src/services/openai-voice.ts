@@ -6,64 +6,6 @@ export interface TranscriptionResult {
   text: string;
 }
 
-export async function convertToWav(audioBlob: Blob): Promise<Blob> {
-  console.log('[Whisper] Converting audio to WAV format');
-  
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  
-  // Create WAV file
-  const numberOfChannels = audioBuffer.numberOfChannels;
-  const length = audioBuffer.length * numberOfChannels * 2;
-  const buffer = new ArrayBuffer(44 + length);
-  const view = new DataView(buffer);
-  
-  // Write WAV header
-  const writeString = (offset: number, string: string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  };
-  
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + length, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numberOfChannels, true);
-  view.setUint32(24, audioBuffer.sampleRate, true);
-  view.setUint32(28, audioBuffer.sampleRate * numberOfChannels * 2, true);
-  view.setUint16(32, numberOfChannels * 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, length, true);
-  
-  // Write audio data
-  const offset = 44;
-  const channelData = [];
-  for (let i = 0; i < numberOfChannels; i++) {
-    channelData.push(audioBuffer.getChannelData(i));
-  }
-  
-  let index = 0;
-  for (let i = 0; i < audioBuffer.length; i++) {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
-      view.setInt16(offset + index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-      index += 2;
-    }
-  }
-  
-  await audioContext.close();
-  
-  const wavBlob = new Blob([buffer], { type: 'audio/wav' });
-  console.log('[Whisper] Converted to WAV, size:', wavBlob.size);
-  
-  return wavBlob;
-}
-
 export async function transcribeAudio(
   audioBlob: Blob,
   apiKey: string
@@ -71,36 +13,48 @@ export async function transcribeAudio(
   console.log('[Whisper] Original blob type:', audioBlob.type);
   console.log('[Whisper] Original blob size:', audioBlob.size);
   
-  // Convert to WAV format for maximum compatibility with OpenAI Whisper
-  let processedBlob = audioBlob;
-  let filename = "audio.wav";
+  // OpenAI Whisper accepts these formats directly without conversion
+  // Let's send the original WebM/Opus which is actually supported
+  let filename = "audio.webm";
+  const mimeType = audioBlob.type.toLowerCase();
   
-  try {
-    // Always convert to WAV for OpenAI Whisper
-    processedBlob = await convertToWav(audioBlob);
-  } catch (conversionError) {
-    console.warn('[Whisper] WAV conversion failed, trying original format:', conversionError);
-    
-    // Fallback: use original blob with appropriate filename
-    const mimeType = audioBlob.type;
-    if (mimeType.includes('mp4')) {
-      filename = "audio.mp4";
-    } else if (mimeType.includes('mpeg') || mimeType.includes('mp3')) {
-      filename = "audio.mp3";
-    } else if (mimeType.includes('ogg')) {
-      filename = "audio.ogg";
-    } else if (mimeType.includes('webm')) {
-      filename = "audio.webm";
-    }
+  // Map MIME types to filenames that OpenAI accepts
+  if (mimeType.includes('webm')) {
+    filename = "audio.webm";
+  } else if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
+    filename = "audio.mp4";
+  } else if (mimeType.includes('mpeg') || mimeType.includes('mp3') || mimeType.includes('mpga')) {
+    filename = "audio.mp3";
+  } else if (mimeType.includes('ogg') || mimeType.includes('oga')) {
+    filename = "audio.ogg";
+  } else if (mimeType.includes('wav')) {
+    filename = "audio.wav";
+  } else if (mimeType.includes('flac')) {
+    filename = "audio.flac";
+  } else {
+    // Default to webm if unknown
+    console.warn('[Whisper] Unknown MIME type, defaulting to webm:', mimeType);
+    filename = "audio.webm";
   }
   
   console.log('[Whisper] Using filename:', filename);
-  console.log('[Whisper] Final blob size:', processedBlob.size);
+  console.log('[Whisper] Sending blob size:', audioBlob.size);
+  
+  // Validate blob size
+  if (audioBlob.size === 0) {
+    throw new Error('Audio recording is empty. Please try speaking again.');
+  }
+  
+  if (audioBlob.size < 1000) {
+    console.warn('[Whisper] Audio blob is very small, might be too short');
+  }
   
   const formData = new FormData();
-  formData.append("file", processedBlob, filename);
+  formData.append("file", audioBlob, filename);
   formData.append("model", "whisper-1");
-  formData.append("language", "en");
+  
+  // Don't force language - let Whisper auto-detect for better accuracy
+  // formData.append("language", "en");
 
   const response = await fetch(`${OPENAI_API_BASE}/audio/transcriptions`, {
     method: "POST",
@@ -111,13 +65,26 @@ export async function transcribeAudio(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('[Whisper] Transcription failed:', error);
-    throw new Error(`Transcription failed: ${error}`);
+    const errorText = await response.text();
+    console.error('[Whisper] Transcription failed:', errorText);
+    
+    let errorMessage = 'Transcription failed';
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorText;
+    } catch {
+      errorMessage = errorText;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const result = await response.json();
   console.log('[Whisper] Transcription successful:', result.text);
+  
+  if (!result.text || result.text.trim().length === 0) {
+    throw new Error('No speech detected. Please speak clearly and try again.');
+  }
   
   return result;
 }

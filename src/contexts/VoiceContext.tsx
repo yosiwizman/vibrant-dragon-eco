@@ -575,32 +575,40 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         silenceStartRef.current = null;
       }
       
-      // Force WebM format for OpenAI Whisper compatibility
+      // Try to use formats that OpenAI Whisper accepts best
+      // Priority: MP4 > WebM > others
       let mimeType = "audio/webm";
+      let recorderOptions: MediaRecorderOptions = {
+        audioBitsPerSecond: 128000 // 128kbps for good quality
+      };
       
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      // Try MP4 first (best compatibility with OpenAI)
+      if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+        recorderOptions.mimeType = mimeType;
+      } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
+        recorderOptions.mimeType = mimeType;
       } else if (MediaRecorder.isTypeSupported("audio/webm")) {
         mimeType = "audio/webm";
-      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        mimeType = "audio/mp4";
+        recorderOptions.mimeType = mimeType;
       } else if (MediaRecorder.isTypeSupported("audio/mpeg")) {
         mimeType = "audio/mpeg";
+        recorderOptions.mimeType = mimeType;
       } else {
-        console.warn("[Voice] No supported audio format found, using default");
-        mimeType = "audio/webm"; // Fallback
+        console.warn("[Voice] No preferred audio format found, using default");
+        // Don't set mimeType, let browser choose
       }
       
       console.log(`[Voice] Using audio format: ${mimeType}`);
+      console.log(`[Voice] Recorder options:`, recorderOptions);
 
-      mediaRecorderRef.current = new MediaRecorder(stream, {
-        mimeType,
-        audioBitsPerSecond: 128000 // 128kbps for good quality
-      });
+      mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
+          console.log(`[Voice] Received audio chunk: ${event.data.size} bytes`);
           chunksRef.current.push(event.data);
         }
       };
@@ -609,12 +617,34 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         if (!isConversation) {
           playFeedback("stop");
         }
+        
+        console.log(`[Voice] Recording stopped. Total chunks: ${chunksRef.current.length}`);
+        const totalSize = chunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0);
+        console.log(`[Voice] Total audio size: ${totalSize} bytes`);
+        
         const blob = new Blob(chunksRef.current, { type: mimeType });
+        console.log(`[Voice] Created blob with type: ${blob.type}, size: ${blob.size}`);
         
         // Clean up stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
+        }
+        
+        // Check minimum audio size (at least 10KB for meaningful audio)
+        if (blob.size < 10000) {
+          console.warn(`[Voice] Audio too short (${blob.size} bytes). Minimum 10KB required.`);
+          setIsProcessing(false);
+          
+          if (!isConversation) {
+            showError("Recording too short. Please speak for at least 1 second.");
+          }
+          
+          // Continue conversation mode
+          if (conversationModeRef.current) {
+            setTimeout(() => startListeningInternal(true), 500);
+          }
+          return;
         }
         
         if (blob.size > 0) {
@@ -807,8 +837,12 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         }
       };
 
-      mediaRecorderRef.current.start(100);
+      // Start recording with larger timeslice for better audio quality
+      // Collect data every 1000ms instead of 100ms
+      mediaRecorderRef.current.start(1000);
       setIsListening(true);
+      
+      console.log(`[Voice] Started recording in ${isConversation ? 'conversation' : 'single'} mode`);
       
       // In conversation mode, use silence detection to auto-stop
       if (isConversation && analyserRef.current) {
