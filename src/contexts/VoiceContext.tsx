@@ -21,16 +21,6 @@ import { trackVoiceCommand, trackError } from "@/services/analytics";
 import { webLLM, isWebLLMSupported } from "@/services/web-llm";
 import { offlineVoice, isOfflineVoiceSupported } from "@/services/offline-voice";
 import { offlineVoiceRecorder, isOfflineVoiceRecorderSupported } from "@/services/offline-voice-recorder";
-import { alwaysOnAssistant } from "@/services/always-on-assistant";
-import { factChecker } from "@/services/real-time-fact-checker";
-import { conversationIndexer } from "@/services/conversation-indexer";
-import { conversationMemory } from "@/services/conversation-memory";
-import { performanceMonitor } from "@/services/performance-monitor";
-import { intentPredictor } from "@/services/intent-predictor";
-import { streamingTTS, processWithStreaming } from "@/services/streaming-tts";
-import { retryAPICall } from "@/utils/retry";
-import { getUserFriendlyError } from "@/utils/error-messages";
-import { responseCache } from "@/services/response-cache";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -66,7 +56,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
+  const { apiKey: openaiApiKey } = useOpenAIKey();
   const { playFeedback } = useVoiceFeedback();
   
   const [isListening, setIsListening] = useState(false);
@@ -88,6 +78,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const silenceStartRef = useRef<number | null>(null);
+  
+  // CRITICAL: Lock to prevent duplicate recording sessions
+  const isStartingRecordingRef = useRef(false);
 
   // Sync ref with state
   useEffect(() => {
@@ -142,7 +135,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   const speak = useCallback(async (text: string) => {
     if (!text || text.trim().length === 0) {
-      console.warn("Empty text provided to speak function");
+      console.warn("[Voice] Empty text provided to speak function");
       return;
     }
 
@@ -165,20 +158,24 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         });
         
         setIsSpeaking(false);
+        
+        // Auto-continue conversation mode after speaking
+        if (conversationModeRef.current && !isStartingRecordingRef.current) {
+          setTimeout(() => startListeningInternal(true), 500);
+        }
         return;
       } catch (error: any) {
-        console.error("Offline speech synthesis error:", error);
-        // Fallthrough to try online if offline fails, unless strictly offline
+        console.error("[Voice] Offline speech synthesis error:", error);
         if (!isOnline) {
-             setIsSpeaking(false);
-             return;
+          setIsSpeaking(false);
+          return;
         }
       }
     }
 
     // Use OpenAI TTS (online mode)
     if (!openaiApiKey) {
-      console.error("OpenAI API key not configured");
+      console.error("[Voice] OpenAI API key not configured");
       showError("OpenAI API key not configured. Go to Settings to add it.");
       return;
     }
@@ -206,7 +203,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       currentAudioRef.current = audio;
       const audioUrl = URL.createObjectURL(speechBlob);
       
-      // Set the type explicitly for better browser compatibility
       audio.src = audioUrl;
       audio.volume = 1.0;
       
@@ -225,7 +221,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           setIsSpeaking(false);
           
           // Auto-continue conversation mode after speaking
-          if (conversationModeRef.current) {
+          if (conversationModeRef.current && !isStartingRecordingRef.current) {
             setTimeout(() => startListeningInternal(true), 500);
           }
         };
@@ -238,14 +234,8 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         
         audio.onerror = (e) => {
           console.error("[Voice] Audio playback error:", e);
-          console.error("[Voice] Audio error code:", audio.error?.code);
-          console.error("[Voice] Audio error message:", audio.error?.message);
           cleanup();
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown error'}`));
-        };
-
-        audio.onloadeddata = () => {
-          console.log("[Voice] Audio data loaded, duration:", audio.duration);
         };
 
         audio.oncanplay = () => {
@@ -259,19 +249,16 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             });
         };
 
-        // Timeout fallback - if nothing happens in 5 seconds, try to play anyway
+        // Timeout fallback
         setTimeout(() => {
           if (!resolved && audio.readyState >= 2) {
-            console.log("[Voice] Timeout fallback - attempting play");
             audio.play()
               .then(() => console.log("[Voice] Fallback playback started"))
               .catch((err) => {
-                console.error("[Voice] Fallback play failed:", err);
                 cleanup();
                 reject(err);
               });
           } else if (!resolved) {
-            console.error("[Voice] Audio not ready after timeout, readyState:", audio.readyState);
             cleanup();
             reject(new Error("Audio loading timeout"));
           }
@@ -282,8 +269,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setIsSpeaking(false);
       
       // Fallback to Web Speech API if OpenAI TTS fails
-      const hasOfflineVoice = isOfflineVoiceSupported();
-      if (hasOfflineVoice) {
+      if (isOfflineVoiceSupported()) {
         console.log("[Voice] Falling back to Web Speech API...");
         try {
           setIsSpeaking(true);
@@ -292,31 +278,28 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           });
           setIsSpeaking(false);
           
-          // Auto-continue conversation mode after speaking
-          if (conversationModeRef.current) {
+          if (conversationModeRef.current && !isStartingRecordingRef.current) {
             setTimeout(() => startListeningInternal(true), 500);
           }
         } catch (fallbackError) {
           console.error("[Voice] Web Speech API fallback also failed:", fallbackError);
           setIsSpeaking(false);
-          showError("Voice playback failed. Please check your audio settings.");
         }
-      } else {
-        showError("Voice playback failed. Please try again.");
       }
     }
   }, [openaiApiKey, preferences.openaiVoice, preferences.voiceSpeed, stopSpeaking]);
 
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
-    if (!user) {
+    // CRITICAL: Check user at the start and use a local reference
+    const currentUser = user;
+    if (!currentUser) {
+      console.error("[Voice] No user found for voice command");
       throw new Error("Please log in to use AI features");
     }
 
     const isOnline = navigator.onLine;
     const hasOpenAI = !!openaiApiKey;
     const hasWebLLM = isWebLLMSupported();
-
-    // Determine which AI to use
     const useLocalAI = !isOnline || !hasOpenAI;
 
     if (!hasOpenAI && !hasWebLLM) {
@@ -324,15 +307,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Check voice rate limit
-    const voiceCheck = voiceRateLimiter.checkLimit(user.id);
+    const voiceCheck = voiceRateLimiter.checkLimit(currentUser.id);
     if (!voiceCheck.allowed) {
       const waitTime = Math.ceil((voiceCheck.resetAt - Date.now()) / 1000);
       throw new Error(`Too many voice commands. Please wait ${waitTime} seconds.`);
     }
 
-    // Only check OpenAI rate limit if using OpenAI
     if (!useLocalAI) {
-      const apiCheck = openAIRateLimiter.checkLimit(user.id, 0.01);
+      const apiCheck = openAIRateLimiter.checkLimit(currentUser.id, 0.01);
       if (!apiCheck.allowed) {
         throw new Error(apiCheck.reason || "API rate limit exceeded");
       }
@@ -349,7 +331,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       if (useLocalAI && hasWebLLM) {
         console.log('[Voice] Using local WebLLM (offline mode)');
         
-        // Initialize WebLLM if needed
         const modelCached = await webLLM.isModelCached();
         if (!modelCached) {
           throw new Error("Offline AI not downloaded. Please download the model in Settings.");
@@ -357,7 +338,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
         await webLLM.initialize();
 
-        // Build simple prompt for local AI
         const systemPrompt = `You are ${preferences.assistantName || "Echo"}, a helpful AI assistant.
 Current time: ${new Date().toLocaleString()}
 Location: ${userLocation?.city || "Unknown"}
@@ -369,18 +349,17 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
           { role: 'user', content: normalizedText },
         ]);
 
-        // Parse tool calls from local AI response
         const toolCalls = parseToolCalls(response);
         
         if (toolCalls.length > 0) {
           for (const toolCall of toolCalls) {
-            await executeTool(user.id, toolCall);
+            await executeTool(currentUser.id, toolCall);
           }
         }
 
         setLastResponse(response);
         setIsProcessing(false);
-        trackVoiceCommand(text, true, user.id);
+        trackVoiceCommand(text, true, currentUser.id);
         
         return response;
       }
@@ -388,16 +367,14 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       // Use OpenAI (online mode)
       console.log('[Voice] Using OpenAI (online mode)');
       
-      // Get memory context if enabled
       let memoryContext = "";
       if (preferences.enableMemory) {
-        memoryContext = await getMemoryContext(user.id);
+        memoryContext = await getMemoryContext(currentUser.id);
       }
 
-      // Get chat history context if enabled
       let chatHistory: { role: "user" | "assistant"; content: string }[] = [];
       if (preferences.enableChatHistory) {
-        chatHistory = await getChatContext(user.id, Math.min(preferences.chatHistoryLimit || 10, 20));
+        chatHistory = await getChatContext(currentUser.id, Math.min(preferences.chatHistoryLimit || 10, 20));
       }
       
       const systemPrompt = buildSystemPrompt(
@@ -410,16 +387,14 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         memoryContext
       );
 
-      // Build messages with chat history
       const messages = [
         { role: "system" as const, content: systemPrompt },
         ...chatHistory.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
         { role: "user" as const, content: normalizedText },
       ];
 
-      // Save user message to chat history
       if (preferences.enableChatHistory && !preferences.privateMode) {
-        saveChatMessage(user.id, "user", normalizedText);
+        saveChatMessage(currentUser.id, "user", normalizedText);
       }
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -443,22 +418,19 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       const data = await response.json();
       let aiResponse = data.choices[0].message.content;
 
-      // Execute tool calls
       const toolCalls = parseToolCalls(aiResponse);
       let toolResults: ActionResult[] = [];
 
       if (toolCalls.length > 0) {
         for (const toolCall of toolCalls) {
-          const result = await executeTool(user.id, toolCall);
+          const result = await executeTool(currentUser.id, toolCall);
           toolResults.push(result);
 
-          // Handle navigation
           if (toolCall.tool === "navigate_to" && result.success && result.data?.path) {
             navigate(result.data.path);
           }
         }
 
-        // Get follow-up response
         if (toolResults.length > 0) {
           const toolResultsText = toolResults.map(r => {
             if (r.data?.voiceText) return r.data.voiceText;
@@ -490,44 +462,64 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         }
       }
 
-      // Clean response
       const cleanResponse = aiResponse
         .replace(/```json[\s\S]*?```/g, '')
         .replace(/```[\s\S]*?```/g, '')
         .replace(/\*\*/g, '')
         .trim();
 
-      // Use voice text if available
       const voiceTextResult = toolResults.find(r => r.data?.voiceText);
       const finalResponse = voiceTextResult?.data?.voiceText || cleanResponse;
 
-      // Save assistant response to chat history
       if (preferences.enableChatHistory && !preferences.privateMode) {
-        saveChatMessage(user.id, "assistant", finalResponse);
+        saveChatMessage(currentUser.id, "assistant", finalResponse);
       }
 
       setLastResponse(finalResponse);
       setIsProcessing(false);
-      
-      // Track successful voice command
-      trackVoiceCommand(text, true, user.id);
+      trackVoiceCommand(text, true, currentUser.id);
       
       return finalResponse;
     } catch (error: any) {
       setIsProcessing(false);
-      console.error("Voice command processing error:", error);
-      
-      // Track failed voice command
-      trackVoiceCommand(text, false, user.id);
-      trackError(error.message, { command: text }, user.id);
-      
+      console.error("[Voice] Voice command processing error:", error);
+      trackVoiceCommand(text, false, user?.id || "unknown");
+      trackError(error.message, { command: text }, user?.id || "unknown");
       throw error;
     }
-  }, [openaiApiKey, user, userLocation, navigate, preferences.enableMemory, preferences.enableChatHistory, preferences.chatHistoryLimit, preferences.privateMode, preferences.assistantName]);
+  }, [openaiApiKey, user, userLocation, navigate, preferences]);
 
   // Internal function to start listening (used by conversation mode)
   const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
-    if (isListening) return;
+    // CRITICAL: Prevent duplicate recording sessions
+    if (isStartingRecordingRef.current) {
+      console.log('[Voice] Already starting recording, ignoring duplicate request');
+      return;
+    }
+    
+    if (isListening) {
+      console.log('[Voice] Already listening, ignoring duplicate start request');
+      return;
+    }
+    
+    // Set lock immediately
+    isStartingRecordingRef.current = true;
+    
+    // Clean up any existing recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[Voice] Stopping existing MediaRecorder');
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.warn('[Voice] Error stopping existing recorder:', e);
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
 
     const isOnline = navigator.onLine;
     const hasOpenAI = !!openaiApiKey;
@@ -543,6 +535,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       
       setIsListening(true);
       setCurrentTranscript("");
+      isStartingRecordingRef.current = false; // Release lock
       
       offlineVoiceRecorder.start({
         onTranscript: (result) => {
@@ -561,22 +554,13 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
             try {
               const response = await processVoiceCommand(finalTranscript);
               await speak(response);
-              
-              if (conversationModeRef.current) {
-                setTimeout(() => startListeningInternal(true), 500);
-              }
             } catch (error: any) {
               playFeedback("error");
               showError(error.message || "Voice processing failed");
               
               if (conversationModeRef.current) {
                 await speak("Sorry, I had trouble with that. Please try again.");
-                setTimeout(() => startListeningInternal(true), 500);
               }
-            }
-          } else {
-            if (conversationModeRef.current) {
-              setTimeout(() => startListeningInternal(true), 500);
             }
           }
         },
@@ -590,8 +574,9 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       return;
     }
 
-    // Use OpenAI Whisper (online mode) - original implementation
+    // Use OpenAI Whisper (online mode)
     if (!openaiApiKey) {
+      isStartingRecordingRef.current = false;
       showError("Please add your OpenAI API key in Settings or enable offline mode");
       return;
     }
@@ -622,40 +607,34 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         silenceStartRef.current = null;
       }
       
-      // Try to use formats that OpenAI Whisper accepts best
-      // Priority: MP4 > WebM > others
+      // CRITICAL: Use WebM format - MP4 from browser is NOT compatible with OpenAI Whisper
       let mimeType = "audio/webm";
       let recorderOptions: MediaRecorderOptions = {
-        audioBitsPerSecond: 128000 // 128kbps for good quality
+        audioBitsPerSecond: 128000
       };
       
-      // Try MP4 first (best compatibility with OpenAI)
-      if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        mimeType = "audio/mp4";
-        recorderOptions.mimeType = mimeType;
-      } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      // WebM with Opus is the best format for OpenAI Whisper
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
         recorderOptions.mimeType = mimeType;
       } else if (MediaRecorder.isTypeSupported("audio/webm")) {
         mimeType = "audio/webm";
         recorderOptions.mimeType = mimeType;
-      } else if (MediaRecorder.isTypeSupported("audio/mpeg")) {
-        mimeType = "audio/mpeg";
+      } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+        mimeType = "audio/ogg;codecs=opus";
         recorderOptions.mimeType = mimeType;
       } else {
-        console.warn("[Voice] No preferred audio format found, using default");
-        // Don't set mimeType, let browser choose
+        console.warn("[Voice] No preferred audio format found, using default WebM");
+        // Don't set mimeType in options, let browser choose
       }
       
       console.log(`[Voice] Using audio format: ${mimeType}`);
-      console.log(`[Voice] Recorder options:`, recorderOptions);
 
       mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log(`[Voice] Received audio chunk: ${event.data.size} bytes`);
           chunksRef.current.push(event.data);
         }
       };
@@ -666,8 +645,6 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         }
         
         console.log(`[Voice] Recording stopped. Total chunks: ${chunksRef.current.length}`);
-        const totalSize = chunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0);
-        console.log(`[Voice] Total audio size: ${totalSize} bytes`);
         
         const blob = new Blob(chunksRef.current, { type: mimeType });
         console.log(`[Voice] Created blob with type: ${blob.type}, size: ${blob.size}`);
@@ -678,17 +655,16 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
           streamRef.current = null;
         }
         
-        // Check minimum audio size (at least 10KB for meaningful audio)
-        if (blob.size < 10000) {
-          console.warn(`[Voice] Audio too short (${blob.size} bytes). Minimum 10KB required.`);
+        // Check minimum audio size
+        if (blob.size < 5000) {
+          console.warn(`[Voice] Audio too short (${blob.size} bytes)`);
           setIsProcessing(false);
           
           if (!isConversation) {
             showError("Recording too short. Please speak for at least 1 second.");
           }
           
-          // Continue conversation mode
-          if (conversationModeRef.current) {
+          if (conversationModeRef.current && !isStartingRecordingRef.current) {
             setTimeout(() => startListeningInternal(true), 500);
           }
           return;
@@ -698,21 +674,8 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
           let transcriptText = "";
           try {
             setIsProcessing(true);
-            console.log("Transcribing audio, blob size:", blob.size);
+            console.log("[Voice] Transcribing audio, blob size:", blob.size);
             
-            const isOnline = navigator.onLine;
-            const hasOpenAI = !!openaiApiKey;
-            const hasOfflineVoice = isOfflineVoiceSupported();
-            
-            // Use offline voice recognition if offline or no API key
-            if ((!isOnline || !hasOpenAI) && hasOfflineVoice) {
-              console.log('[Voice] Using offline STT (Web Speech API)');
-              // Note: Web Speech API works with live audio, not blobs
-              // For now, we'll show a message that offline transcription requires live mode
-              throw new Error("Offline transcription requires using the microphone button. Please try again.");
-            }
-            
-            // Use OpenAI Whisper (online mode)
             if (!openaiApiKey) {
               throw new Error("OpenAI API key required for transcription");
             }
@@ -721,7 +684,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
             const transcription = await transcribeAudio(blob, openaiApiKey);
             transcriptText = transcription.text.trim();
             
-            console.log("Transcription result:", transcriptText);
+            console.log("[Voice] Transcription result:", transcriptText);
             setCurrentTranscript(transcriptText);
             
             if (transcriptText) {
@@ -739,7 +702,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
                 const context = contextMatch ? contextMatch[1] : undefined;
                 enterQuietMode(context);
                 setIsProcessing(false);
-                await speak(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen. Say "${preferences.quietModeExitPhrase || "Echo summarize"}" when you're done.`);
+                await speak(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen.`);
                 return;
               }
 
@@ -750,9 +713,6 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
                   let summaryText = result.summary;
                   if (result.bulletPoints.length > 0) {
                     summaryText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
-                  }
-                  if (result.actionItems.length > 0) {
-                    summaryText += ` Action items: ${result.actionItems.join(". ")}.`;
                   }
                   playFeedback("success");
                   await speak(summaryText);
@@ -766,8 +726,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
               if (isQuietMode && user) {
                 addTranscript(user.id, transcriptText);
                 setIsProcessing(false);
-                // Don't respond, just keep listening
-                if (conversationModeRef.current) {
+                if (conversationModeRef.current && !isStartingRecordingRef.current) {
                   setTimeout(() => startListeningInternal(true), 500);
                 }
                 return;
@@ -777,23 +736,14 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
               if (user && hasActiveFlow(user.id)) {
                 const flowResult = processMultiStepResponse(user.id, transcriptText);
                 if (flowResult.complete && flowResult.collectedData) {
-                  // Flow complete, process the collected data
                   playFeedback("success");
                   const response = await processVoiceCommand(
                     `Create ${flowResult.state?.intent.replace(/_/g, " ")} with: ${JSON.stringify(flowResult.collectedData)}`
                   );
                   await speak(response);
-                  // Continue conversation mode
-                  if (conversationModeRef.current) {
-                    setTimeout(() => startListeningInternal(true), 500);
-                  }
                 } else if (flowResult.nextPrompt) {
                   setIsProcessing(false);
                   await speak(flowResult.nextPrompt);
-                  // Continue conversation mode
-                  if (conversationModeRef.current) {
-                    setTimeout(() => startListeningInternal(true), 500);
-                  }
                 }
                 return;
               }
@@ -805,10 +755,6 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
                   playFeedback("success");
                   setIsProcessing(false);
                   await speak(modResult.message);
-                  // Continue conversation mode
-                  if (conversationModeRef.current) {
-                    setTimeout(() => startListeningInternal(true), 500);
-                  }
                   return;
                 }
               }
@@ -820,10 +766,6 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
                 if (flowStart) {
                   setIsProcessing(false);
                   await speak(flowStart.prompt);
-                  // Continue conversation mode
-                  if (conversationModeRef.current) {
-                    setTimeout(() => startListeningInternal(true), 500);
-                  }
                   return;
                 }
               }
@@ -833,61 +775,50 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
                 cancelFlow(user.id);
                 setIsProcessing(false);
                 await speak("Cancelled. What else can I help with?");
-                // Continue conversation mode
-                if (conversationModeRef.current) {
-                  setTimeout(() => startListeningInternal(true), 500);
-                }
                 return;
               }
 
               const response = await processVoiceCommand(transcriptText);
               playFeedback("success");
               
-              // Log the voice interaction
               if (user) {
                 logVoiceCommand(user.id, transcriptText, response);
               }
               
               await speak(response);
-              
-              // Note: Auto-continue is now handled in speak() cleanup
             } else {
               setIsProcessing(false);
-              // If no speech detected but in conversation mode, keep listening
-              if (conversationModeRef.current) {
+              if (conversationModeRef.current && !isStartingRecordingRef.current) {
                 setTimeout(() => startListeningInternal(true), 500);
               }
             }
           } catch (error: any) {
             playFeedback("error");
             setIsProcessing(false);
-            console.error("Voice processing error:", error);
+            console.error("[Voice] Voice processing error:", error);
             showError(error.message || "Voice processing failed");
             
-            // Log the error
             if (user) {
               logAIError(user.id, error.message || "Voice processing failed", { transcript: transcriptText });
             }
             
-            // Continue conversation mode even after error
             if (conversationModeRef.current) {
               await speak("Sorry, I had trouble with that. Please try again.");
-              setTimeout(() => startListeningInternal(true), 500);
             }
           }
         } else {
           setIsProcessing(false);
-          // If no audio but in conversation mode, keep listening
-          if (conversationModeRef.current) {
+          if (conversationModeRef.current && !isStartingRecordingRef.current) {
             setTimeout(() => startListeningInternal(true), 500);
           }
         }
       };
 
-      // Start recording with larger timeslice for better audio quality
-      // Collect data every 1000ms instead of 100ms
       mediaRecorderRef.current.start(1000);
       setIsListening(true);
+      
+      // Release lock after successful start
+      isStartingRecordingRef.current = false;
       
       console.log(`[Voice] Started recording in ${isConversation ? 'conversation' : 'single'} mode`);
       
@@ -901,87 +832,98 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(dataArray);
           
-          // Calculate average volume
           const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          
-          // Threshold for silence (adjust as needed)
           const silenceThreshold = 10;
-          const silenceDuration = 2000; // 2 seconds of silence to stop
+          const silenceDuration = 2000;
           
           if (average < silenceThreshold) {
             if (silenceStartRef.current === null) {
               silenceStartRef.current = Date.now();
             } else if (Date.now() - silenceStartRef.current > silenceDuration) {
-              // Silence detected for long enough, stop recording
-              console.log("Silence detected, stopping recording");
+              console.log("[Voice] Silence detected, stopping recording");
               if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
                 mediaRecorderRef.current.stop();
               }
               return;
             }
           } else {
-            // Reset silence timer when sound is detected
             silenceStartRef.current = null;
           }
           
-          // Continue checking
           if (conversationModeRef.current) {
             silenceTimeoutRef.current = setTimeout(checkSilence, 100);
           }
         };
         
-        // Start checking after a brief delay to allow user to start speaking
         silenceTimeoutRef.current = setTimeout(checkSilence, 1000);
       }
     } catch (error: any) {
-      console.error("Failed to start recording:", error);
+      console.error("[Voice] Failed to start recording:", error);
+      isStartingRecordingRef.current = false;
       showError(error.message || "Failed to start recording. Please check microphone permissions.");
     }
-  }, [isListening, openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode, preferences.quietModeExitPhrase]);
+  }, [isListening, openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode]);
 
   const startListening = useCallback(async () => {
     await startListeningInternal(false);
   }, [startListeningInternal]);
 
   const stopListening = useCallback(() => {
+    console.log('[Voice] Stopping listening...');
+    
+    isStartingRecordingRef.current = false;
+    
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.warn('[Voice] Error stopping MediaRecorder:', e);
+      }
     }
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      try {
+        audioContextRef.current.close();
+      } catch (e) {
+        console.warn('[Voice] Error closing AudioContext:', e);
+      }
       audioContextRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.warn('[Voice] Error stopping track:', e);
+        }
+      });
       streamRef.current = null;
     }
     analyserRef.current = null;
     silenceStartRef.current = null;
     setIsListening(false);
+    
+    console.log('[Voice] Listening stopped');
   }, []);
 
   const startConversationMode = useCallback(async () => {
     if (isConversationMode) return;
     
-    console.log("Starting conversation mode");
+    console.log("[Voice] Starting conversation mode");
     setIsConversationMode(true);
     conversationModeRef.current = true;
     
-    // Play a greeting
     await speak(`Hi! I'm ${preferences.assistantName || "Echo"}. How can I help you?`);
-    
-    // Start listening
-    await startListeningInternal(true);
-  }, [isConversationMode, speak, startListeningInternal, preferences.assistantName]);
+  }, [isConversationMode, speak, preferences.assistantName]);
 
   const stopConversationMode = useCallback(() => {
-    console.log("Stopping conversation mode");
+    console.log("[Voice] Stopping conversation mode");
     conversationModeRef.current = false;
     setIsConversationMode(false);
+    isStartingRecordingRef.current = false;
     
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
@@ -1017,7 +959,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         };
       }
     } catch (error) {
-      console.error("Failed to exit quiet mode:", error);
+      console.error("[Voice] Failed to exit quiet mode:", error);
     }
     
     setIsQuietMode(false);
@@ -1038,6 +980,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       if (silenceTimeoutRef.current) {
         clearTimeout(silenceTimeoutRef.current);
       }
+      isStartingRecordingRef.current = false;
       stopConversationMode();
     };
   }, []);
