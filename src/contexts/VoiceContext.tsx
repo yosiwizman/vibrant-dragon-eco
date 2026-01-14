@@ -3,24 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { usePreferences } from "@/state/preferences";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
-import { transcribeAudio, synthesizeSpeech } from "@/services/openai-voice";
-import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
-import { normalizeSpeechInput } from "@/services/conversation-manager";
 import { showError, showSuccess } from "@/utils/toast";
 import { useVoiceFeedback } from "@/components/VoiceFeedback";
-import { hasActiveFlow, processMultiStepResponse, cancelFlow, handleInlineModification, detectMultiStepIntent, startMultiStepFlow } from "@/services/multi-step-conversation";
 import { initializeRAGKnowledge } from "@/services/rag-knowledge";
 import { logVoiceCommand, logAIError } from "@/services/ai-logging";
-import { getMemoryContext } from "@/services/memory";
-import { saveChatMessage, getChatContext } from "@/services/chat-history";
 import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } from "@/services/wake-word-detection";
-import { isEnterPhrase, isExitPhrase, startListeningSession, addTranscript, endListeningSession, getSessionStatus } from "@/services/quiet-mode";
-import { voiceRateLimiter, openAIRateLimiter } from "@/services/rate-limiter";
-import { trackVoiceCommand, trackError } from "@/services/analytics";
-import { webLLM, isWebLLMSupported } from "@/services/web-llm";
-import { offlineVoice, isOfflineVoiceSupported } from "@/services/offline-voice";
 import { offlineVoiceRecorder, isOfflineVoiceRecorderSupported } from "@/services/offline-voice-recorder";
+
+// Import modular voice services
+import { 
+  voiceRecorder, 
+  voicePlayer, 
+  voiceProcessor, 
+  conversationManager,
+  VoiceConfig 
+} from "@/services/voice";
 
 interface VoiceContextType {
   isListening: boolean;
@@ -59,6 +57,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const { apiKey: openaiApiKey } = useOpenAIKey();
   const { playFeedback } = useVoiceFeedback();
   
+  // State
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -69,20 +68,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const [lastResponse, setLastResponse] = useState("");
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
+  // Refs
   const conversationModeRef = useRef(false);
-  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const silenceStartRef = useRef<number | null>(null);
-  
-  // CRITICAL: Lock to prevent duplicate recording sessions
-  const isStartingRecordingRef = useRef(false);
+  const isStartingRef = useRef(false);
 
-  // Sync ref with state
+  // Sync conversation mode ref
   useEffect(() => {
     conversationModeRef.current = isConversationMode;
   }, [isConversationMode]);
@@ -101,6 +91,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Check quiet mode status on mount
+  useEffect(() => {
+    if (user) {
+      const isActive = conversationManager.checkQuietModeStatus(user.id);
+      setIsQuietMode(isActive);
+    }
+  }, [user]);
+
   // Wake word detection
   useEffect(() => {
     if (preferences.wakeWordEnabled && isWakeWordSupported() && !isListening && !isProcessing && !isSpeaking && !isConversationMode) {
@@ -111,213 +109,80 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           startConversationMode();
         },
         onError: (error) => {
-          console.error("Wake word error:", error);
+          console.error("[Voice] Wake word error:", error);
         },
       });
     } else {
       stopWakeWordDetection();
     }
 
-    return () => {
-      stopWakeWordDetection();
-    };
+    return () => stopWakeWordDetection();
   }, [preferences.wakeWordEnabled, preferences.wakeWord, isListening, isProcessing, isSpeaking, isConversationMode]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isStartingRef.current = false;
+      voiceRecorder.stop();
+      voicePlayer.stop();
+    };
+  }, []);
+
+  // Get voice config from preferences
+  const getVoiceConfig = useCallback((): VoiceConfig => ({
+    openaiApiKey,
+    assistantName: preferences.assistantName || "Echo",
+    openaiVoice: preferences.openaiVoice || "nova",
+    voiceSpeed: preferences.voiceSpeed || 1.0,
+    preferOpenAIVoice: preferences.preferOpenAIVoice !== false,
+    enableMemory: preferences.enableMemory || false,
+    enableChatHistory: preferences.enableChatHistory || false,
+    chatHistoryLimit: preferences.chatHistoryLimit || 10,
+    privateMode: preferences.privateMode || false,
+  }), [openaiApiKey, preferences]);
+
+  // Stop speaking
   const stopSpeaking = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      URL.revokeObjectURL(currentAudioRef.current.src);
-      currentAudioRef.current = null;
-    }
+    voicePlayer.stop();
     setIsSpeaking(false);
   }, []);
 
+  // Speak text
   const speak = useCallback(async (text: string) => {
-    if (!text || text.trim().length === 0) {
-      console.warn("[Voice] Empty text provided to speak function");
-      return;
-    }
+    if (!text?.trim()) return;
 
-    // Stop any current audio
     stopSpeaking();
-
-    const isOnline = navigator.onLine;
-    const hasOpenAI = !!openaiApiKey;
-    const hasOfflineVoice = isOfflineVoiceSupported();
-    const preferOpenAI = preferences.preferOpenAIVoice !== false;
-
-    // Use offline voice ONLY if offline OR no API key OR user explicitly disabled OpenAI preference
-    if ((!isOnline || !hasOpenAI || !preferOpenAI) && hasOfflineVoice) {
-      try {
-        setIsSpeaking(true);
-        console.log('[Voice] Using offline TTS (Web Speech API)');
-        
-        await offlineVoice.speak(text, {
-          rate: preferences.voiceSpeed || 1.0,
-        });
-        
-        setIsSpeaking(false);
-        
-        // Auto-continue conversation mode after speaking
-        if (conversationModeRef.current && !isStartingRecordingRef.current) {
-          setTimeout(() => startListeningInternal(true), 500);
-        }
-        return;
-      } catch (error: any) {
-        console.error("[Voice] Offline speech synthesis error:", error);
-        if (!isOnline) {
-          setIsSpeaking(false);
-          return;
-        }
-      }
-    }
-
-    // Use OpenAI TTS (online mode)
-    if (!openaiApiKey) {
-      console.error("[Voice] OpenAI API key not configured");
-      showError("OpenAI API key not configured. Go to Settings to add it.");
-      return;
-    }
+    const config = getVoiceConfig();
 
     try {
       setIsSpeaking(true);
-      console.log('[Voice] Using OpenAI TTS (online mode)');
       
-      const speechBlob = await synthesizeSpeech(
-        text,
-        openaiApiKey,
-        preferences.openaiVoice || "nova"
-      );
-      
-      console.log("[Voice] Speech blob received:", {
-        size: speechBlob.size,
-        type: speechBlob.type
-      });
-      
-      if (speechBlob.size === 0) {
-        throw new Error("Empty audio blob received");
-      }
-      
-      const audio = new Audio();
-      currentAudioRef.current = audio;
-      const audioUrl = URL.createObjectURL(speechBlob);
-      
-      audio.src = audioUrl;
-      audio.volume = 1.0;
-      
-      console.log("[Voice] Audio element created, attempting playback...");
-      
-      await new Promise<void>((resolve, reject) => {
-        let resolved = false;
-        
-        const cleanup = () => {
-          if (resolved) return;
-          resolved = true;
-          URL.revokeObjectURL(audioUrl);
-          if (currentAudioRef.current === audio) {
-            currentAudioRef.current = null;
-          }
+      await voicePlayer.speak(text, openaiApiKey, {
+        voice: config.openaiVoice,
+        rate: config.voiceSpeed,
+        onEnd: () => {
           setIsSpeaking(false);
-          
-          // Auto-continue conversation mode after speaking
-          if (conversationModeRef.current && !isStartingRecordingRef.current) {
+          // Auto-continue conversation mode
+          if (conversationModeRef.current && !isStartingRef.current) {
             setTimeout(() => startListeningInternal(true), 500);
           }
-        };
-
-        audio.onended = () => {
-          console.log("[Voice] Audio playback ended successfully");
-          cleanup();
-          resolve();
-        };
-        
-        audio.onerror = (e) => {
-          console.error("[Voice] Audio playback error:", e);
-          cleanup();
-          reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown error'}`));
-        };
-
-        audio.oncanplay = () => {
-          console.log("[Voice] Audio can play, starting playback...");
-          audio.play()
-            .then(() => console.log("[Voice] Playback started successfully"))
-            .catch((err) => {
-              console.error("[Voice] Play failed:", err);
-              cleanup();
-              reject(err);
-            });
-        };
-
-        // Timeout fallback
-        setTimeout(() => {
-          if (!resolved && audio.readyState >= 2) {
-            audio.play()
-              .then(() => console.log("[Voice] Fallback playback started"))
-              .catch((err) => {
-                cleanup();
-                reject(err);
-              });
-          } else if (!resolved) {
-            cleanup();
-            reject(new Error("Audio loading timeout"));
-          }
-        }, 5000);
+        },
+        onError: (error) => {
+          console.error("[Voice] Speech error:", error);
+          setIsSpeaking(false);
+        },
       });
     } catch (error: any) {
-      console.error("[Voice] OpenAI TTS error:", error);
+      console.error("[Voice] Speak error:", error);
       setIsSpeaking(false);
-      
-      // Fallback to Web Speech API if OpenAI TTS fails
-      if (isOfflineVoiceSupported()) {
-        console.log("[Voice] Falling back to Web Speech API...");
-        try {
-          setIsSpeaking(true);
-          await offlineVoice.speak(text, {
-            rate: preferences.voiceSpeed || 1.0,
-          });
-          setIsSpeaking(false);
-          
-          if (conversationModeRef.current && !isStartingRecordingRef.current) {
-            setTimeout(() => startListeningInternal(true), 500);
-          }
-        } catch (fallbackError) {
-          console.error("[Voice] Web Speech API fallback also failed:", fallbackError);
-          setIsSpeaking(false);
-        }
-      }
     }
-  }, [openaiApiKey, preferences.openaiVoice, preferences.voiceSpeed, stopSpeaking]);
+  }, [openaiApiKey, getVoiceConfig, stopSpeaking]);
 
+  // Process voice command
   const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
-    // CRITICAL: Check user at the start and use a local reference
     const currentUser = user;
     if (!currentUser) {
-      console.error("[Voice] No user found for voice command");
       throw new Error("Please log in to use AI features");
-    }
-
-    const isOnline = navigator.onLine;
-    const hasOpenAI = !!openaiApiKey;
-    const hasWebLLM = isWebLLMSupported();
-    const useLocalAI = !isOnline || !hasOpenAI;
-
-    if (!hasOpenAI && !hasWebLLM) {
-      throw new Error("Please add your OpenAI API key in Settings or enable offline AI");
-    }
-
-    // Check voice rate limit
-    const voiceCheck = voiceRateLimiter.checkLimit(currentUser.id);
-    if (!voiceCheck.allowed) {
-      const waitTime = Math.ceil((voiceCheck.resetAt - Date.now()) / 1000);
-      throw new Error(`Too many voice commands. Please wait ${waitTime} seconds.`);
-    }
-
-    if (!useLocalAI) {
-      const apiCheck = openAIRateLimiter.checkLimit(currentUser.id, 0.01);
-      if (!apiCheck.allowed) {
-        throw new Error(apiCheck.reason || "API rate limit exceeded");
-      }
     }
 
     setIsProcessing(true);
@@ -325,218 +190,153 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setCurrentTranscript("");
 
     try {
-      const normalizedText = normalizeSpeechInput(text);
-
-      // Use local AI if offline or no API key
-      if (useLocalAI && hasWebLLM) {
-        console.log('[Voice] Using local WebLLM (offline mode)');
-        
-        const modelCached = await webLLM.isModelCached();
-        if (!modelCached) {
-          throw new Error("Offline AI not downloaded. Please download the model in Settings.");
-        }
-
-        await webLLM.initialize();
-
-        const systemPrompt = `You are ${preferences.assistantName || "Echo"}, a helpful AI assistant.
-Current time: ${new Date().toLocaleString()}
-Location: ${userLocation?.city || "Unknown"}
-
-Parse the user's command and respond naturally. For tasks, reminders, notes, etc., acknowledge what you'll do.`;
-
-        const response = await webLLM.chat([
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: normalizedText },
-        ]);
-
-        const toolCalls = parseToolCalls(response);
-        
-        if (toolCalls.length > 0) {
-          for (const toolCall of toolCalls) {
-            await executeTool(currentUser.id, toolCall);
-          }
-        }
-
-        setLastResponse(response);
-        setIsProcessing(false);
-        trackVoiceCommand(text, true, currentUser.id);
-        
-        return response;
-      }
-
-      // Use OpenAI (online mode)
-      console.log('[Voice] Using OpenAI (online mode)');
+      const config = getVoiceConfig();
       
-      let memoryContext = "";
-      if (preferences.enableMemory) {
-        memoryContext = await getMemoryContext(currentUser.id);
-      }
-
-      let chatHistory: { role: "user" | "assistant"; content: string }[] = [];
-      if (preferences.enableChatHistory) {
-        chatHistory = await getChatContext(currentUser.id, Math.min(preferences.chatHistoryLimit || 10, 20));
-      }
-      
-      const systemPrompt = buildSystemPrompt(
-        userLocation ? {
-          lat: userLocation.lat,
-          lng: userLocation.lng,
-          city: userLocation.city,
-        } : undefined,
-        preferences.assistantName,
-        memoryContext
+      const result = await voiceProcessor.processCommand(
+        text,
+        currentUser.id,
+        openaiApiKey,
+        config,
+        userLocation,
+        (path) => navigate(path)
       );
 
-      const messages = [
-        { role: "system" as const, content: systemPrompt },
-        ...chatHistory.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
-        { role: "user" as const, content: normalizedText },
-      ];
-
-      if (preferences.enableChatHistory && !preferences.privateMode) {
-        saveChatMessage(currentUser.id, "user", normalizedText);
-      }
-
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiApiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages,
-          max_tokens: 1024,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AI request failed: ${errorText}`);
-      }
-
-      const data = await response.json();
-      let aiResponse = data.choices[0].message.content;
-
-      const toolCalls = parseToolCalls(aiResponse);
-      let toolResults: ActionResult[] = [];
-
-      if (toolCalls.length > 0) {
-        for (const toolCall of toolCalls) {
-          const result = await executeTool(currentUser.id, toolCall);
-          toolResults.push(result);
-
-          if (toolCall.tool === "navigate_to" && result.success && result.data?.path) {
-            navigate(result.data.path);
-          }
-        }
-
-        if (toolResults.length > 0) {
-          const toolResultsText = toolResults.map(r => {
-            if (r.data?.voiceText) return r.data.voiceText;
-            return `${r.tool}: ${r.success ? "Success" : r.error}`;
-          }).join("\n");
-
-          const followUpResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${openaiApiKey}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: normalizedText },
-                { role: "assistant", content: aiResponse },
-                { role: "user", content: `Results: ${toolResultsText}\n\nGive a brief voice response.` },
-              ],
-              max_tokens: 256,
-            }),
-          });
-
-          if (followUpResponse.ok) {
-            const followUpData = await followUpResponse.json();
-            aiResponse = followUpData.choices[0].message.content;
-          }
-        }
-      }
-
-      const cleanResponse = aiResponse
-        .replace(/```json[\s\S]*?```/g, '')
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(/\*\*/g, '')
-        .trim();
-
-      const voiceTextResult = toolResults.find(r => r.data?.voiceText);
-      const finalResponse = voiceTextResult?.data?.voiceText || cleanResponse;
-
-      if (preferences.enableChatHistory && !preferences.privateMode) {
-        saveChatMessage(currentUser.id, "assistant", finalResponse);
-      }
-
-      setLastResponse(finalResponse);
+      setLastResponse(result.response);
       setIsProcessing(false);
-      trackVoiceCommand(text, true, currentUser.id);
       
-      return finalResponse;
+      return result.response;
     } catch (error: any) {
       setIsProcessing(false);
-      console.error("[Voice] Voice command processing error:", error);
-      trackVoiceCommand(text, false, user?.id || "unknown");
-      trackError(error.message, { command: text }, user?.id || "unknown");
+      console.error("[Voice] Processing error:", error);
+      
+      if (user) {
+        logAIError(user.id, error.message, { command: text });
+      }
+      
       throw error;
     }
-  }, [openaiApiKey, user, userLocation, navigate, preferences]);
+  }, [user, openaiApiKey, userLocation, navigate, getVoiceConfig]);
 
-  // Internal function to start listening (used by conversation mode)
-  const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
-    // CRITICAL: Prevent duplicate recording sessions
-    if (isStartingRecordingRef.current) {
-      console.log('[Voice] Already starting recording, ignoring duplicate request');
-      return;
-    }
-    
-    if (isListening) {
-      console.log('[Voice] Already listening, ignoring duplicate start request');
-      return;
-    }
-    
-    // Set lock immediately
-    isStartingRecordingRef.current = true;
-    
-    // Clean up any existing recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      console.log('[Voice] Stopping existing MediaRecorder');
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (e) {
-        console.warn('[Voice] Error stopping existing recorder:', e);
+  // Handle transcription result
+  const handleTranscription = useCallback(async (text: string, isConversation: boolean) => {
+    if (!text?.trim()) {
+      setIsProcessing(false);
+      if (conversationModeRef.current && !isStartingRef.current) {
+        setTimeout(() => startListeningInternal(true), 500);
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      return;
     }
-    
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+
+    setCurrentTranscript(text);
+
+    // Check for special commands via conversation manager
+    if (user) {
+      const result = conversationManager.handleTranscript(user.id, text);
+      
+      if (result.handled) {
+        switch (result.action) {
+          case 'exit':
+            setIsProcessing(false);
+            await speak(result.message!);
+            stopConversationMode();
+            return;
+            
+          case 'quiet-enter':
+            if (result.data?.context !== undefined) {
+              enterQuietMode(result.data.context);
+            } else if (isQuietMode) {
+              conversationManager.addQuietModeTranscript(user.id, text);
+            }
+            setIsProcessing(false);
+            if (result.message) await speak(result.message);
+            return;
+            
+          case 'quiet-exit':
+            const quietResult = await exitQuietMode();
+            setIsProcessing(false);
+            if (quietResult) {
+              let summaryText = quietResult.summary;
+              if (quietResult.bulletPoints.length > 0) {
+                summaryText += ` Key points: ${quietResult.bulletPoints.slice(0, 3).join(". ")}.`;
+              }
+              playFeedback("success");
+              await speak(summaryText);
+            } else {
+              await speak("I didn't capture any conversation during the listening session.");
+            }
+            return;
+            
+          case 'multi-step':
+            if (result.data?.complete) {
+              playFeedback("success");
+              const response = await processVoiceCommand(
+                `Create ${result.data.intent?.replace(/_/g, " ")} with: ${JSON.stringify(result.data.collectedData)}`
+              );
+              await speak(response);
+            } else if (result.message) {
+              setIsProcessing(false);
+              await speak(result.message);
+            }
+            return;
+            
+          case 'modification':
+            playFeedback("success");
+            setIsProcessing(false);
+            await speak(result.message!);
+            return;
+            
+          case 'cancel':
+            setIsProcessing(false);
+            await speak(result.message!);
+            return;
+        }
+      }
     }
+
+    // Process as regular command
+    try {
+      const response = await processVoiceCommand(text);
+      playFeedback("success");
+      
+      if (user) {
+        logVoiceCommand(user.id, text, response);
+      }
+      
+      await speak(response);
+    } catch (error: any) {
+      playFeedback("error");
+      setIsProcessing(false);
+      showError(error.message || "Voice processing failed");
+      
+      if (conversationModeRef.current) {
+        await speak("Sorry, I had trouble with that. Please try again.");
+      }
+    }
+  }, [user, isQuietMode, processVoiceCommand, speak, playFeedback]);
+
+  // Internal start listening function
+  const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
+    if (isStartingRef.current || isListening) {
+      console.log("[Voice] Already listening or starting");
+      return;
+    }
+
+    isStartingRef.current = true;
 
     const isOnline = navigator.onLine;
-    const hasOpenAI = !!openaiApiKey;
-    const hasOfflineVoiceRecorder = isOfflineVoiceRecorderSupported();
+    const hasApiKey = !!openaiApiKey;
+    const hasOfflineRecorder = isOfflineVoiceRecorderSupported();
 
-    // Use offline voice recorder if offline or no API key
-    if ((!isOnline || !hasOpenAI) && hasOfflineVoiceRecorder) {
-      console.log('[Voice] Using offline voice recorder (Web Speech API)');
+    // Use offline recorder if needed
+    if ((!isOnline || !hasApiKey) && hasOfflineRecorder) {
+      console.log("[Voice] Using offline voice recorder");
       
-      if (!isConversation) {
-        playFeedback("start");
-      }
+      if (!isConversation) playFeedback("start");
       
       setIsListening(true);
       setCurrentTranscript("");
-      isStartingRecordingRef.current = false; // Release lock
-      
+      isStartingRef.current = false;
+
       offlineVoiceRecorder.start({
         onTranscript: (result) => {
           if (result.isFinal) {
@@ -545,23 +345,10 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
         },
         onEnd: async (finalTranscript) => {
           setIsListening(false);
+          if (!isConversation) playFeedback("stop");
           
-          if (!isConversation) {
-            playFeedback("stop");
-          }
-          
-          if (finalTranscript && finalTranscript.trim()) {
-            try {
-              const response = await processVoiceCommand(finalTranscript);
-              await speak(response);
-            } catch (error: any) {
-              playFeedback("error");
-              showError(error.message || "Voice processing failed");
-              
-              if (conversationModeRef.current) {
-                await speak("Sorry, I had trouble with that. Please try again.");
-              }
-            }
+          if (finalTranscript?.trim()) {
+            await handleTranscription(finalTranscript, isConversation);
           }
         },
         onError: (error) => {
@@ -574,339 +361,82 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       return;
     }
 
-    // Use OpenAI Whisper (online mode)
+    // Use OpenAI Whisper
     if (!openaiApiKey) {
-      isStartingRecordingRef.current = false;
-      showError("Please add your OpenAI API key in Settings or enable offline mode");
+      isStartingRef.current = false;
+      showError("Please add your OpenAI API key in Settings");
       return;
     }
 
-    try {
-      if (!isConversation) {
-        playFeedback("start");
-      }
-      setCurrentTranscript("");
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        } 
-      });
-      
-      streamRef.current = stream;
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Set up audio analysis for silence detection in conversation mode
-      if (isConversation) {
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 2048;
-        source.connect(analyserRef.current);
-        silenceStartRef.current = null;
-      }
-      
-      // CRITICAL: Use WebM format - MP4 from browser is NOT compatible with OpenAI Whisper
-      let mimeType = "audio/webm";
-      let recorderOptions: MediaRecorderOptions = {
-        audioBitsPerSecond: 128000
-      };
-      
-      // WebM with Opus is the best format for OpenAI Whisper
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        mimeType = "audio/webm;codecs=opus";
-        recorderOptions.mimeType = mimeType;
-      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-        mimeType = "audio/webm";
-        recorderOptions.mimeType = mimeType;
-      } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
-        mimeType = "audio/ogg;codecs=opus";
-        recorderOptions.mimeType = mimeType;
-      } else {
-        console.warn("[Voice] No preferred audio format found, using default WebM");
-        // Don't set mimeType in options, let browser choose
-      }
-      
-      console.log(`[Voice] Using audio format: ${mimeType}`);
+    if (!isConversation) playFeedback("start");
+    setCurrentTranscript("");
 
-      mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
-      chunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        if (!isConversation) {
-          playFeedback("stop");
-        }
-        
-        console.log(`[Voice] Recording stopped. Total chunks: ${chunksRef.current.length}`);
-        
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        console.log(`[Voice] Created blob with type: ${blob.type}, size: ${blob.size}`);
-        
-        // Clean up stream
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-        
-        // Check minimum audio size
-        if (blob.size < 5000) {
-          console.warn(`[Voice] Audio too short (${blob.size} bytes)`);
-          setIsProcessing(false);
+    voiceRecorder.start(
+      {
+        onStart: () => {
+          setIsListening(true);
+          isStartingRef.current = false;
+          console.log(`[Voice] Recording started (${isConversation ? 'conversation' : 'single'} mode)`);
+        },
+        onStop: () => {
+          if (!isConversation) playFeedback("stop");
+        },
+        onData: async (blob) => {
+          console.log(`[Voice] Recording complete, size: ${blob.size}`);
+          setIsListening(false);
           
-          if (!isConversation) {
-            showError("Recording too short. Please speak for at least 1 second.");
+          if (blob.size < 5000) {
+            setIsProcessing(false);
+            if (!isConversation) {
+              showError("Recording too short. Please speak for at least 1 second.");
+            }
+            if (conversationModeRef.current && !isStartingRef.current) {
+              setTimeout(() => startListeningInternal(true), 500);
+            }
+            return;
           }
-          
-          if (conversationModeRef.current && !isStartingRecordingRef.current) {
-            setTimeout(() => startListeningInternal(true), 500);
-          }
-          return;
-        }
-        
-        if (blob.size > 0) {
-          let transcriptText = "";
+
           try {
             setIsProcessing(true);
-            console.log("[Voice] Transcribing audio, blob size:", blob.size);
-            
-            if (!openaiApiKey) {
-              throw new Error("OpenAI API key required for transcription");
-            }
-            
-            console.log('[Voice] Using OpenAI Whisper (online mode)');
-            const transcription = await transcribeAudio(blob, openaiApiKey);
-            transcriptText = transcription.text.trim();
-            
-            console.log("[Voice] Transcription result:", transcriptText);
-            setCurrentTranscript(transcriptText);
-            
-            if (transcriptText) {
-              // Check for exit phrases in conversation mode
-              if (conversationModeRef.current && /\b(goodbye|bye|stop|exit|end conversation|that's all|thank you|thanks)\b/i.test(transcriptText)) {
-                setIsProcessing(false);
-                await speak("Goodbye! Let me know if you need anything else.");
-                stopConversationMode();
-                return;
-              }
-
-              // Check for quiet mode entry/exit
-              if (isEnterPhrase(transcriptText) && user) {
-                const contextMatch = transcriptText.match(/for\s+(.+?)(?:\s*$|,)/i);
-                const context = contextMatch ? contextMatch[1] : undefined;
-                enterQuietMode(context);
-                setIsProcessing(false);
-                await speak(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll stay quiet and just listen.`);
-                return;
-              }
-
-              if (isExitPhrase(transcriptText) && isQuietMode && user) {
-                const result = await exitQuietMode();
-                setIsProcessing(false);
-                if (result) {
-                  let summaryText = result.summary;
-                  if (result.bulletPoints.length > 0) {
-                    summaryText += ` Key points: ${result.bulletPoints.slice(0, 3).join(". ")}.`;
-                  }
-                  playFeedback("success");
-                  await speak(summaryText);
-                } else {
-                  await speak("I didn't capture any conversation during the listening session.");
-                }
-                return;
-              }
-
-              // If in quiet mode, just record the transcript
-              if (isQuietMode && user) {
-                addTranscript(user.id, transcriptText);
-                setIsProcessing(false);
-                if (conversationModeRef.current && !isStartingRecordingRef.current) {
-                  setTimeout(() => startListeningInternal(true), 500);
-                }
-                return;
-              }
-
-              // Check for multi-step conversation
-              if (user && hasActiveFlow(user.id)) {
-                const flowResult = processMultiStepResponse(user.id, transcriptText);
-                if (flowResult.complete && flowResult.collectedData) {
-                  playFeedback("success");
-                  const response = await processVoiceCommand(
-                    `Create ${flowResult.state?.intent.replace(/_/g, " ")} with: ${JSON.stringify(flowResult.collectedData)}`
-                  );
-                  await speak(response);
-                } else if (flowResult.nextPrompt) {
-                  setIsProcessing(false);
-                  await speak(flowResult.nextPrompt);
-                }
-                return;
-              }
-
-              // Check for inline modifications
-              if (user) {
-                const modResult = handleInlineModification(user.id, transcriptText);
-                if (modResult.handled && modResult.message) {
-                  playFeedback("success");
-                  setIsProcessing(false);
-                  await speak(modResult.message);
-                  return;
-                }
-              }
-
-              // Check if user wants to start a multi-step flow
-              const multiStepIntent = detectMultiStepIntent(transcriptText);
-              if (multiStepIntent && user) {
-                const flowStart = startMultiStepFlow(user.id, multiStepIntent);
-                if (flowStart) {
-                  setIsProcessing(false);
-                  await speak(flowStart.prompt);
-                  return;
-                }
-              }
-
-              // Check for cancel/undo commands
-              if (/\b(cancel|stop|never\s*mind)\b/i.test(transcriptText) && user && hasActiveFlow(user.id)) {
-                cancelFlow(user.id);
-                setIsProcessing(false);
-                await speak("Cancelled. What else can I help with?");
-                return;
-              }
-
-              const response = await processVoiceCommand(transcriptText);
-              playFeedback("success");
-              
-              if (user) {
-                logVoiceCommand(user.id, transcriptText, response);
-              }
-              
-              await speak(response);
-            } else {
-              setIsProcessing(false);
-              if (conversationModeRef.current && !isStartingRecordingRef.current) {
-                setTimeout(() => startListeningInternal(true), 500);
-              }
-            }
+            const text = await voiceProcessor.transcribe(blob, openaiApiKey!);
+            await handleTranscription(text, isConversation);
           } catch (error: any) {
             playFeedback("error");
             setIsProcessing(false);
-            console.error("[Voice] Voice processing error:", error);
-            showError(error.message || "Voice processing failed");
-            
-            if (user) {
-              logAIError(user.id, error.message || "Voice processing failed", { transcript: transcriptText });
-            }
+            console.error("[Voice] Transcription error:", error);
+            showError(error.message || "Transcription failed");
             
             if (conversationModeRef.current) {
               await speak("Sorry, I had trouble with that. Please try again.");
             }
           }
-        } else {
-          setIsProcessing(false);
-          if (conversationModeRef.current && !isStartingRecordingRef.current) {
-            setTimeout(() => startListeningInternal(true), 500);
-          }
-        }
-      };
+        },
+        onError: (error) => {
+          console.error("[Voice] Recording error:", error);
+          isStartingRef.current = false;
+          setIsListening(false);
+          playFeedback("error");
+          showError(error.message || "Recording failed");
+        },
+        onSilenceDetected: isConversation ? () => {
+          console.log("[Voice] Silence detected, stopping");
+          voiceRecorder.stop();
+        } : undefined,
+      },
+      isConversation
+    );
+  }, [isListening, openaiApiKey, playFeedback, handleTranscription, speak]);
 
-      mediaRecorderRef.current.start(1000);
-      setIsListening(true);
-      
-      // Release lock after successful start
-      isStartingRecordingRef.current = false;
-      
-      console.log(`[Voice] Started recording in ${isConversation ? 'conversation' : 'single'} mode`);
-      
-      // In conversation mode, use silence detection to auto-stop
-      if (isConversation && analyserRef.current) {
-        const checkSilence = () => {
-          if (!analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== "recording") {
-            return;
-          }
-          
-          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-          analyserRef.current.getByteFrequencyData(dataArray);
-          
-          const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const silenceThreshold = 10;
-          const silenceDuration = 2000;
-          
-          if (average < silenceThreshold) {
-            if (silenceStartRef.current === null) {
-              silenceStartRef.current = Date.now();
-            } else if (Date.now() - silenceStartRef.current > silenceDuration) {
-              console.log("[Voice] Silence detected, stopping recording");
-              if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-                mediaRecorderRef.current.stop();
-              }
-              return;
-            }
-          } else {
-            silenceStartRef.current = null;
-          }
-          
-          if (conversationModeRef.current) {
-            silenceTimeoutRef.current = setTimeout(checkSilence, 100);
-          }
-        };
-        
-        silenceTimeoutRef.current = setTimeout(checkSilence, 1000);
-      }
-    } catch (error: any) {
-      console.error("[Voice] Failed to start recording:", error);
-      isStartingRecordingRef.current = false;
-      showError(error.message || "Failed to start recording. Please check microphone permissions.");
-    }
-  }, [isListening, openaiApiKey, processVoiceCommand, speak, playFeedback, user, isQuietMode]);
-
+  // Public API
   const startListening = useCallback(async () => {
     await startListeningInternal(false);
   }, [startListeningInternal]);
 
   const stopListening = useCallback(() => {
-    console.log('[Voice] Stopping listening...');
-    
-    isStartingRecordingRef.current = false;
-    
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current);
-      silenceTimeoutRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (e) {
-        console.warn('[Voice] Error stopping MediaRecorder:', e);
-      }
-    }
-    if (audioContextRef.current) {
-      try {
-        audioContextRef.current.close();
-      } catch (e) {
-        console.warn('[Voice] Error closing AudioContext:', e);
-      }
-      audioContextRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        try {
-          track.stop();
-        } catch (e) {
-          console.warn('[Voice] Error stopping track:', e);
-        }
-      });
-      streamRef.current = null;
-    }
-    analyserRef.current = null;
-    silenceStartRef.current = null;
+    console.log("[Voice] Stopping listening");
+    isStartingRef.current = false;
+    voiceRecorder.stop();
     setIsListening(false);
-    
-    console.log('[Voice] Listening stopped');
   }, []);
 
   const startConversationMode = useCallback(async () => {
@@ -915,6 +445,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
     console.log("[Voice] Starting conversation mode");
     setIsConversationMode(true);
     conversationModeRef.current = true;
+    conversationManager.startConversation();
     
     await speak(`Hi! I'm ${preferences.assistantName || "Echo"}. How can I help you?`);
   }, [isConversationMode, speak, preferences.assistantName]);
@@ -923,12 +454,8 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
     console.log("[Voice] Stopping conversation mode");
     conversationModeRef.current = false;
     setIsConversationMode(false);
-    isStartingRecordingRef.current = false;
-    
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current);
-      silenceTimeoutRef.current = null;
-    }
+    isStartingRef.current = false;
+    conversationManager.stopConversation();
     
     stopListening();
     stopSpeaking();
@@ -936,7 +463,7 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
 
   const enterQuietMode = useCallback((context?: string) => {
     if (!user) return;
-    startListeningSession(user.id, context);
+    conversationManager.enterQuietMode(user.id, context);
     setIsQuietMode(true);
     showSuccess(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll just listen.`);
   }, [user]);
@@ -947,43 +474,10 @@ Parse the user's command and respond naturally. For tasks, reminders, notes, etc
       return null;
     }
 
-    try {
-      const result = await endListeningSession(user.id, openaiApiKey);
-      setIsQuietMode(false);
-      
-      if (result.success) {
-        return {
-          summary: result.summary || "",
-          bulletPoints: result.bulletPoints || [],
-          actionItems: result.actionItems || [],
-        };
-      }
-    } catch (error) {
-      console.error("[Voice] Failed to exit quiet mode:", error);
-    }
-    
+    const result = await conversationManager.exitQuietMode(user.id, openaiApiKey);
     setIsQuietMode(false);
-    return null;
+    return result;
   }, [user, openaiApiKey]);
-
-  // Check quiet mode status on mount
-  useEffect(() => {
-    if (user) {
-      const status = getSessionStatus(user.id);
-      setIsQuietMode(status.isActive);
-    }
-  }, [user]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-      }
-      isStartingRecordingRef.current = false;
-      stopConversationMode();
-    };
-  }, []);
 
   return (
     <VoiceContext.Provider
