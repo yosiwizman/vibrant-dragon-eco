@@ -106,7 +106,12 @@ export default function Settings() {
   };
 
   const testVoice = async () => {
+    console.log('[Test Voice] Starting test...');
+    console.log('[Test Voice] API key exists:', !!openaiApiKey);
+    console.log('[Test Voice] API key length:', openaiApiKey?.length);
+    
     if (!openaiApiKey) {
+      console.error('[Test Voice] No API key found');
       showError("Please enter your OpenAI API key first in the General tab");
       return;
     }
@@ -115,13 +120,17 @@ export default function Settings() {
       const name = preferences.assistantName || "Echo";
       const selectedVoice = preferences.openaiVoice || "nova";
       
+      console.log('[Test Voice] Assistant name:', name);
+      console.log('[Test Voice] Selected voice:', selectedVoice);
+      
       // Get voice description for feedback
       const voiceInfo = OPENAI_VOICES.find(v => v.value === selectedVoice);
       const voiceDescription = voiceInfo ? voiceInfo.description : selectedVoice;
       
       showSuccess("Testing voice... Please wait");
       
-      console.log('[Test Voice] Using API key, voice:', selectedVoice);
+      console.log('[Test Voice] Calling synthesizeSpeech...');
+      console.log('[Test Voice] API key (first 10 chars):', openaiApiKey.substring(0, 10) + '...');
       
       // Force OpenAI TTS synthesis
       const blob = await synthesizeSpeech(
@@ -130,41 +139,92 @@ export default function Settings() {
         selectedVoice
       );
       
-      console.log('[Test Voice] Speech blob received, size:', blob.size);
+      console.log('[Test Voice] Speech blob received!');
+      console.log('[Test Voice] Blob size:', blob.size, 'bytes');
+      console.log('[Test Voice] Blob type:', blob.type);
+      
+      if (blob.size === 0) {
+        throw new Error('Received empty audio blob from OpenAI');
+      }
       
       // Stop any currently playing audio first
       const existingAudio = document.querySelectorAll('audio');
+      console.log('[Test Voice] Stopping', existingAudio.length, 'existing audio elements');
       existingAudio.forEach(audio => {
         audio.pause();
         audio.currentTime = 0;
       });
       
-      // Play the audio with better error handling
+      // Play the audio with comprehensive error handling
+      console.log('[Test Voice] Creating audio element...');
       const audio = new Audio();
       const url = URL.createObjectURL(blob);
+      console.log('[Test Voice] Created blob URL:', url);
+      
       audio.src = url;
+      audio.volume = 1.0;
+      
+      console.log('[Test Voice] Audio element created, setting up event listeners...');
+      
+      audio.onloadstart = () => {
+        console.log('[Test Voice] Audio loading started');
+      };
+      
+      audio.onloadeddata = () => {
+        console.log('[Test Voice] Audio data loaded');
+      };
+      
+      audio.oncanplay = () => {
+        console.log('[Test Voice] Audio can play');
+      };
       
       audio.onplay = () => {
+        console.log('[Test Voice] Audio playback started!');
         showSuccess(`Playing ${voiceInfo?.label || selectedVoice} voice...`);
       };
       
       audio.onended = () => {
+        console.log('[Test Voice] Audio playback ended');
         URL.revokeObjectURL(url);
         showSuccess(`Voice test complete!`);
       };
       
       audio.onerror = (e) => {
-        console.error(`[Voice Test] Playback error:`, e);
+        console.error('[Test Voice] Audio playback error:', e);
+        console.error('[Test Voice] Audio error code:', audio.error?.code);
+        console.error('[Test Voice] Audio error message:', audio.error?.message);
         URL.revokeObjectURL(url);
-        showError("Failed to play audio. Please try again.");
+        showError(`Audio playback failed: ${audio.error?.message || 'Unknown error'}`);
       };
       
-      // Attempt to play
-      await audio.play();
+      // Attempt to play with detailed logging
+      console.log('[Test Voice] Attempting to play audio...');
+      try {
+        const playPromise = audio.play();
+        console.log('[Test Voice] Play promise created');
+        
+        await playPromise;
+        console.log('[Test Voice] Play promise resolved - audio should be playing!');
+      } catch (playError: any) {
+        console.error('[Test Voice] Play promise rejected:', playError);
+        console.error('[Test Voice] Play error name:', playError.name);
+        console.error('[Test Voice] Play error message:', playError.message);
+        
+        // Check if it's an autoplay policy error
+        if (playError.name === 'NotAllowedError') {
+          showError('Browser blocked audio autoplay. Please click the page first, then try again.');
+        } else {
+          showError(`Failed to play audio: ${playError.message}`);
+        }
+        
+        URL.revokeObjectURL(url);
+      }
       
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Voice test failed";
-      console.error("[Voice Test] Error:", e);
+      console.error("[Test Voice] Outer catch - Error:", e);
+      console.error("[Test Voice] Error type:", typeof e);
+      console.error("[Test Voice] Error details:", JSON.stringify(e, null, 2));
       showError(`Voice test failed: ${errorMessage}`);
     }
   };
