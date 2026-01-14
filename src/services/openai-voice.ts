@@ -10,8 +10,34 @@ export async function transcribeAudio(
   audioBlob: Blob,
   apiKey: string
 ): Promise<TranscriptionResult> {
+  console.log('[Whisper] Original blob type:', audioBlob.type);
+  console.log('[Whisper] Original blob size:', audioBlob.size);
+  
+  // Determine the correct file extension based on blob type
+  let filename = "audio.webm";
+  let mimeType = audioBlob.type;
+  
+  // Map blob types to proper extensions
+  if (mimeType.includes('webm')) {
+    filename = "audio.webm";
+  } else if (mimeType.includes('mp4')) {
+    filename = "audio.mp4";
+  } else if (mimeType.includes('mpeg') || mimeType.includes('mp3')) {
+    filename = "audio.mp3";
+  } else if (mimeType.includes('wav')) {
+    filename = "audio.wav";
+  } else if (mimeType.includes('ogg')) {
+    filename = "audio.ogg";
+  } else {
+    // Default to webm if unknown
+    console.warn('[Whisper] Unknown mime type, defaulting to webm');
+    filename = "audio.webm";
+  }
+  
+  console.log('[Whisper] Using filename:', filename);
+  
   const formData = new FormData();
-  formData.append("file", audioBlob, "audio.webm");
+  formData.append("file", audioBlob, filename);
   formData.append("model", "whisper-1");
   formData.append("language", "en");
 
@@ -25,10 +51,14 @@ export async function transcribeAudio(
 
   if (!response.ok) {
     const error = await response.text();
+    console.error('[Whisper] Transcription failed:', error);
     throw new Error(`Transcription failed: ${error}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('[Whisper] Transcription successful:', result.text);
+  
+  return result;
 }
 
 export async function synthesizeSpeech(
