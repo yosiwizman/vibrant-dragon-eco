@@ -191,6 +191,12 @@ src/services/orchestrator/
 - ✅ `executeGetRecurringItems()` - Get recurring items
 - ✅ `executeCancelRecurringSeries()` - Cancel recurring series
 
+#### Appointments (`executors/appointments.ts`)
+- ✅ `executeCreateAppointment()` - Create appointment
+- ✅ `executeGetAppointments()` - Get appointments
+- ✅ `executeCancelAppointment()` - Cancel appointment
+- ✅ `executeRescheduleAppointment()` - Reschedule appointment
+
 ## Benefits of Modularization
 
 1. **Maintainability**: Each file is focused on a single domain (~50-150 lines)

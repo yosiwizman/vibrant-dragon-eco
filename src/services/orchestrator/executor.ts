@@ -4,6 +4,10 @@ import { ActionResult, ToolCall } from './types';
 import {
   executeGetCurrentTime,
   executeGetSystemStatus,
+  executeCreateAppointment,
+  executeGetAppointments,
+  executeCancelAppointment,
+  executeRescheduleAppointment,
   executeGetProductivityStats,
   executeUndoLastAction,
   executeGetDailySummary,
@@ -76,7 +80,6 @@ import {
 
 // Import external executors
 import { executeAddWidget, executeRemoveWidget, executeListWidgets } from "@/services/voice-widget-control";
-import { executeCreateAppointment, executeGetAppointments, executeCancelAppointment, executeRescheduleAppointment } from "@/services/appointments";
 
 export interface ExecutorContext {
   openaiApiKey?: string;

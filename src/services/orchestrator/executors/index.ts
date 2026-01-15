@@ -124,3 +124,11 @@ export {
   executeGetRecurringItems,
   executeCancelRecurringSeries,
 } from './recurring';
+
+// Appointment executors
+export {
+  executeCreateAppointment,
+  executeGetAppointments,
+  executeCancelAppointment,
+  executeRescheduleAppointment,
+} from './appointments';
