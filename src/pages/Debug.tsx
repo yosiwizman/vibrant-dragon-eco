@@ -31,6 +31,9 @@ import { getTimeContext } from "@/services/context";
 import { AVAILABLE_TOOLS } from "@/services/orchestrator";
 import { runSmokeTests, SmokeTestReport } from "@/services/smoke-test";
 import { runHealthCheck, SystemHealthReport } from "@/services/system-health";
+import { selfHealing } from "@/services/self-healing";
+import { advancedAnalytics } from "@/services/advanced-analytics";
+import { predictiveCache } from "@/services/predictive-caching";
 
 interface SystemCheck {
   name: string;
@@ -597,6 +600,159 @@ export default function Debug() {
             ) : (
               <p className="text-slate-400 text-sm">Click "Check Health" to run system diagnostics</p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Self-Healing Status */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Zap className="h-5 w-5 text-fuchsia-400" />
+              Self-Healing System
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <div className="text-2xl font-bold text-green-400">
+                  {selfHealing.getStatus().isMonitoring ? 'Active' : 'Inactive'}
+                </div>
+                <div className="text-xs text-slate-400">Monitoring</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <div className="text-2xl font-bold text-fuchsia-400">
+                  {selfHealing.getStatus().registeredActions}
+                </div>
+                <div className="text-xs text-slate-400">Healing Actions</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <div className="text-2xl font-bold text-blue-400">
+                  {selfHealing.getStatus().totalIssues}
+                </div>
+                <div className="text-xs text-slate-400">Issues Detected</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <div className="text-2xl font-bold text-green-400">
+                  {selfHealing.getStatus().autoFixRate.toFixed(0)}%
+                </div>
+                <div className="text-xs text-slate-400">Auto-Fix Rate</div>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const result = await selfHealing.forceHeal();
+                  showSuccess(`Healed ${result.healed} issues, ${result.failed} failed`);
+                }}
+                className="border-slate-600 text-slate-300"
+              >
+                Force Heal All
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Analytics Dashboard */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Activity className="h-5 w-5 text-fuchsia-400" />
+              Analytics Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const dashboard = advancedAnalytics.getDashboardData();
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-fuchsia-400">
+                        {dashboard.voiceSuccessRate.toFixed(0)}%
+                      </div>
+                      <div className="text-xs text-slate-400">Voice Success</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-blue-400">
+                        {dashboard.avgVoiceLatency.toFixed(0)}ms
+                      </div>
+                      <div className="text-xs text-slate-400">Avg Voice Latency</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-green-400">
+                        {dashboard.sessionSummary.totalSessions}
+                      </div>
+                      <div className="text-xs text-slate-400">Sessions</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {Object.values(dashboard.eventCounts).reduce((a, b) => a + b, 0)}
+                      </div>
+                      <div className="text-xs text-slate-400">Total Events</div>
+                    </div>
+                  </div>
+                  {dashboard.topTools.length > 0 && (
+                    <div>
+                      <p className="text-sm text-slate-400 mb-2">Top Tools Used:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {dashboard.topTools.map(tool => (
+                          <Badge key={tool.tool} variant="outline" className="border-slate-600">
+                            {tool.tool}: {tool.count}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* Predictive Cache Stats */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Database className="h-5 w-5 text-fuchsia-400" />
+              Predictive Cache
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const stats = predictiveCache.getStats();
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-fuchsia-400">{stats.size}</div>
+                      <div className="text-xs text-slate-400">Cached Items</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-green-400">{stats.hitRate.toFixed(0)}%</div>
+                      <div className="text-xs text-slate-400">Hit Rate</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-blue-400">{stats.topPatterns.length}</div>
+                      <div className="text-xs text-slate-400">Patterns Learned</div>
+                    </div>
+                  </div>
+                  {stats.topPatterns.length > 0 && (
+                    <div>
+                      <p className="text-sm text-slate-400 mb-2">Top Patterns:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {stats.topPatterns.map(p => (
+                          <Badge key={p.action} variant="outline" className="border-slate-600">
+                            {p.action}: {p.frequency}x
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
