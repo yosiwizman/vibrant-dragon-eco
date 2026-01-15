@@ -99,25 +99,62 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Wake word detection - track if it's active
+  const wakeWordActiveRef = useRef(false);
+
   // Wake word detection
   useEffect(() => {
-    if (preferences.wakeWordEnabled && isWakeWordSupported() && !isListening && !isProcessing && !isSpeaking && !isConversationMode) {
-      startWakeWordDetection({
+    const shouldBeActive = preferences.wakeWordEnabled &&
+                          isWakeWordSupported() &&
+                          !isListening &&
+                          !isProcessing &&
+                          !isSpeaking &&
+                          !isConversationMode;
+
+    console.log("[WakeWord] Checking status:", {
+      enabled: preferences.wakeWordEnabled,
+      supported: isWakeWordSupported(),
+      isListening,
+      isProcessing,
+      isSpeaking,
+      isConversationMode,
+      shouldBeActive,
+      currentlyActive: wakeWordActiveRef.current
+    });
+
+    if (shouldBeActive && !wakeWordActiveRef.current) {
+      console.log("[WakeWord] Starting wake word detection for:", preferences.wakeWord || "echo");
+      
+      const started = startWakeWordDetection({
         wakeWord: preferences.wakeWord || "echo",
         onWakeWordDetected: () => {
+          console.log("[WakeWord] Wake word detected! Starting conversation mode...");
+          wakeWordActiveRef.current = false; // Will be stopped when conversation starts
           showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
           startConversationMode();
         },
         onError: (error) => {
-          console.error("[Voice] Wake word error:", error);
+          console.error("[WakeWord] Error:", error);
+          wakeWordActiveRef.current = false;
         },
       });
-    } else {
+      
+      wakeWordActiveRef.current = started;
+      console.log("[WakeWord] Detection started:", started);
+    } else if (!shouldBeActive && wakeWordActiveRef.current) {
+      console.log("[WakeWord] Stopping wake word detection");
       stopWakeWordDetection();
+      wakeWordActiveRef.current = false;
     }
 
-    return () => stopWakeWordDetection();
-  }, [preferences.wakeWordEnabled, preferences.wakeWord, isListening, isProcessing, isSpeaking, isConversationMode]);
+    return () => {
+      if (wakeWordActiveRef.current) {
+        console.log("[WakeWord] Cleanup - stopping detection");
+        stopWakeWordDetection();
+        wakeWordActiveRef.current = false;
+      }
+    };
+  }, [preferences.wakeWordEnabled, preferences.wakeWord, preferences.assistantName, isListening, isProcessing, isSpeaking, isConversationMode, startConversationMode]);
 
   // Cleanup on unmount
   useEffect(() => {
