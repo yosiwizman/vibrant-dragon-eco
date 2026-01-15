@@ -16,6 +16,29 @@ export {
   getToolByName,
   getToolsByCategory,
   getAllToolNames,
+  getAllCategories,
+  toolExists,
+  getToolCountByCategory,
+  searchTools,
+  // Individual tool arrays
+  TIME_TOOLS,
+  SYSTEM_TOOLS,
+  TASK_TOOLS,
+  REMINDER_TOOLS,
+  NOTE_TOOLS,
+  CALENDAR_TOOLS,
+  CONTACT_TOOLS,
+  APPOINTMENT_TOOLS,
+  NOTIFICATION_TOOLS,
+  MESSAGE_TOOLS,
+  KNOWLEDGE_TOOLS,
+  SEARCH_TOOLS,
+  SCHEDULING_TOOLS,
+  RECURRING_TOOLS,
+  NAVIGATION_TOOLS,
+  SETTINGS_TOOLS,
+  WIDGET_TOOLS,
+  LISTENING_TOOLS,
 } from './tools';
 
 // Parser
@@ -28,8 +51,9 @@ export {
 // System prompt
 export { buildSystemPrompt } from './system-prompt';
 
-// Executors - re-export all
-export * from './executors';
+// Main executor
+export { executeTool, executeTools } from './executor';
+export type { ExecutorContext } from './executor';
 
-// For backward compatibility, also export from the main orchestrator file
-// This allows gradual migration
+// All executors - re-export for direct access
+export * from './executors';

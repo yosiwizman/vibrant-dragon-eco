@@ -46,3 +46,81 @@ export {
   executeDeleteNote,
   executePinNote,
 } from './notes';
+
+// Calendar executors
+export {
+  executeCreateCalendarEvent,
+  executeGetCalendarEvents,
+  executeUpdateCalendarEvent,
+  executeDeleteCalendarEvent,
+} from './calendar';
+
+// Contact executors
+export {
+  executeCreateContact,
+  executeGetContacts,
+  executeSearchContacts,
+  executeUpdateContact,
+  executeDeleteContact,
+  executeCallContact,
+  executeSendMessageToContact,
+} from './contacts';
+
+// Notification executors
+export {
+  executeSendNotification,
+  executeGetNotifications,
+  executeMarkNotificationRead,
+  executeClearNotifications,
+} from './notifications';
+
+// Message executors
+export {
+  executeDraftEmail,
+  executeDraftSMS,
+  executeGetDrafts,
+  executeDeleteDraft,
+} from './messages';
+
+// Knowledge executors
+export {
+  executeGetKnowledge,
+  executeSaveMemory,
+  executeGetMemories,
+  executeSearchKnowledgeBase,
+  executeAddToKnowledgeBase,
+  executeAddKnowledge,
+} from './knowledge';
+
+// Search executors
+export {
+  executeWebSearch,
+  executeGetWeather,
+  executeFindNearby,
+} from './search';
+
+// Scheduling executors
+export {
+  executeCheckScheduleConflicts,
+  executeGetSchedulingSuggestions,
+  executeGetScheduleAnalysis,
+  executeLearnUserPatterns,
+  executeCreatePatternReminder,
+} from './scheduling';
+
+// Listening mode executors
+export {
+  executeStartListeningMode,
+  executeEndListeningMode,
+  executeGetListeningStatus,
+  executeGetListeningSessions,
+} from './listening';
+
+// Navigation executors
+export { executeNavigateTo } from './navigation';
+
+// Recurring executors
+export {
+  executeGetRecurringItems,
+  executeCancelRecurringSeries,
+} from './recurring';
