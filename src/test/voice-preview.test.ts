@@ -6,11 +6,9 @@ global.fetch = vi.fn();
 
 describe('Voice Preview', () => {
   it('should use OpenAI TTS for voice preview', async () => {
-    const mockBlob = new Blob(['audio data'], { type: 'audio/mp3' });
-    
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      blob: () => Promise.resolve(mockBlob),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
     });
 
     const result = await synthesizeSpeech('Hello', 'test-key', 'nova');
@@ -28,12 +26,12 @@ describe('Voice Preview', () => {
     );
   });
 
-  it('should use HD model for better quality', async () => {
+  it('should use standard model for faster response', async () => {
     const mockBlob = new Blob(['audio data'], { type: 'audio/mp3' });
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      blob: () => Promise.resolve(mockBlob),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
     });
 
     await synthesizeSpeech('Hello', 'test-key', 'alloy');
@@ -41,7 +39,7 @@ describe('Voice Preview', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        body: expect.stringContaining('"model":"tts-1-hd"'),
+        body: expect.stringContaining('"model":"tts-1"'),
       })
     );
   });
@@ -52,7 +50,7 @@ describe('Voice Preview', () => {
       text: () => Promise.resolve('API Error'),
     });
 
-    await expect(synthesizeSpeech('Hello', 'bad-key', 'nova')).rejects.toThrow();
+    await expect(synthesizeSpeech('Hello', 'bad-key', 'nova')).rejects.toThrow('Speech synthesis failed');
   });
 });
 

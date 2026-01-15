@@ -58,13 +58,14 @@ export const createMockSession = (overrides = {}) => ({
   ...overrides
 });
 
-export const createMockNotification = (overrides = {}) => ({
+export const createMockNotification = (overrides: Record<string, any> = {}) => ({
   id: `notif_${Date.now()}`,
   type: 'info',
   title: 'Test Notification',
   body: 'Test body',
   read: false,
   created_at: new Date().toISOString(),
+  scheduled_at: null as number | null,
   ...overrides
 });
 
