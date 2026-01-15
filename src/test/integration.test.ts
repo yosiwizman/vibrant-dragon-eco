@@ -24,19 +24,32 @@
 export {
   createMockUser,
   createMockTask,
+  createMockNote,
+  createMockReminder,
   createMockWidget,
   createMockSession,
   createMockNotification,
+  createMockSupabaseAuth,
+  createMockSupabaseDb,
   wait,
+  waitFor,
   measureTime,
+  mockLocalStorage,
+  isValidEmail,
+  isValidUUID,
+  isValidISODate,
+  createNetworkError,
+  createTimeoutError,
+  createAuthError,
+  createValidationError,
   withRetry,
-  TestCache
+  TestCache,
 } from './integration/utils/test-helpers';
 
 // Legacy test utilities (for backward compatibility)
 export const testUtils = {
   createMockUser: () => ({ id: 'test-user', email: 'test@example.com' }),
-  createMockTask: (overrides = {}) => ({
+  createMockTask: (overrides: Record<string, unknown> = {}) => ({
     id: `task_${Date.now()}`,
     title: 'Test Task',
     status: 'pending',

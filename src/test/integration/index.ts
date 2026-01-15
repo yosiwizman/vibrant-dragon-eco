@@ -53,3 +53,29 @@ export const TEST_CATEGORIES = [
 ] as const;
 
 export type TestCategory = typeof TEST_CATEGORIES[number];
+
+// Re-export commonly used test utilities for convenience
+export {
+  createMockUser,
+  createMockTask,
+  createMockNote,
+  createMockReminder,
+  createMockWidget,
+  createMockSession,
+  createMockNotification,
+  createMockSupabaseAuth,
+  createMockSupabaseDb,
+  wait,
+  waitFor,
+  measureTime,
+  mockLocalStorage,
+  isValidEmail,
+  isValidUUID,
+  isValidISODate,
+  createNetworkError,
+  createTimeoutError,
+  createAuthError,
+  createValidationError,
+  withRetry,
+  TestCache,
+} from './utils/test-helpers';

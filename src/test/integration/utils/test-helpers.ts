@@ -1,17 +1,88 @@
 import { vi } from 'vitest';
 
 // ============================================
+// TYPES
+// ============================================
+
+export interface MockUser {
+  id: string;
+  email: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface MockTask {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  tags: string[];
+  created_at: string;
+  recurrence_rule?: string;
+  recurrence_end_date?: string;
+  [key: string]: unknown;
+}
+
+export interface MockNote {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  pinned: boolean;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface MockReminder {
+  id: string;
+  text: string;
+  due_time: string;
+  channel: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+export interface MockWidget {
+  id: string;
+  type: string;
+  position: { x: number; y: number };
+  size: { w: number; h: number };
+  config: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface MockSession {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  [key: string]: unknown;
+}
+
+export interface MockNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  read: boolean;
+  created_at: string;
+  scheduled_at: number | null;
+  [key: string]: unknown;
+}
+
+// ============================================
 // MOCK FACTORIES
 // ============================================
 
-export const createMockUser = (overrides = {}) => ({
+export const createMockUser = (overrides: Record<string, unknown> = {}): MockUser => ({
   id: `user_${Date.now()}`,
   email: 'test@example.com',
   created_at: new Date().toISOString(),
   ...overrides
 });
 
-export const createMockTask = (overrides = {}) => ({
+export const createMockTask = (overrides: Record<string, unknown> = {}): MockTask => ({
   id: `task_${Date.now()}`,
   title: 'Test Task',
   description: '',
@@ -23,7 +94,7 @@ export const createMockTask = (overrides = {}) => ({
   ...overrides
 });
 
-export const createMockNote = (overrides = {}) => ({
+export const createMockNote = (overrides: Record<string, unknown> = {}): MockNote => ({
   id: `note_${Date.now()}`,
   title: 'Test Note',
   content: '',
@@ -33,7 +104,7 @@ export const createMockNote = (overrides = {}) => ({
   ...overrides
 });
 
-export const createMockReminder = (overrides = {}) => ({
+export const createMockReminder = (overrides: Record<string, unknown> = {}): MockReminder => ({
   id: `reminder_${Date.now()}`,
   text: 'Test Reminder',
   due_time: new Date(Date.now() + 3600000).toISOString(),
@@ -42,7 +113,7 @@ export const createMockReminder = (overrides = {}) => ({
   ...overrides
 });
 
-export const createMockWidget = (type: string, overrides = {}) => ({
+export const createMockWidget = (type: string, overrides: Record<string, unknown> = {}): MockWidget => ({
   id: `widget_${Date.now()}`,
   type,
   position: { x: 0, y: 0 },
@@ -51,21 +122,21 @@ export const createMockWidget = (type: string, overrides = {}) => ({
   ...overrides
 });
 
-export const createMockSession = (overrides = {}) => ({
+export const createMockSession = (overrides: Record<string, unknown> = {}): MockSession => ({
   access_token: `token_${Date.now()}`,
   refresh_token: `refresh_${Date.now()}`,
   expires_at: Date.now() + 3600000,
   ...overrides
 });
 
-export const createMockNotification = (overrides: Record<string, any> = {}) => ({
+export const createMockNotification = (overrides: Record<string, unknown> = {}): MockNotification => ({
   id: `notif_${Date.now()}`,
   type: 'info',
   title: 'Test Notification',
   body: 'Test body',
   read: false,
   created_at: new Date().toISOString(),
-  scheduled_at: null as number | null,
+  scheduled_at: null,
   ...overrides
 });
 
@@ -95,7 +166,7 @@ export const createMockSupabaseDb = () => ({
 // ASYNC UTILITIES
 // ============================================
 
-export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const wait = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 export const waitFor = async (
   condition: () => boolean | Promise<boolean>,
@@ -153,10 +224,10 @@ export const isValidISODate = (date: string): boolean => {
 // ERROR SIMULATION
 // ============================================
 
-export const createNetworkError = () => new Error('Network request failed');
-export const createTimeoutError = () => new Error('Request timeout');
-export const createAuthError = () => new Error('Unauthorized: Invalid token');
-export const createValidationError = (field: string) => new Error(`Validation failed: ${field}`);
+export const createNetworkError = (): Error => new Error('Network request failed');
+export const createTimeoutError = (): Error => new Error('Request timeout');
+export const createAuthError = (): Error => new Error('Unauthorized: Invalid token');
+export const createValidationError = (field: string): Error => new Error(`Validation failed: ${field}`);
 
 // ============================================
 // RETRY UTILITIES
