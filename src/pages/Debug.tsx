@@ -23,10 +23,14 @@ import {
   Server,
   Zap,
   Clock,
-  TestTube
+  TestTube,
+  Activity,
+  Heart
 } from "lucide-react";
 import { getTimeContext } from "@/services/context";
 import { AVAILABLE_TOOLS } from "@/services/orchestrator";
+import { runSmokeTests, SmokeTestReport } from "@/services/smoke-test";
+import { runHealthCheck, SystemHealthReport } from "@/services/system-health";
 
 interface SystemCheck {
   name: string;
@@ -41,6 +45,10 @@ export default function Debug() {
   const [systemChecks, setSystemChecks] = useState<SystemCheck[]>([]);
   const [isRunningChecks, setIsRunningChecks] = useState(false);
   const [dbStats, setDbStats] = useState<any>(null);
+  const [smokeTestReport, setSmokeTestReport] = useState<SmokeTestReport | null>(null);
+  const [healthReport, setHealthReport] = useState<SystemHealthReport | null>(null);
+  const [isRunningSmokeTests, setIsRunningSmokeTests] = useState(false);
+  const [isRunningHealthCheck, setIsRunningHealthCheck] = useState(false);
 
   useEffect(() => {
     runAllChecks();
@@ -231,6 +239,42 @@ export default function Debug() {
       case "error": return <XCircle className="h-4 w-4 text-red-400" />;
       case "warning": return <XCircle className="h-4 w-4 text-yellow-400" />;
       default: return <RefreshCw className="h-4 w-4 text-slate-400 animate-spin" />;
+    }
+  };
+
+  const runSmokeTestsHandler = async () => {
+    setIsRunningSmokeTests(true);
+    try {
+      const report = await runSmokeTests();
+      setSmokeTestReport(report);
+      if (report.failed === 0) {
+        showSuccess(`All ${report.total} smoke tests passed!`);
+      } else {
+        showError(`${report.failed} of ${report.total} tests failed`);
+      }
+    } catch (error: any) {
+      showError(error.message || 'Smoke tests failed');
+    } finally {
+      setIsRunningSmokeTests(false);
+    }
+  };
+
+  const runHealthCheckHandler = async () => {
+    setIsRunningHealthCheck(true);
+    try {
+      const report = await runHealthCheck(preferences.openaiApiKey || undefined);
+      setHealthReport(report);
+      if (report.overall === 'healthy') {
+        showSuccess('System is healthy!');
+      } else if (report.overall === 'degraded') {
+        showSuccess('System is degraded - some features may be limited');
+      } else {
+        showError('System health issues detected');
+      }
+    } catch (error: any) {
+      showError(error.message || 'Health check failed');
+    } finally {
+      setIsRunningHealthCheck(false);
     }
   };
 
@@ -427,6 +471,132 @@ export default function Debug() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Smoke Tests */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <TestTube className="h-5 w-5 text-fuchsia-400" />
+              Smoke Tests
+            </CardTitle>
+            <Button
+              onClick={runSmokeTestsHandler}
+              disabled={isRunningSmokeTests}
+              size="sm"
+              className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+            >
+              <TestTube className={`h-4 w-4 mr-2 ${isRunningSmokeTests ? "animate-spin" : ""}`} />
+              Run Tests
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {smokeTestReport ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Badge className={smokeTestReport.failed === 0 ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}>
+                    {smokeTestReport.passed}/{smokeTestReport.total} Passed
+                  </Badge>
+                  <span className="text-xs text-slate-400">{smokeTestReport.timestamp}</span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {smokeTestReport.results.map((result) => (
+                    <div
+                      key={result.name}
+                      className={`p-3 rounded-lg border ${result.passed ? 'border-green-500/30 bg-green-900/10' : 'border-red-500/30 bg-red-900/10'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {result.passed ? (
+                          <CheckCircle className="h-4 w-4 text-green-400" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-400" />
+                        )}
+                        <span className="font-medium text-white">{result.name}</span>
+                        <span className="text-xs text-slate-400 ml-auto">{result.duration.toFixed(0)}ms</span>
+                      </div>
+                      {result.error && (
+                        <p className="text-xs text-red-300 mt-1">{result.error}</p>
+                      )}
+                      {result.details && (
+                        <pre className="text-xs text-slate-400 mt-1 overflow-hidden text-ellipsis">
+                          {JSON.stringify(result.details, null, 2).slice(0, 100)}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Click "Run Tests" to verify system components</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Health Check */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Heart className="h-5 w-5 text-fuchsia-400" />
+              System Health
+            </CardTitle>
+            <Button
+              onClick={runHealthCheckHandler}
+              disabled={isRunningHealthCheck}
+              size="sm"
+              className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+            >
+              <Activity className={`h-4 w-4 mr-2 ${isRunningHealthCheck ? "animate-spin" : ""}`} />
+              Check Health
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {healthReport ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Badge className={
+                    healthReport.overall === 'healthy' ? "bg-green-500/20 text-green-300" :
+                    healthReport.overall === 'degraded' ? "bg-yellow-500/20 text-yellow-300" :
+                    "bg-red-500/20 text-red-300"
+                  }>
+                    {healthReport.overall.toUpperCase()}
+                  </Badge>
+                  <span className="text-xs text-slate-400">{healthReport.timestamp}</span>
+                  {healthReport.metrics.memoryUsage && (
+                    <span className="text-xs text-slate-400">Memory: {healthReport.metrics.memoryUsage}MB</span>
+                  )}
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {healthReport.checks.map((check) => (
+                    <div
+                      key={check.component}
+                      className={`p-3 rounded-lg border ${
+                        check.status === 'healthy' ? 'border-green-500/30 bg-green-900/10' :
+                        check.status === 'degraded' ? 'border-yellow-500/30 bg-yellow-900/10' :
+                        'border-red-500/30 bg-red-900/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {check.status === 'healthy' ? (
+                          <CheckCircle className="h-4 w-4 text-green-400" />
+                        ) : check.status === 'degraded' ? (
+                          <XCircle className="h-4 w-4 text-yellow-400" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-400" />
+                        )}
+                        <span className="font-medium text-white">{check.component}</span>
+                        {check.latency && (
+                          <span className="text-xs text-slate-400 ml-auto">{check.latency.toFixed(0)}ms</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">{check.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Click "Check Health" to run system diagnostics</p>
+            )}
           </CardContent>
         </Card>
 
