@@ -135,7 +135,8 @@ describe('Notification System Integration', () => {
         scheduled_at: scheduledTime
       });
 
-      expect(notification.scheduled_at).toBeGreaterThan(Date.now());
+      expect(notification.scheduled_at).not.toBeNull();
+      expect(notification.scheduled_at as number).toBeGreaterThan(Date.now());
     });
 
     it('should determine if notification is due', () => {

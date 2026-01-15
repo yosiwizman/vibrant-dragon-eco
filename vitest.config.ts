@@ -31,6 +31,17 @@ export default defineConfig({
     },
     testTimeout: 10000,
     hookTimeout: 10000,
+    // Silence console output during tests (optional - uncomment to enable)
+    // silent: true,
+    // Reporter configuration
+    reporters: ['default'],
+    // Pool configuration for better performance
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
   resolve: {
     alias: {
