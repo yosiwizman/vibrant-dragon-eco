@@ -6,9 +6,14 @@ export { useVoiceSpeech } from './useVoiceSpeech';
 export { useVoiceRecording } from './useVoiceRecording';
 export { useVoiceCommands } from './useVoiceCommands';
 
+// Utility hooks
+export { useAsyncOperation, useMutation, useQuery } from './useAsyncOperation';
+export { useDebounce, useDebouncedCallback, useThrottledCallback, useSearchInput, useInfiniteScroll } from './useDebounce';
+
 // Re-export types
 export type { UseVoiceStateReturn } from './useVoiceState';
 export type { UseWakeWordOptions, UseWakeWordReturn } from './useWakeWord';
 export type { UseVoiceSpeechOptions, UseVoiceSpeechReturn } from './useVoiceSpeech';
 export type { UseVoiceRecordingOptions, UseVoiceRecordingReturn } from './useVoiceRecording';
 export type { UseVoiceCommandsOptions, UseVoiceCommandsReturn } from './useVoiceCommands';
+export type { AsyncOperationState, AsyncOperationOptions, UseAsyncOperationReturn } from './useAsyncOperation';
