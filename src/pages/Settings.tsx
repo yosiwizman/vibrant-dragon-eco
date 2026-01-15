@@ -241,10 +241,12 @@ export default function Settings() {
 
   const requestLocation = async () => {
     try {
+      showSuccess("Requesting location access...");
       const loc = await getCurrentLocation();
-      showSuccess(`Location access granted: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`);
+      showSuccess(`Location access granted! Coordinates: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "Location permission denied";
+      const errorMessage = e instanceof Error ? e.message : "Unable to access location";
+      console.error("[Settings] Location error:", e);
       showError(errorMessage);
     }
   };
