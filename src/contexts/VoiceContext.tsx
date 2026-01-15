@@ -71,6 +71,10 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   // Refs
   const conversationModeRef = useRef(false);
   const isStartingRef = useRef(false);
+  const wakeWordActiveRef = useRef(false);
+  
+  // Ref to hold the startConversationMode function for use in useEffect
+  const startConversationModeRef = useRef<(() => Promise<void>) | null>(null);
 
   // Sync conversation mode ref
   useEffect(() => {
@@ -98,63 +102,6 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       setIsQuietMode(isActive);
     }
   }, [user]);
-
-  // Wake word detection - track if it's active
-  const wakeWordActiveRef = useRef(false);
-
-  // Wake word detection
-  useEffect(() => {
-    const shouldBeActive = preferences.wakeWordEnabled &&
-                          isWakeWordSupported() &&
-                          !isListening &&
-                          !isProcessing &&
-                          !isSpeaking &&
-                          !isConversationMode;
-
-    console.log("[WakeWord] Checking status:", {
-      enabled: preferences.wakeWordEnabled,
-      supported: isWakeWordSupported(),
-      isListening,
-      isProcessing,
-      isSpeaking,
-      isConversationMode,
-      shouldBeActive,
-      currentlyActive: wakeWordActiveRef.current
-    });
-
-    if (shouldBeActive && !wakeWordActiveRef.current) {
-      console.log("[WakeWord] Starting wake word detection for:", preferences.wakeWord || "echo");
-      
-      const started = startWakeWordDetection({
-        wakeWord: preferences.wakeWord || "echo",
-        onWakeWordDetected: () => {
-          console.log("[WakeWord] Wake word detected! Starting conversation mode...");
-          wakeWordActiveRef.current = false; // Will be stopped when conversation starts
-          showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
-          startConversationMode();
-        },
-        onError: (error) => {
-          console.error("[WakeWord] Error:", error);
-          wakeWordActiveRef.current = false;
-        },
-      });
-      
-      wakeWordActiveRef.current = started;
-      console.log("[WakeWord] Detection started:", started);
-    } else if (!shouldBeActive && wakeWordActiveRef.current) {
-      console.log("[WakeWord] Stopping wake word detection");
-      stopWakeWordDetection();
-      wakeWordActiveRef.current = false;
-    }
-
-    return () => {
-      if (wakeWordActiveRef.current) {
-        console.log("[WakeWord] Cleanup - stopping detection");
-        stopWakeWordDetection();
-        wakeWordActiveRef.current = false;
-      }
-    };
-  }, [preferences.wakeWordEnabled, preferences.wakeWord, preferences.assistantName, isListening, isProcessing, isSpeaking, isConversationMode, startConversationMode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -184,6 +131,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     setIsSpeaking(false);
   }, []);
 
+  // Forward declare startListeningInternal ref for use in speak
+  const startListeningInternalRef = useRef<((isConversation: boolean) => Promise<void>) | null>(null);
+
   // Speak text
   const speak = useCallback(async (text: string) => {
     if (!text?.trim()) return;
@@ -201,7 +151,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
           setIsSpeaking(false);
           // Auto-continue conversation mode
           if (conversationModeRef.current && !isStartingRef.current) {
-            setTimeout(() => startListeningInternal(true), 500);
+            setTimeout(() => startListeningInternalRef.current?.(true), 500);
           }
         },
         onError: (error) => {
@@ -254,12 +204,52 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, openaiApiKey, userLocation, navigate, getVoiceConfig]);
 
+  // Stop listening
+  const stopListening = useCallback(() => {
+    console.log("[Voice] Stopping listening");
+    isStartingRef.current = false;
+    voiceRecorder.stop();
+    setIsListening(false);
+  }, []);
+
+  // Stop conversation mode - defined early so it can be used in handleTranscription
+  const stopConversationMode = useCallback(() => {
+    console.log("[Voice] Stopping conversation mode");
+    conversationModeRef.current = false;
+    setIsConversationMode(false);
+    isStartingRef.current = false;
+    conversationManager.stopConversation();
+    
+    stopListening();
+    stopSpeaking();
+  }, [stopListening, stopSpeaking]);
+
+  // Enter quiet mode
+  const enterQuietMode = useCallback((context?: string) => {
+    if (!user) return;
+    conversationManager.enterQuietMode(user.id, context);
+    setIsQuietMode(true);
+    showSuccess(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll just listen.`);
+  }, [user]);
+
+  // Exit quiet mode
+  const exitQuietMode = useCallback(async () => {
+    if (!user || !openaiApiKey) {
+      setIsQuietMode(false);
+      return null;
+    }
+
+    const result = await conversationManager.exitQuietMode(user.id, openaiApiKey);
+    setIsQuietMode(false);
+    return result;
+  }, [user, openaiApiKey]);
+
   // Handle transcription result
   const handleTranscription = useCallback(async (text: string, isConversation: boolean) => {
     if (!text?.trim()) {
       setIsProcessing(false);
       if (conversationModeRef.current && !isStartingRef.current) {
-        setTimeout(() => startListeningInternal(true), 500);
+        setTimeout(() => startListeningInternalRef.current?.(true), 500);
       }
       return;
     }
@@ -349,7 +339,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         await speak("Sorry, I had trouble with that. Please try again.");
       }
     }
-  }, [user, isQuietMode, processVoiceCommand, speak, playFeedback]);
+  }, [user, isQuietMode, processVoiceCommand, speak, playFeedback, stopConversationMode, enterQuietMode, exitQuietMode]);
 
   // Internal start listening function
   const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
@@ -428,7 +418,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
               showError("Recording too short. Please speak for at least 1 second.");
             }
             if (conversationModeRef.current && !isStartingRef.current) {
-              setTimeout(() => startListeningInternal(true), 500);
+              setTimeout(() => startListeningInternalRef.current?.(true), 500);
             }
             return;
           }
@@ -464,18 +454,17 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     );
   }, [isListening, openaiApiKey, playFeedback, handleTranscription, speak]);
 
+  // Update the ref when startListeningInternal changes
+  useEffect(() => {
+    startListeningInternalRef.current = startListeningInternal;
+  }, [startListeningInternal]);
+
   // Public API
   const startListening = useCallback(async () => {
     await startListeningInternal(false);
   }, [startListeningInternal]);
 
-  const stopListening = useCallback(() => {
-    console.log("[Voice] Stopping listening");
-    isStartingRef.current = false;
-    voiceRecorder.stop();
-    setIsListening(false);
-  }, []);
-
+  // Start conversation mode - now defined after speak is available
   const startConversationMode = useCallback(async () => {
     if (isConversationMode) return;
     
@@ -487,34 +476,65 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     await speak(`Hi! I'm ${preferences.assistantName || "Echo"}. How can I help you?`);
   }, [isConversationMode, speak, preferences.assistantName]);
 
-  const stopConversationMode = useCallback(() => {
-    console.log("[Voice] Stopping conversation mode");
-    conversationModeRef.current = false;
-    setIsConversationMode(false);
-    isStartingRef.current = false;
-    conversationManager.stopConversation();
-    
-    stopListening();
-    stopSpeaking();
-  }, [stopListening, stopSpeaking]);
+  // Update the ref when startConversationMode changes
+  useEffect(() => {
+    startConversationModeRef.current = startConversationMode;
+  }, [startConversationMode]);
 
-  const enterQuietMode = useCallback((context?: string) => {
-    if (!user) return;
-    conversationManager.enterQuietMode(user.id, context);
-    setIsQuietMode(true);
-    showSuccess(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll just listen.`);
-  }, [user]);
+  // Wake word detection - uses ref to avoid circular dependency
+  useEffect(() => {
+    const shouldBeActive = preferences.wakeWordEnabled &&
+                          isWakeWordSupported() &&
+                          !isListening &&
+                          !isProcessing &&
+                          !isSpeaking &&
+                          !isConversationMode;
 
-  const exitQuietMode = useCallback(async () => {
-    if (!user || !openaiApiKey) {
-      setIsQuietMode(false);
-      return null;
+    console.log("[WakeWord] Checking status:", {
+      enabled: preferences.wakeWordEnabled,
+      supported: isWakeWordSupported(),
+      isListening,
+      isProcessing,
+      isSpeaking,
+      isConversationMode,
+      shouldBeActive,
+      currentlyActive: wakeWordActiveRef.current
+    });
+
+    if (shouldBeActive && !wakeWordActiveRef.current) {
+      console.log("[WakeWord] Starting wake word detection for:", preferences.wakeWord || "echo");
+      
+      const started = startWakeWordDetection({
+        wakeWord: preferences.wakeWord || "echo",
+        onWakeWordDetected: () => {
+          console.log("[WakeWord] Wake word detected! Starting conversation mode...");
+          wakeWordActiveRef.current = false; // Will be stopped when conversation starts
+          showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
+          // Use ref to call startConversationMode to avoid circular dependency
+          startConversationModeRef.current?.();
+        },
+        onError: (error) => {
+          console.error("[WakeWord] Error:", error);
+          wakeWordActiveRef.current = false;
+        },
+      });
+      
+      wakeWordActiveRef.current = started;
+      console.log("[WakeWord] Detection started:", started);
+    } else if (!shouldBeActive && wakeWordActiveRef.current) {
+      console.log("[WakeWord] Stopping wake word detection");
+      stopWakeWordDetection();
+      wakeWordActiveRef.current = false;
     }
 
-    const result = await conversationManager.exitQuietMode(user.id, openaiApiKey);
-    setIsQuietMode(false);
-    return result;
-  }, [user, openaiApiKey]);
+    return () => {
+      if (wakeWordActiveRef.current) {
+        console.log("[WakeWord] Cleanup - stopping detection");
+        stopWakeWordDetection();
+        wakeWordActiveRef.current = false;
+      }
+    };
+  }, [preferences.wakeWordEnabled, preferences.wakeWord, preferences.assistantName, isListening, isProcessing, isSpeaking, isConversationMode]);
 
   return (
     <VoiceContext.Provider
