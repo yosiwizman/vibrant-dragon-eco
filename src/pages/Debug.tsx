@@ -25,7 +25,11 @@ import {
   Clock,
   TestTube,
   Activity,
-  Heart
+  Heart,
+  Beaker,
+  Video,
+  Brain,
+  BarChart3
 } from "lucide-react";
 import { getTimeContext } from "@/services/context";
 import { AVAILABLE_TOOLS } from "@/services/orchestrator";
@@ -34,6 +38,10 @@ import { runHealthCheck, SystemHealthReport } from "@/services/system-health";
 import { selfHealing } from "@/services/self-healing";
 import { advancedAnalytics } from "@/services/advanced-analytics";
 import { predictiveCache } from "@/services/predictive-caching";
+import { performanceDashboard } from "@/services/performance-dashboard";
+import { abTesting } from "@/services/ab-testing";
+import { sessionRecording } from "@/services/session-recording";
+import { mlErrorPredictor } from "@/services/ml-error-predictor";
 
 interface SystemCheck {
   name: string;
@@ -52,10 +60,29 @@ export default function Debug() {
   const [healthReport, setHealthReport] = useState<SystemHealthReport | null>(null);
   const [isRunningSmokeTests, setIsRunningSmokeTests] = useState(false);
   const [isRunningHealthCheck, setIsRunningHealthCheck] = useState(false);
+  const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
+  const [abExperiments, setAbExperiments] = useState<any[]>([]);
+  const [sessionInfo, setSessionInfo] = useState<any>(null);
+  const [errorPredictions, setErrorPredictions] = useState<any[]>([]);
 
   useEffect(() => {
     runAllChecks();
     if (user) loadDbStats();
+    
+    // Initialize 130% services
+    const metrics = performanceDashboard.getLatestMetrics();
+    setPerformanceMetrics(metrics);
+    
+    const experiments = abTesting.getAllExperiments();
+    setAbExperiments(experiments);
+    
+    const recording = sessionRecording.getCurrentRecording();
+    if (recording) {
+      setSessionInfo(sessionRecording.generateSessionSummary(recording));
+    }
+    
+    const predictions = mlErrorPredictor.getRecentPredictions();
+    setErrorPredictions(predictions);
   }, [user]);
 
   const loadDbStats = async () => {
@@ -753,6 +780,248 @@ export default function Debug() {
                 </div>
               );
             })()}
+          </CardContent>
+        </Card>
+
+        {/* Performance Dashboard - 130% */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-fuchsia-400" />
+              Performance Dashboard (130%)
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  performanceDashboard.startRecording();
+                  showSuccess('Performance recording started');
+                }}
+                className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+              >
+                Start Recording
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  performanceDashboard.stopRecording();
+                  setPerformanceMetrics(performanceDashboard.getLatestMetrics());
+                  showSuccess('Performance recording stopped');
+                }}
+                className="border-slate-600 text-slate-300"
+              >
+                Stop
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {performanceMetrics && Object.keys(performanceMetrics).length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(performanceMetrics).map(([key, metric]: [string, any]) => (
+                  metric && (
+                    <div key={key} className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                      <div className="text-2xl font-bold text-fuchsia-400">
+                        {metric.value}{metric.unit}
+                      </div>
+                      <div className="text-xs text-slate-400">{metric.name}</div>
+                      {metric.trend && (
+                        <div className={`text-xs ${metric.trend === 'up' ? 'text-red-400' : metric.trend === 'down' ? 'text-green-400' : 'text-slate-400'}`}>
+                          {metric.trend === 'up' ? '↑' : metric.trend === 'down' ? '↓' : '→'}
+                        </div>
+                      )}
+                    </div>
+                  )
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Click "Start Recording" to collect performance metrics</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* A/B Testing - 130% */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Beaker className="h-5 w-5 text-fuchsia-400" />
+              A/B Testing Framework (130%)
+            </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => {
+                abTesting.setupDefaultExperiments();
+                setAbExperiments(abTesting.getAllExperiments());
+                showSuccess('Default experiments created');
+              }}
+              className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+            >
+              Setup Experiments
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {abExperiments.length > 0 ? (
+              <div className="space-y-3">
+                {abExperiments.map((exp) => (
+                  <div key={exp.id} className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-white">{exp.name}</span>
+                      <Badge className={
+                        exp.status === 'running' ? 'bg-green-500/20 text-green-300' :
+                        exp.status === 'completed' ? 'bg-blue-500/20 text-blue-300' :
+                        'bg-slate-500/20 text-slate-300'
+                      }>
+                        {exp.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">{exp.description}</p>
+                    <div className="flex gap-2 mt-2">
+                      {exp.variants.map((v: any) => (
+                        <Badge key={v.id} variant="outline" className="border-slate-600 text-xs">
+                          {v.name}: {v.weight}%
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Click "Setup Experiments" to create default A/B tests</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Session Recording - 130% */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Video className="h-5 w-5 text-fuchsia-400" />
+              Session Recording (130%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${sessionRecording.isCurrentlyRecording() ? 'bg-red-500 animate-pulse' : 'bg-slate-500'}`} />
+                <span className="text-white">
+                  {sessionRecording.isCurrentlyRecording() ? 'Recording in progress...' : 'Not recording'}
+                </span>
+              </div>
+              {sessionInfo && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="text-2xl font-bold text-fuchsia-400">
+                      {Math.round(sessionInfo.duration / 1000)}s
+                    </div>
+                    <div className="text-xs text-slate-400">Duration</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="text-2xl font-bold text-red-400">
+                      {sessionInfo.errorCount}
+                    </div>
+                    <div className="text-xs text-slate-400">Errors</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="text-2xl font-bold text-blue-400">
+                      {sessionInfo.voiceUsage}
+                    </div>
+                    <div className="text-xs text-slate-400">Voice Events</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="text-2xl font-bold text-green-400">
+                      {Object.values(sessionInfo.eventCounts || {}).reduce((a: number, b: any) => a + (b as number), 0)}
+                    </div>
+                    <div className="text-xs text-slate-400">Total Events</div>
+                  </div>
+                </div>
+              )}
+              {sessionInfo?.topInteractions?.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-400 mb-2">Top Interactions:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionInfo.topInteractions.slice(0, 5).map((interaction: string, i: number) => (
+                      <Badge key={i} variant="outline" className="border-slate-600 text-xs">
+                        {interaction}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ML Error Predictor - 130% */}
+        <Card className="border-fuchsia-500/20 bg-black/40 backdrop-blur-lg shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Brain className="h-5 w-5 text-fuchsia-400" />
+              ML Error Predictor (130%)
+            </CardTitle>
+            <Button
+              size="sm"
+              onClick={() => {
+                mlErrorPredictor.initialize();
+                setErrorPredictions(mlErrorPredictor.getRecentPredictions());
+                showSuccess('Error predictor initialized');
+              }}
+              className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+            >
+              Initialize
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(() => {
+                const health = mlErrorPredictor.getSystemHealth();
+                return (
+                  <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-medium text-white">System Health Score</span>
+                      <Badge className={
+                        health.status === 'healthy' ? 'bg-green-500/20 text-green-300' :
+                        health.status === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
+                        'bg-red-500/20 text-red-300'
+                      }>
+                        {health.status.toUpperCase()} ({health.score}%)
+                      </Badge>
+                    </div>
+                    {health.issues.length > 0 && (
+                      <div className="space-y-1">
+                        {health.issues.map((issue, i) => (
+                          <p key={i} className="text-xs text-yellow-400">⚠️ {issue}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              
+              {errorPredictions.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-400 mb-2">Active Predictions:</p>
+                  <div className="space-y-2">
+                    {errorPredictions.map((pred, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-white">{pred.errorType}</span>
+                          <Badge className="bg-yellow-500/20 text-yellow-300">
+                            {pred.probability}% likely
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Prevention: {pred.preventionAction}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {errorPredictions.length === 0 && (
+                <p className="text-slate-400 text-sm">No error predictions at this time - system is stable</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
