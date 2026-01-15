@@ -1,24 +1,18 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
-import { usePreferences } from "@/state/preferences";
-import { useOpenAIKey } from "@/hooks/useOpenAIKey";
-import { getLocationContext, LocationContext } from "@/services/context";
-import { showError, showSuccess } from "@/utils/toast";
-import { useVoiceFeedback } from "@/components/VoiceFeedback";
-import { initializeRAGKnowledge } from "@/services/rag-knowledge";
-import { logVoiceCommand, logAIError } from "@/services/ai-logging";
-import { startWakeWordDetection, stopWakeWordDetection, isWakeWordSupported } from "@/services/wake-word-detection";
-import { offlineVoiceRecorder, isOfflineVoiceRecorderSupported } from "@/services/offline-voice-recorder";
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { usePreferences } from '@/state/preferences';
+import { getLocationContext, LocationContext } from '@/services/context';
+import { showSuccess } from '@/utils/toast';
+import { initializeRAGKnowledge } from '@/services/rag-knowledge';
+import { conversationManager, voiceRecorder, voicePlayer } from '@/services/voice';
 
-// Import modular voice services
-import { 
-  voiceRecorder, 
-  voicePlayer, 
-  voiceProcessor, 
-  conversationManager,
-  VoiceConfig 
-} from "@/services/voice";
+// Import modular hooks
+import { useVoiceState } from '@/hooks/useVoiceState';
+import { useVoiceConfig } from '@/hooks/useVoiceConfig';
+import { useWakeWord } from '@/hooks/useWakeWord';
+import { useVoiceSpeech } from '@/hooks/useVoiceSpeech';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useVoiceCommands } from '@/hooks/useVoiceCommands';
 
 interface VoiceContextType {
   isListening: boolean;
@@ -45,41 +39,41 @@ const VoiceContext = createContext<VoiceContextType | null>(null);
 export function useVoice() {
   const context = useContext(VoiceContext);
   if (!context) {
-    throw new Error("useVoice must be used within a VoiceProvider");
+    throw new Error('useVoice must be used within a VoiceProvider');
   }
   return context;
 }
 
 export function VoiceProvider({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { apiKey: openaiApiKey } = useOpenAIKey();
-  const { playFeedback } = useVoiceFeedback();
+  const config = useVoiceConfig();
   
-  // State
-  const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isQuietMode, setIsQuietMode] = useState(false);
-  const [isConversationMode, setIsConversationMode] = useState(false);
-  const [lastTranscript, setLastTranscript] = useState("");
-  const [currentTranscript, setCurrentTranscript] = useState("");
-  const [lastResponse, setLastResponse] = useState("");
+  // Location state
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
   
-  // Refs
-  const conversationModeRef = useRef(false);
-  const isStartingRef = useRef(false);
-  const wakeWordActiveRef = useRef(false);
-  
-  // Ref to hold the startConversationMode function for use in useEffect
-  const startConversationModeRef = useRef<(() => Promise<void>) | null>(null);
-
-  // Sync conversation mode ref
-  useEffect(() => {
-    conversationModeRef.current = isConversationMode;
-  }, [isConversationMode]);
+  // Voice state management
+  const voiceState = useVoiceState();
+  const {
+    isListening,
+    isProcessing,
+    isSpeaking,
+    isQuietMode,
+    isConversationMode,
+    lastTranscript,
+    currentTranscript,
+    lastResponse,
+    setIsListening,
+    setIsProcessing,
+    setIsSpeaking,
+    setIsQuietMode,
+    setIsConversationMode,
+    setLastTranscript,
+    setCurrentTranscript,
+    setLastResponse,
+    conversationModeRef,
+    isStartingRef,
+  } = voiceState;
 
   // Get location on mount
   useEffect(() => {
@@ -101,7 +95,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       const isActive = conversationManager.checkQuietModeStatus(user.id);
       setIsQuietMode(isActive);
     }
-  }, [user]);
+  }, [user, setIsQuietMode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -110,431 +104,112 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
       voiceRecorder.stop();
       voicePlayer.stop();
     };
-  }, []);
+  }, [isStartingRef]);
 
-  // Get voice config from preferences
-  const getVoiceConfig = useCallback((): VoiceConfig => ({
-    openaiApiKey,
-    assistantName: preferences.assistantName || "Echo",
-    openaiVoice: preferences.openaiVoice || "nova",
-    voiceSpeed: preferences.voiceSpeed || 1.0,
-    preferOpenAIVoice: preferences.preferOpenAIVoice !== false,
-    enableMemory: preferences.enableMemory || false,
-    enableChatHistory: preferences.enableChatHistory || false,
-    chatHistoryLimit: preferences.chatHistoryLimit || 10,
-    privateMode: preferences.privateMode || false,
-  }), [openaiApiKey, preferences]);
-
-  // Stop speaking
-  const stopSpeaking = useCallback(() => {
-    voicePlayer.stop();
-    setIsSpeaking(false);
-  }, []);
-
-  // Forward declare startListeningInternal ref for use in speak
-  const startListeningInternalRef = useRef<((isConversation: boolean) => Promise<void>) | null>(null);
-
-  // Speak text
-  const speak = useCallback(async (text: string) => {
-    if (!text?.trim()) return;
-
-    stopSpeaking();
-    const config = getVoiceConfig();
-
-    try {
-      setIsSpeaking(true);
-      
-      await voicePlayer.speak(text, openaiApiKey, {
-        voice: config.openaiVoice,
-        rate: config.voiceSpeed,
-        onEnd: () => {
-          setIsSpeaking(false);
-          // Auto-continue conversation mode
-          if (conversationModeRef.current && !isStartingRef.current) {
-            setTimeout(() => startListeningInternalRef.current?.(true), 500);
-          }
-        },
-        onError: (error) => {
-          console.error("[Voice] Speech error:", error);
-          setIsSpeaking(false);
-        },
-      });
-    } catch (error: any) {
-      console.error("[Voice] Speak error:", error);
-      setIsSpeaking(false);
-    }
-  }, [openaiApiKey, getVoiceConfig, stopSpeaking]);
-
-  // Process voice command
-  const processVoiceCommand = useCallback(async (text: string): Promise<string> => {
-    const currentUser = user;
-    if (!currentUser) {
-      throw new Error("Please log in to use AI features");
-    }
-
-    setIsProcessing(true);
-    setLastTranscript(text);
-    setCurrentTranscript("");
-
-    try {
-      const config = getVoiceConfig();
-      
-      const result = await voiceProcessor.processCommand(
-        text,
-        currentUser.id,
-        openaiApiKey,
-        config,
-        userLocation,
-        (path) => navigate(path)
-      );
-
-      setLastResponse(result.response);
-      setIsProcessing(false);
-      
-      return result.response;
-    } catch (error: any) {
-      setIsProcessing(false);
-      console.error("[Voice] Processing error:", error);
-      
-      if (user) {
-        logAIError(user.id, error.message, { command: text });
+  // Speech hook
+  const { speak, stopSpeaking } = useVoiceSpeech({
+    config,
+    onSpeakingChange: setIsSpeaking,
+    onSpeechEnd: () => {
+      // Auto-continue conversation mode
+      if (conversationModeRef.current && !isStartingRef.current) {
+        setTimeout(() => startListeningInternal(true), 500);
       }
-      
-      throw error;
+    },
+  });
+
+  // Quiet mode handlers
+  const enterQuietMode = useCallback((context?: string) => {
+    if (!user) return;
+    conversationManager.enterQuietMode(user.id, context);
+    setIsQuietMode(true);
+    showSuccess(`Entering quiet mode${context ? ` for ${context}` : ''}. I'll just listen.`);
+  }, [user, setIsQuietMode]);
+
+  const exitQuietMode = useCallback(async () => {
+    if (!user || !config.openaiApiKey) {
+      setIsQuietMode(false);
+      return null;
     }
-  }, [user, openaiApiKey, userLocation, navigate, getVoiceConfig]);
 
-  // Stop listening
-  const stopListening = useCallback(() => {
-    console.log("[Voice] Stopping listening");
-    isStartingRef.current = false;
-    voiceRecorder.stop();
-    setIsListening(false);
-  }, []);
+    const result = await conversationManager.exitQuietMode(user.id, config.openaiApiKey);
+    setIsQuietMode(false);
+    return result;
+  }, [user, config.openaiApiKey, setIsQuietMode]);
 
-  // Stop conversation mode - defined early so it can be used in handleTranscription
+  // Stop conversation mode (defined early for use in commands hook)
   const stopConversationMode = useCallback(() => {
-    console.log("[Voice] Stopping conversation mode");
+    console.log('[Voice] Stopping conversation mode');
     conversationModeRef.current = false;
     setIsConversationMode(false);
     isStartingRef.current = false;
     conversationManager.stopConversation();
     
-    stopListening();
-    stopSpeaking();
-  }, [stopListening, stopSpeaking]);
+    voiceRecorder.stop();
+    setIsListening(false);
+    voicePlayer.stop();
+    setIsSpeaking(false);
+  }, [conversationModeRef, isStartingRef, setIsConversationMode, setIsListening, setIsSpeaking]);
 
-  // Enter quiet mode
-  const enterQuietMode = useCallback((context?: string) => {
-    if (!user) return;
-    conversationManager.enterQuietMode(user.id, context);
-    setIsQuietMode(true);
-    showSuccess(`Entering quiet mode${context ? ` for ${context}` : ""}. I'll just listen.`);
-  }, [user]);
+  // Voice commands hook
+  const { processCommand, handleTranscription } = useVoiceCommands({
+    userId: user?.id || null,
+    config,
+    userLocation,
+    isQuietMode,
+    onProcessingChange: setIsProcessing,
+    onTranscriptChange: setLastTranscript,
+    onResponseChange: setLastResponse,
+    speak,
+    stopConversationMode,
+    enterQuietMode,
+    exitQuietMode,
+  });
 
-  // Exit quiet mode
-  const exitQuietMode = useCallback(async () => {
-    if (!user || !openaiApiKey) {
-      setIsQuietMode(false);
-      return null;
-    }
-
-    const result = await conversationManager.exitQuietMode(user.id, openaiApiKey);
-    setIsQuietMode(false);
-    return result;
-  }, [user, openaiApiKey]);
-
-  // Handle transcription result
-  const handleTranscription = useCallback(async (text: string, isConversation: boolean) => {
-    if (!text?.trim()) {
-      setIsProcessing(false);
-      if (conversationModeRef.current && !isStartingRef.current) {
-        setTimeout(() => startListeningInternalRef.current?.(true), 500);
-      }
-      return;
-    }
-
+  // Wrapped transcription handler that also sets current transcript
+  const handleTranscriptionWithState = useCallback(async (text: string, isConversation: boolean) => {
     setCurrentTranscript(text);
+    await handleTranscription(text, isConversation);
+  }, [handleTranscription, setCurrentTranscript]);
 
-    // Check for special commands via conversation manager
-    if (user) {
-      const result = conversationManager.handleTranscript(user.id, text);
-      
-      if (result.handled) {
-        switch (result.action) {
-          case 'exit':
-            setIsProcessing(false);
-            await speak(result.message!);
-            stopConversationMode();
-            return;
-            
-          case 'quiet-enter':
-            if (result.data?.context !== undefined) {
-              enterQuietMode(result.data.context);
-            } else if (isQuietMode) {
-              conversationManager.addQuietModeTranscript(user.id, text);
-            }
-            setIsProcessing(false);
-            if (result.message) await speak(result.message);
-            return;
-            
-          case 'quiet-exit':
-            const quietResult = await exitQuietMode();
-            setIsProcessing(false);
-            if (quietResult) {
-              let summaryText = quietResult.summary;
-              if (quietResult.bulletPoints.length > 0) {
-                summaryText += ` Key points: ${quietResult.bulletPoints.slice(0, 3).join(". ")}.`;
-              }
-              playFeedback("success");
-              await speak(summaryText);
-            } else {
-              await speak("I didn't capture any conversation during the listening session.");
-            }
-            return;
-            
-          case 'multi-step':
-            if (result.data?.complete) {
-              playFeedback("success");
-              const response = await processVoiceCommand(
-                `Create ${result.data.intent?.replace(/_/g, " ")} with: ${JSON.stringify(result.data.collectedData)}`
-              );
-              await speak(response);
-            } else if (result.message) {
-              setIsProcessing(false);
-              await speak(result.message);
-            }
-            return;
-            
-          case 'modification':
-            playFeedback("success");
-            setIsProcessing(false);
-            await speak(result.message!);
-            return;
-            
-          case 'cancel':
-            setIsProcessing(false);
-            await speak(result.message!);
-            return;
-        }
-      }
-    }
+  // Voice recording hook
+  const { startListening: startListeningInternal, stopListening } = useVoiceRecording({
+    openaiApiKey: config.openaiApiKey,
+    isListening,
+    isStartingRef,
+    conversationModeRef,
+    onListeningChange: setIsListening,
+    onTranscript: handleTranscriptionWithState,
+  });
 
-    // Process as regular command
-    try {
-      const response = await processVoiceCommand(text);
-      playFeedback("success");
-      
-      if (user) {
-        logVoiceCommand(user.id, text, response);
-      }
-      
-      await speak(response);
-    } catch (error: any) {
-      playFeedback("error");
-      setIsProcessing(false);
-      showError(error.message || "Voice processing failed");
-      
-      if (conversationModeRef.current) {
-        await speak("Sorry, I had trouble with that. Please try again.");
-      }
-    }
-  }, [user, isQuietMode, processVoiceCommand, speak, playFeedback, stopConversationMode, enterQuietMode, exitQuietMode]);
-
-  // Internal start listening function
-  const startListeningInternal = useCallback(async (isConversation: boolean = false) => {
-    if (isStartingRef.current || isListening) {
-      console.log("[Voice] Already listening or starting");
-      return;
-    }
-
-    isStartingRef.current = true;
-
-    const isOnline = navigator.onLine;
-    const hasApiKey = !!openaiApiKey;
-    const hasOfflineRecorder = isOfflineVoiceRecorderSupported();
-
-    // Use offline recorder if needed
-    if ((!isOnline || !hasApiKey) && hasOfflineRecorder) {
-      console.log("[Voice] Using offline voice recorder");
-      
-      if (!isConversation) playFeedback("start");
-      
-      setIsListening(true);
-      setCurrentTranscript("");
-      isStartingRef.current = false;
-
-      offlineVoiceRecorder.start({
-        onTranscript: (result) => {
-          if (result.isFinal) {
-            setCurrentTranscript(result.transcript);
-          }
-        },
-        onEnd: async (finalTranscript) => {
-          setIsListening(false);
-          if (!isConversation) playFeedback("stop");
-          
-          if (finalTranscript?.trim()) {
-            await handleTranscription(finalTranscript, isConversation);
-          }
-        },
-        onError: (error) => {
-          setIsListening(false);
-          playFeedback("error");
-          showError(error.message || "Voice recognition failed");
-        },
-      });
-      
-      return;
-    }
-
-    // Use OpenAI Whisper
-    if (!openaiApiKey) {
-      isStartingRef.current = false;
-      showError("Please add your OpenAI API key in Settings");
-      return;
-    }
-
-    if (!isConversation) playFeedback("start");
-    setCurrentTranscript("");
-
-    voiceRecorder.start(
-      {
-        onStart: () => {
-          setIsListening(true);
-          isStartingRef.current = false;
-          console.log(`[Voice] Recording started (${isConversation ? 'conversation' : 'single'} mode)`);
-        },
-        onStop: () => {
-          if (!isConversation) playFeedback("stop");
-        },
-        onData: async (blob) => {
-          console.log(`[Voice] Recording complete, size: ${blob.size}`);
-          setIsListening(false);
-          
-          if (blob.size < 5000) {
-            setIsProcessing(false);
-            if (!isConversation) {
-              showError("Recording too short. Please speak for at least 1 second.");
-            }
-            if (conversationModeRef.current && !isStartingRef.current) {
-              setTimeout(() => startListeningInternalRef.current?.(true), 500);
-            }
-            return;
-          }
-
-          try {
-            setIsProcessing(true);
-            const text = await voiceProcessor.transcribe(blob, openaiApiKey!);
-            await handleTranscription(text, isConversation);
-          } catch (error: any) {
-            playFeedback("error");
-            setIsProcessing(false);
-            console.error("[Voice] Transcription error:", error);
-            showError(error.message || "Transcription failed");
-            
-            if (conversationModeRef.current) {
-              await speak("Sorry, I had trouble with that. Please try again.");
-            }
-          }
-        },
-        onError: (error) => {
-          console.error("[Voice] Recording error:", error);
-          isStartingRef.current = false;
-          setIsListening(false);
-          playFeedback("error");
-          showError(error.message || "Recording failed");
-        },
-        onSilenceDetected: isConversation ? () => {
-          console.log("[Voice] Silence detected, stopping");
-          voiceRecorder.stop();
-        } : undefined,
-      },
-      isConversation
-    );
-  }, [isListening, openaiApiKey, playFeedback, handleTranscription, speak]);
-
-  // Update the ref when startListeningInternal changes
-  useEffect(() => {
-    startListeningInternalRef.current = startListeningInternal;
-  }, [startListeningInternal]);
-
-  // Public API
+  // Public start listening
   const startListening = useCallback(async () => {
     await startListeningInternal(false);
   }, [startListeningInternal]);
 
-  // Start conversation mode - now defined after speak is available
+  // Start conversation mode
   const startConversationMode = useCallback(async () => {
     if (isConversationMode) return;
     
-    console.log("[Voice] Starting conversation mode");
+    console.log('[Voice] Starting conversation mode');
     setIsConversationMode(true);
     conversationModeRef.current = true;
     conversationManager.startConversation();
     
-    await speak(`Hi! I'm ${preferences.assistantName || "Echo"}. How can I help you?`);
-  }, [isConversationMode, speak, preferences.assistantName]);
+    await speak(`Hi! I'm ${config.assistantName}. How can I help you?`);
+  }, [isConversationMode, speak, config.assistantName, setIsConversationMode, conversationModeRef]);
 
-  // Update the ref when startConversationMode changes
-  useEffect(() => {
-    startConversationModeRef.current = startConversationMode;
-  }, [startConversationMode]);
-
-  // Wake word detection - uses ref to avoid circular dependency
-  useEffect(() => {
-    const shouldBeActive = preferences.wakeWordEnabled &&
-                          isWakeWordSupported() &&
-                          !isListening &&
-                          !isProcessing &&
-                          !isSpeaking &&
-                          !isConversationMode;
-
-    console.log("[WakeWord] Checking status:", {
-      enabled: preferences.wakeWordEnabled,
-      supported: isWakeWordSupported(),
-      isListening,
-      isProcessing,
-      isSpeaking,
-      isConversationMode,
-      shouldBeActive,
-      currentlyActive: wakeWordActiveRef.current
-    });
-
-    if (shouldBeActive && !wakeWordActiveRef.current) {
-      console.log("[WakeWord] Starting wake word detection for:", preferences.wakeWord || "echo");
-      
-      const started = startWakeWordDetection({
-        wakeWord: preferences.wakeWord || "echo",
-        onWakeWordDetected: () => {
-          console.log("[WakeWord] Wake word detected! Starting conversation mode...");
-          wakeWordActiveRef.current = false; // Will be stopped when conversation starts
-          showSuccess(`${preferences.assistantName || "Echo"} is listening...`);
-          // Use ref to call startConversationMode to avoid circular dependency
-          startConversationModeRef.current?.();
-        },
-        onError: (error) => {
-          console.error("[WakeWord] Error:", error);
-          wakeWordActiveRef.current = false;
-        },
-      });
-      
-      wakeWordActiveRef.current = started;
-      console.log("[WakeWord] Detection started:", started);
-    } else if (!shouldBeActive && wakeWordActiveRef.current) {
-      console.log("[WakeWord] Stopping wake word detection");
-      stopWakeWordDetection();
-      wakeWordActiveRef.current = false;
-    }
-
-    return () => {
-      if (wakeWordActiveRef.current) {
-        console.log("[WakeWord] Cleanup - stopping detection");
-        stopWakeWordDetection();
-        wakeWordActiveRef.current = false;
-      }
-    };
-  }, [preferences.wakeWordEnabled, preferences.wakeWord, preferences.assistantName, isListening, isProcessing, isSpeaking, isConversationMode]);
+  // Wake word detection
+  useWakeWord({
+    enabled: preferences.wakeWordEnabled || false,
+    wakeWord: preferences.wakeWord || 'echo',
+    assistantName: config.assistantName,
+    isListening,
+    isProcessing,
+    isSpeaking,
+    isConversationMode,
+    onWakeWordDetected: startConversationMode,
+  });
 
   return (
     <VoiceContext.Provider
@@ -551,7 +226,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         stopListening,
         speak,
         stopSpeaking,
-        processVoiceCommand,
+        processVoiceCommand: processCommand,
         enterQuietMode,
         exitQuietMode,
         startConversationMode,
