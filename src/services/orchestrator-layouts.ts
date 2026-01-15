@@ -3,7 +3,7 @@
  * Handles layout switching commands
  */
 
-import type { ActionResult } from "./orchestrator";
+import type { ActionResult } from "./orchestrator/types";
 import { getLayout, hydrateLayout } from "./voice-layouts";
 
 export async function executeSwitchLayout(layoutName: string): Promise<ActionResult> {
@@ -43,13 +43,5 @@ export async function executeSwitchLayout(layoutName: string): Promise<ActionRes
   };
 }
 
-export const LAYOUT_TOOLS = [
-  {
-    name: "switch_layout",
-    description: "Switch dashboard to a preset layout. Use when user says 'switch to [mode] mode', 'reset dashboard', 'use [layout] layout'.",
-    parameters: {
-      layout: "string (e.g. 'productivity', 'finance', 'morning', 'default')"
-    },
-    category: "widgets"
-  }
-];
+// Note: Layout tools are now defined in src/services/orchestrator/tools/widgets.tools.ts
+// The switch_layout tool is part of WIDGET_TOOLS

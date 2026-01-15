@@ -3,7 +3,7 @@
  * Adds voice control for widget positioning and configuration
  */
 
-import type { ActionResult } from "./orchestrator";
+import type { ActionResult } from "./orchestrator/types";
 import type { Widget } from "@/types/widgets";
 import { executeVoiceMoveCommand, parseMoveVoiceCommand } from "./voice-widget-positioning";
 
@@ -66,17 +66,5 @@ export async function executeMoveWidget(
   };
 }
 
-/**
- * Advanced Widget Tools Definition
- */
-export const ADVANCED_WIDGET_TOOLS = [
-  {
-    name: "move_widget",
-    description: "Move a widget to a specific position or direction. Use when user says 'move [widget] to [position]' or 'move [widget] [direction]'.",
-    parameters: { 
-      widget_type: "string (e.g., 'stocks', 'clock')",
-      destination: "string (e.g., 'top right', 'bottom', 'up', 'left')" 
-    },
-    category: "widgets",
-  },
-];
+// Note: Widget tools are now defined in src/services/orchestrator/tools/widgets.tools.ts
+// Import from there if needed: import { WIDGET_TOOLS } from './orchestrator/tools/widgets.tools';

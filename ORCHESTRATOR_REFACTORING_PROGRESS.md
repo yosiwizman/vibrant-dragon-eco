@@ -251,6 +251,12 @@ const taskTools = searchTools('task'); // Find all task-related tools
 ### Files Removed
 - ✅ `src/services/orchestrator.ts` (2,500+ lines) - DELETED
 
+### Files Updated (Backward Compatibility)
+- ✅ `src/services/appointments.ts` - Now re-exports from modular structure
+- ✅ `src/services/orchestrator-settings-extension.ts` - Updated import path, removed duplicate tool definitions
+- ✅ `src/services/orchestrator-advanced-widgets.ts` - Updated import path, removed duplicate tool definitions
+- ✅ `src/services/orchestrator-layouts.ts` - Updated import path, removed duplicate tool definitions
+
 ### Import Updates Needed
 Update imports from:
 ```typescript
@@ -266,3 +272,6 @@ Or for more specific imports:
 ```typescript
 import { executeTool } from '@/services/orchestrator/executor';
 import { TASK_TOOLS } from '@/services/orchestrator/tools/tasks.tools';
+
+// For types only:
+import type { ActionResult } from '@/services/orchestrator/types';
