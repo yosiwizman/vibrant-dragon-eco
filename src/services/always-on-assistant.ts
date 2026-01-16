@@ -33,12 +33,15 @@ interface PrivacyMode {
  */
 class AlwaysOnAssistantService {
   private isActive = false;
+  private isRecognitionRunning = false;
+  private isStarting = false;
   private wakeWord = 'echo';
   private speakers = new Map<string, Speaker>();
   private currentConversation: ConversationSegment[] = [];
   private privacyMode: PrivacyMode = { active: false };
   private recognition: any = null;
   private currentSpeaker: Speaker | null = null;
+  private restartTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Start always-on listening
@@ -56,36 +59,138 @@ class AlwaysOnAssistantService {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
+      this.isActive = false;
       throw new Error('Speech recognition not supported');
     }
+
+    // Clean up any existing recognition
+    this.cleanupRecognition();
 
     this.recognition = new SpeechRecognition();
     this.recognition.continuous = true;
     this.recognition.interimResults = true;
     this.recognition.lang = 'en-US';
 
+    this.recognition.onstart = () => {
+      this.isRecognitionRunning = true;
+      this.isStarting = false;
+      logger.log('AlwaysOn', 'Recognition started');
+    };
+
     this.recognition.onresult = (event: any) => {
       this.handleSpeech(event);
     };
 
     this.recognition.onerror = (event: any) => {
-      logger.error('AlwaysOn', 'Recognition error:', event.error);
+      // Don't log "aborted" errors as they're expected when stopping
+      if (event.error !== 'aborted') {
+        logger.error('AlwaysOn', 'Recognition error:', event.error);
+      }
       
-      // Auto-restart on error
-      if (this.isActive) {
-        setTimeout(() => this.recognition?.start(), 1000);
+      this.isRecognitionRunning = false;
+      this.isStarting = false;
+      
+      // Auto-restart on error (except for certain errors)
+      if (this.isActive && event.error !== 'not-allowed' && event.error !== 'service-not-allowed') {
+        this.scheduleRestart(1000);
       }
     };
 
     this.recognition.onend = () => {
+      this.isRecognitionRunning = false;
+      this.isStarting = false;
+      logger.log('AlwaysOn', 'Recognition ended');
+      
       // Auto-restart if still active
       if (this.isActive) {
-        this.recognition?.start();
+        this.scheduleRestart(100);
       }
     };
 
-    this.recognition.start();
+    this.safeStartRecognition();
     logger.log('AlwaysOn', `Started with wake word: "${this.wakeWord}"`);
+  }
+
+  /**
+   * Safely start recognition with state checking
+   */
+  private safeStartRecognition(): void {
+    if (!this.recognition || !this.isActive) {
+      return;
+    }
+
+    if (this.isRecognitionRunning || this.isStarting) {
+      logger.warn('AlwaysOn', 'Recognition already running or starting, skipping start');
+      return;
+    }
+
+    try {
+      this.isStarting = true;
+      this.recognition.start();
+    } catch (error: any) {
+      this.isStarting = false;
+      
+      // Handle "already started" error gracefully
+      if (error.message?.includes('already started')) {
+        logger.warn('AlwaysOn', 'Recognition was already started');
+        this.isRecognitionRunning = true;
+      } else {
+        logger.error('AlwaysOn', 'Failed to start recognition:', error);
+        // Try to restart after a delay
+        if (this.isActive) {
+          this.scheduleRestart(1000);
+        }
+      }
+    }
+  }
+
+  /**
+   * Schedule a restart with debouncing
+   */
+  private scheduleRestart(delay: number): void {
+    // Clear any existing restart timeout
+    if (this.restartTimeout) {
+      clearTimeout(this.restartTimeout);
+      this.restartTimeout = null;
+    }
+
+    this.restartTimeout = setTimeout(() => {
+      this.restartTimeout = null;
+      if (this.isActive && !this.isRecognitionRunning && !this.isStarting) {
+        this.safeStartRecognition();
+      }
+    }, delay);
+  }
+
+  /**
+   * Clean up recognition instance
+   */
+  private cleanupRecognition(): void {
+    // Clear any pending restart
+    if (this.restartTimeout) {
+      clearTimeout(this.restartTimeout);
+      this.restartTimeout = null;
+    }
+
+    if (this.recognition) {
+      try {
+        // Remove event listeners to prevent callbacks after cleanup
+        this.recognition.onstart = null;
+        this.recognition.onresult = null;
+        this.recognition.onerror = null;
+        this.recognition.onend = null;
+        
+        if (this.isRecognitionRunning) {
+          this.recognition.abort();
+        }
+      } catch (error) {
+        logger.warn('AlwaysOn', 'Error during recognition cleanup:', error);
+      }
+      this.recognition = null;
+    }
+
+    this.isRecognitionRunning = false;
+    this.isStarting = false;
   }
 
   /**
@@ -93,12 +198,7 @@ class AlwaysOnAssistantService {
    */
   stop(): void {
     this.isActive = false;
-    
-    if (this.recognition) {
-      this.recognition.stop();
-      this.recognition = null;
-    }
-
+    this.cleanupRecognition();
     logger.log('AlwaysOn', 'Stopped');
   }
 
