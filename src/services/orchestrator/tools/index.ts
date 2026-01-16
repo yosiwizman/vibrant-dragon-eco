@@ -19,6 +19,7 @@ import { NAVIGATION_TOOLS } from './navigation.tools';
 import { SETTINGS_TOOLS } from './settings.tools';
 import { WIDGET_TOOLS } from './widgets.tools';
 import { LISTENING_TOOLS } from './listening.tools';
+import { SECOND_BRAIN_TOOLS } from './second-brain.tools';
 
 // Re-export individual tool arrays for selective imports
 export {
@@ -40,6 +41,7 @@ export {
   SETTINGS_TOOLS,
   WIDGET_TOOLS,
   LISTENING_TOOLS,
+  SECOND_BRAIN_TOOLS,
 };
 
 // Combined array of all available tools
@@ -62,6 +64,7 @@ export const AVAILABLE_TOOLS: ToolDefinition[] = [
   ...SETTINGS_TOOLS,
   ...WIDGET_TOOLS,
   ...LISTENING_TOOLS,
+  ...SECOND_BRAIN_TOOLS,
 ];
 
 // Tool lookup utilities

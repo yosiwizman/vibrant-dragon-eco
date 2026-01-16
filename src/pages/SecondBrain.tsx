@@ -30,6 +30,7 @@ import { speakerIdentification } from "@/services/second-brain/speaker-identific
 import { whisperMode } from "@/services/second-brain/whisper-mode";
 import { translationService } from "@/services/second-brain/translation";
 import { toast } from "sonner";
+import SecondBrainVoiceCommands from "@/components/SecondBrainVoiceCommands";
 
 export default function SecondBrain() {
   const [state, actions] = useSecondBrain();
@@ -360,22 +361,38 @@ export default function SecondBrain() {
                 </CardContent>
               </Card>
 
+              {/* Voice Commands */}
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Mic className="h-5 w-5 text-purple-400" />
+                    Voice Commands
+                  </CardTitle>
+                  <CardDescription>
+                    Control Second Brain with your voice
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SecondBrainVoiceCommands />
+                </CardContent>
+              </Card>
+
               {/* Data Management */}
-              <Card className="bg-slate-800/50 border-slate-700 md:col-span-2">
+              <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-white">Data Management</CardTitle>
                   <CardDescription>
                     Manage your Second Brain data
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex gap-4">
-                  <Button variant="outline" className="flex-1">
+                <CardContent className="space-y-4">
+                  <Button variant="outline" className="w-full">
                     <Download className="h-4 w-4 mr-2" />
                     Export Conversations
                   </Button>
                   <Button
                     variant="outline"
-                    className="flex-1 text-red-400 border-red-500/50 hover:bg-red-500/10"
+                    className="w-full text-red-400 border-red-500/50 hover:bg-red-500/10"
                     onClick={() => {
                       actions.clearMemory();
                       speakerIdentification.clearSpeakers();

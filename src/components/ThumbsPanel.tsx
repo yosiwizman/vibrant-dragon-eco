@@ -46,9 +46,10 @@ const quickAccess: NavItem[] = [
 ];
 
 const tools: NavItem[] = [
-  { to: "/knowledge", label: "Knowledge", icon: BookOpenText, color: "text-purple-500" },
-  { to: "/knowledge-base", label: "RAG Docs", icon: Brain, color: "text-violet-500" },
-  { to: "/listening-sessions", label: "Sessions", icon: EarOff, color: "text-purple-500" },
+  { to: "/second-brain", label: "Second Brain", icon: Brain, color: "text-purple-500" },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpenText, color: "text-violet-500" },
+  { to: "/knowledge-base", label: "RAG Docs", icon: Brain, color: "text-indigo-500" },
+  { to: "/listening-sessions", label: "Sessions", icon: EarOff, color: "text-purple-400" },
   { to: "/tools", label: "Tools", icon: Wrench, color: "text-fuchsia-500" },
   { to: "/integrations", label: "Integrations", icon: Puzzle, color: "text-pink-500" },
   { to: "/ai-logs", label: "AI Logs", icon: Activity, color: "text-lime-500" },

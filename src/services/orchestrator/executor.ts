@@ -81,6 +81,25 @@ import {
 // Import external executors
 import { executeAddWidget, executeRemoveWidget, executeListWidgets } from "@/services/voice-widget-control";
 
+// Import Second Brain executors
+import {
+  executeStartSecondBrain,
+  executeStopSecondBrain,
+  executeEnterPrivacyMode,
+  executeExitPrivacyMode,
+  executeSearchConversations,
+  executeGetConversationsWith,
+  executeGetItemsFromConversation,
+  executeEnableFactChecking,
+  executeDisableFactChecking,
+  executeGetSecondBrainStatus,
+  executeClearConversationMemory,
+  executeNameSpeaker,
+  executeGetDetectedSpeakers,
+  executeWhisperMessage,
+  executeSetWhisperVolume,
+} from './executors/second-brain';
+
 export interface ExecutorContext {
   openaiApiKey?: string;
 }
@@ -395,6 +414,68 @@ export async function executeTool(
       case "switch_layout":
         const { executeSwitchLayout } = await import('@/services/orchestrator-layouts');
         result = await executeSwitchLayout(parameters.layout);
+        break;
+      
+      // Second Brain
+      case "start_second_brain":
+        const startResult = await executeStartSecondBrain(parameters);
+        result = { tool, success: startResult.success, data: startResult, message: startResult.message };
+        break;
+      case "stop_second_brain":
+        const stopResult = executeStopSecondBrain();
+        result = { tool, success: stopResult.success, data: stopResult, message: stopResult.message };
+        break;
+      case "enter_privacy_mode":
+        const privacyResult = executeEnterPrivacyMode();
+        result = { tool, success: privacyResult.success, data: privacyResult, message: privacyResult.message };
+        break;
+      case "exit_privacy_mode":
+        const exitPrivacyResult = executeExitPrivacyMode();
+        result = { tool, success: exitPrivacyResult.success, data: exitPrivacyResult, message: exitPrivacyResult.message };
+        break;
+      case "search_conversations":
+        const searchConvResult = await executeSearchConversations(userId, parameters);
+        result = { tool, success: searchConvResult.success, data: searchConvResult.results, message: searchConvResult.message };
+        break;
+      case "get_conversations_with":
+        const convWithResult = await executeGetConversationsWith(userId, parameters);
+        result = { tool, success: convWithResult.success, data: convWithResult.results, message: convWithResult.message };
+        break;
+      case "get_items_from_conversation":
+        const itemsResult = await executeGetItemsFromConversation(userId, parameters);
+        result = { tool, success: itemsResult.success, data: itemsResult.items, message: itemsResult.message };
+        break;
+      case "enable_fact_checking":
+        const enableFCResult = executeEnableFactChecking();
+        result = { tool, success: enableFCResult.success, data: enableFCResult, message: enableFCResult.message };
+        break;
+      case "disable_fact_checking":
+        const disableFCResult = executeDisableFactChecking();
+        result = { tool, success: disableFCResult.success, data: disableFCResult, message: disableFCResult.message };
+        break;
+      case "get_second_brain_status":
+        const statusResult = executeGetSecondBrainStatus();
+        result = { tool, success: statusResult.success, data: statusResult.status, message: statusResult.message };
+        break;
+      case "clear_conversation_memory":
+        const clearResult = executeClearConversationMemory();
+        result = { tool, success: clearResult.success, data: clearResult, message: clearResult.message };
+        break;
+      case "name_speaker":
+        const nameResult = executeNameSpeaker(parameters);
+        result = { tool, success: nameResult.success, data: nameResult, message: nameResult.message };
+        break;
+      case "get_detected_speakers":
+        const speakersResult = executeGetDetectedSpeakers();
+        result = { tool, success: speakersResult.success, data: speakersResult.speakers, message: speakersResult.message };
+        break;
+      case "whisper_message":
+        const whisperResult = await executeWhisperMessage(parameters);
+        result = { tool, success: whisperResult.success, data: whisperResult, message: whisperResult.message };
+        break;
+      case "set_whisper_volume":
+        const volumeResult = executeSetWhisperVolume(parameters);
+        result = { tool, success: volumeResult.success, data: volumeResult, message: volumeResult.message };
         break;
       
       // Settings

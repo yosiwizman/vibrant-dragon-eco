@@ -132,3 +132,22 @@ export {
   executeCancelAppointment,
   executeRescheduleAppointment,
 } from './appointments';
+
+// Second Brain executors
+export {
+  executeStartSecondBrain,
+  executeStopSecondBrain,
+  executeEnterPrivacyMode,
+  executeExitPrivacyMode,
+  executeSearchConversations,
+  executeGetConversationsWith,
+  executeGetItemsFromConversation,
+  executeEnableFactChecking,
+  executeDisableFactChecking,
+  executeGetSecondBrainStatus,
+  executeClearConversationMemory,
+  executeNameSpeaker,
+  executeGetDetectedSpeakers,
+  executeWhisperMessage,
+  executeSetWhisperVolume,
+} from './second-brain';

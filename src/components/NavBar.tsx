@@ -17,6 +17,7 @@ import {
   Command,
   HelpCircle,
   EarOff,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -40,10 +41,10 @@ export default function NavBar() {
   }, [user]);
 
   const navItems = [
-    { to: "/", icon: Home, label: "Echo" },
+    { to: "/app", icon: Home, label: "Home" },
     { to: "/chat", icon: MessageSquare, label: "Chat" },
+    { to: "/second-brain", icon: Brain, label: "Second Brain" },
     { to: "/notifications", icon: Bell, label: "Alerts" },
-    { to: "/listening-sessions", icon: EarOff, label: "Sessions" },
     { to: "/settings", icon: Settings, label: "Settings" },
   ];
 
