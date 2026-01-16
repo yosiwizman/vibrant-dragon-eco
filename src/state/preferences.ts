@@ -47,10 +47,21 @@ const DEFAULT: Preferences = {
   widgets: undefined,
 };
 
+// Valid OpenAI TTS voices
+const VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
+
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULT, ...JSON.parse(raw) } : DEFAULT;
+    const prefs = raw ? { ...DEFAULT, ...JSON.parse(raw) } : DEFAULT;
+    
+    // Validate voice - reset to nova if invalid (e.g., "ballad" or "verse" which are not supported)
+    if (prefs.openaiVoice && !VALID_VOICES.includes(prefs.openaiVoice)) {
+      console.warn(`[Preferences] Invalid voice "${prefs.openaiVoice}" detected, resetting to "nova"`);
+      prefs.openaiVoice = "nova";
+    }
+    
+    return prefs;
   } catch {
     return DEFAULT;
   }

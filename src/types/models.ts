@@ -34,7 +34,7 @@ export interface LocationSnapshot {
   timestamp: number;
 }
 
-export type OpenAIVoice = "alloy" | "ash" | "ballad" | "coral" | "echo" | "fable" | "onyx" | "nova" | "sage" | "shimmer" | "verse";
+export type OpenAIVoice = "alloy" | "ash" | "coral" | "echo" | "fable" | "nova" | "onyx" | "sage" | "shimmer";
 
 export interface Preferences {
   preferredName: string;
@@ -132,15 +132,13 @@ export interface ChatHistoryEntry {
 }
 
 export const OPENAI_VOICES: { value: OpenAIVoice; label: string; description: string }[] = [
+  { value: "nova", label: "Nova", description: "Energetic and bright" },
   { value: "alloy", label: "Alloy", description: "Neutral and balanced" },
-  { value: "ash", label: "Ash", description: "Soft and thoughtful" },
-  { value: "ballad", label: "Ballad", description: "Warm and expressive" },
-  { value: "coral", label: "Coral", description: "Clear and friendly" },
   { value: "echo", label: "Echo", description: "Smooth and calm" },
   { value: "fable", label: "Fable", description: "Expressive British accent" },
   { value: "onyx", label: "Onyx", description: "Deep and authoritative" },
-  { value: "nova", label: "Nova", description: "Energetic and bright" },
-  { value: "sage", label: "Sage", description: "Wise and measured" },
   { value: "shimmer", label: "Shimmer", description: "Soft and gentle" },
-  { value: "verse", label: "Verse", description: "Dynamic and versatile" },
+  { value: "ash", label: "Ash", description: "Soft and thoughtful" },
+  { value: "sage", label: "Sage", description: "Wise and measured" },
+  { value: "coral", label: "Coral", description: "Clear and friendly" },
 ];

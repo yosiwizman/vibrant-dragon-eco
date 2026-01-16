@@ -95,12 +95,22 @@ export async function transcribeAudio(
   return { text: transcribedText };
 }
 
+// Valid OpenAI TTS voices as of the API
+const VALID_OPENAI_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
+
 export async function synthesizeSpeech(
   text: string,
   apiKey: string,
   voice: OpenAIVoice = "nova"
 ): Promise<Blob> {
-  console.log(`[OpenAI TTS] Synthesizing speech with voice: ${voice}`);
+  // Validate voice - fall back to nova if invalid
+  const validatedVoice = VALID_OPENAI_VOICES.includes(voice) ? voice : "nova";
+  
+  if (voice !== validatedVoice) {
+    console.warn(`[OpenAI TTS] Invalid voice "${voice}" - falling back to "${validatedVoice}"`);
+  }
+  
+  console.log(`[OpenAI TTS] Synthesizing speech with voice: ${validatedVoice}`);
   console.log(`[OpenAI TTS] Text length: ${text.length} characters`);
   
   // Truncate very long text to avoid API issues
@@ -116,7 +126,7 @@ export async function synthesizeSpeech(
     body: JSON.stringify({
       model: "tts-1", // Use standard model for faster response
       input: truncatedText,
-      voice: voice,
+      voice: validatedVoice,
       response_format: "mp3",
       speed: 1.0,
     }),
