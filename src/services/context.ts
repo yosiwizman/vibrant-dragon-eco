@@ -64,29 +64,70 @@ export function getTimeContext(): TimeContext {
   };
 }
 
+// Cache for reverse geocoding results to avoid repeated API calls
+const geocodeCache = new Map<string, { city?: string; country?: string; timestamp: number }>();
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+async function reverseGeocode(lat: number, lng: number): Promise<{ city?: string; country?: string }> {
+  // Round coordinates to reduce cache misses for nearby locations
+  const cacheKey = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  
+  // Check cache first
+  const cached = geocodeCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return { city: cached.city, country: cached.country };
+  }
+
+  try {
+    // Use a CORS-friendly approach with proper headers
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10`,
+      { 
+        headers: { 
+          "Accept": "application/json",
+          "Accept-Language": "en",
+        },
+        signal: controller.signal,
+        mode: "cors",
+      }
+    );
+    
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      const result = {
+        city: data.address?.city || data.address?.town || data.address?.village || data.address?.municipality,
+        country: data.address?.country,
+      };
+      
+      // Cache the result
+      geocodeCache.set(cacheKey, { ...result, timestamp: Date.now() });
+      return result;
+    }
+  } catch (error) {
+    // Silently handle CORS or network errors - location coordinates are still useful
+    console.debug("[Location] Reverse geocoding unavailable:", error instanceof Error ? error.message : "Unknown error");
+  }
+
+  return {};
+}
+
 export async function getLocationContext(): Promise<LocationContext | null> {
   try {
     const loc = await getCurrentLocation();
     
-    // Try to get city name via reverse geocoding
-    let city: string | undefined;
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${loc.lat}&lon=${loc.lng}&format=json`,
-        { headers: { "User-Agent": "EchoAssistant/1.0" } }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        city = data.address?.city || data.address?.town || data.address?.village;
-      }
-    } catch {
-      // Ignore reverse geocoding errors
-    }
+    // Try to get city name via reverse geocoding (non-blocking, with fallback)
+    const { city, country } = await reverseGeocode(loc.lat, loc.lng);
 
     return {
       lat: loc.lat,
       lng: loc.lng,
       city,
+      country,
     };
   } catch {
     return null;
