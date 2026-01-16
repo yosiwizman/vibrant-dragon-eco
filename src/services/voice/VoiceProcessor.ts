@@ -11,16 +11,24 @@ import { ProcessingResult, VoiceConfig } from './types';
 
 export class VoiceProcessor {
   async transcribe(audioBlob: Blob, apiKey: string): Promise<string> {
-    if (audioBlob.size < 5000) {
+    // Lower the minimum size threshold - even short recordings might have speech
+    if (audioBlob.size < 1000) {
+      console.log('[VoiceProcessor] Recording very small:', audioBlob.size, 'bytes');
       throw new Error('Recording too short. Please speak for at least 1 second.');
     }
 
     console.log('[VoiceProcessor] Transcribing audio, size:', audioBlob.size);
     
     const result = await transcribeAudio(audioBlob, apiKey);
-    const text = result.text.trim();
+    const text = (result.text || '').trim();
     
-    console.log('[VoiceProcessor] Transcription result:', text);
+    console.log('[VoiceProcessor] Transcription result:', text || '(empty)');
+    
+    // If transcription is empty, throw a user-friendly error
+    if (!text) {
+      throw new Error('No speech detected. Please speak clearly and try again. Make sure your microphone is working and you are close to it.');
+    }
+    
     return text;
   }
 

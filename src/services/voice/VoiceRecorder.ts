@@ -163,7 +163,12 @@ export class VoiceRecorder {
     return 'audio/webm';
   }
 
+  private recordingStartTime: number = 0;
+
   private startSilenceDetection(onSilenceDetected: () => void): void {
+    // Track when recording started
+    this.recordingStartTime = Date.now();
+    
     const checkSilence = () => {
       if (!this.analyser || !this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
         return;
@@ -172,26 +177,54 @@ export class VoiceRecorder {
       const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       this.analyser.getByteFrequencyData(dataArray);
 
+      // Calculate average volume level
       const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      const silenceThreshold = 10;
-      const silenceDuration = 2000;
+      
+      // Also check the max value to detect any speech
+      const maxValue = Math.max(...dataArray);
+      
+      // FIXED: Much more lenient settings
+      const silenceThreshold = 5; // Very low threshold - only trigger on true silence
+      const silenceDuration = 3000; // 3 seconds of silence required
+      const minimumRecordingTime = 3000; // Must record for at least 3 seconds before checking silence
 
-      if (average < silenceThreshold) {
+      // Don't check for silence until minimum recording time has passed
+      const timeSinceStart = Date.now() - this.recordingStartTime;
+      if (timeSinceStart < minimumRecordingTime) {
+        this.silenceTimeout = setTimeout(checkSilence, 100);
+        return;
+      }
+
+      // Log audio levels for debugging (only occasionally to avoid spam)
+      if (Math.random() < 0.1) {
+        console.log(`[VoiceRecorder] Audio level - avg: ${average.toFixed(1)}, max: ${maxValue}, time: ${(timeSinceStart/1000).toFixed(1)}s`);
+      }
+
+      // Consider it silence only if BOTH average AND max are very low
+      const isSilent = average < silenceThreshold && maxValue < 15;
+
+      if (isSilent) {
         if (this.silenceStart === null) {
           this.silenceStart = Date.now();
+          console.log('[VoiceRecorder] Silence started...');
         } else if (Date.now() - this.silenceStart > silenceDuration) {
-          console.log('[VoiceRecorder] Silence detected');
+          console.log('[VoiceRecorder] Silence detected after', ((Date.now() - this.silenceStart) / 1000).toFixed(1), 'seconds');
           onSilenceDetected();
           return;
         }
       } else {
+        // Reset silence timer when sound is detected
+        if (this.silenceStart !== null) {
+          console.log('[VoiceRecorder] Sound detected, resetting silence timer');
+        }
         this.silenceStart = null;
       }
 
       this.silenceTimeout = setTimeout(checkSilence, 100);
     };
 
-    this.silenceTimeout = setTimeout(checkSilence, 1000);
+    // Start checking after 2 seconds to give user time to start speaking
+    this.silenceTimeout = setTimeout(checkSilence, 2000);
   }
 
   get recording(): boolean {

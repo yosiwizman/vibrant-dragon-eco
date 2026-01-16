@@ -97,11 +97,15 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions): UseVoiceRe
           console.log(`[VoiceRecording] Recording complete, size: ${blob.size}`);
           onListeningChange(false);
           
-          if (blob.size < 5000) {
+          // Lower threshold - even 1KB might contain speech
+          if (blob.size < 1000) {
+            console.log('[VoiceRecording] Recording too small, likely no audio captured');
             if (!isConversation) {
               showError('Recording too short. Please speak for at least 1 second.');
             }
+            // Continue conversation mode even on short recordings
             if (conversationModeRef.current && !isStartingRef.current) {
+              console.log('[VoiceRecording] Continuing conversation mode...');
               setTimeout(() => startListeningInternalRef.current?.(true), 500);
             }
             return;
@@ -111,9 +115,22 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions): UseVoiceRe
             const text = await voiceProcessor.transcribe(blob, openaiApiKey!);
             await onTranscript(text, isConversation);
           } catch (error: any) {
-            playFeedback('error');
             console.error('[VoiceRecording] Transcription error:', error);
-            showError(error.message || 'Transcription failed');
+            
+            // Only show error toast in single mode, not conversation mode
+            if (!isConversation) {
+              playFeedback('error');
+              showError(error.message || 'Transcription failed');
+            } else {
+              // In conversation mode, just log and continue listening
+              console.log('[VoiceRecording] Transcription failed in conversation mode, continuing...');
+            }
+            
+            // Continue conversation mode even on transcription failure
+            if (conversationModeRef.current && !isStartingRef.current) {
+              console.log('[VoiceRecording] Restarting listening after error...');
+              setTimeout(() => startListeningInternalRef.current?.(true), 1000);
+            }
           }
         },
         onError: (error) => {

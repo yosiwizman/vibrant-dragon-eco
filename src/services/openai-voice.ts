@@ -80,13 +80,19 @@ export async function transcribeAudio(
   }
 
   const result = await response.json();
-  console.log('[Whisper] Transcription successful:', result.text);
+  const transcribedText = result.text || '';
+  console.log('[Whisper] Transcription result:', transcribedText || '(empty)');
   
-  if (!result.text || result.text.trim().length === 0) {
-    throw new Error('No speech detected. Please speak clearly and try again.');
+  // Don't throw an error for empty results - let the caller handle it
+  // This allows the system to continue listening instead of stopping
+  if (!transcribedText || transcribedText.trim().length === 0) {
+    console.log('[Whisper] No speech detected in audio - this may be due to:');
+    console.log('[Whisper] - Microphone not picking up voice clearly');
+    console.log('[Whisper] - Background noise being filtered out');
+    console.log('[Whisper] - Speaking too quietly or too far from microphone');
   }
   
-  return result;
+  return { text: transcribedText };
 }
 
 export async function synthesizeSpeech(
