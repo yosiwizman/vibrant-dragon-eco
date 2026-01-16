@@ -126,9 +126,32 @@ npx cap open android
 ### **Environment Variables:**
 
 ```env
+# Supabase Configuration (Required)
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# App Branding (Optional - has defaults)
+VITE_APP_NAME="Echo"
+VITE_APP_DESCRIPTION="Echo is a voice-first AI assistant..."
+VITE_SITE_URL="https://your-domain.com"
 ```
+
+### **Branding Assets:**
+
+All branding assets are in the `public/` folder:
+
+| File | Purpose | Size |
+|------|---------|------|
+| `favicon.svg` | Browser tab icon | Any (vector) |
+| `favicon.ico` | Legacy browser icon | 32x32 |
+| `apple-touch-icon.png` | iOS home screen | 180x180 |
+| `og-image.png` | Social share preview | 1200x630 |
+| `site.webmanifest` | PWA manifest | - |
+
+To customize branding:
+1. Replace the files in `public/` with your own assets
+2. Update `index.html` meta tags if needed
+3. Edit `src/pages/Marketing.tsx` for landing page content
 
 ### **User Configuration:**
 - OpenAI API Key (optional, for online mode)

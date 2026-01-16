@@ -46,7 +46,7 @@ export default function Login() {
       if (!hasSeenWelcome) {
         setShowWelcome(true);
       } else {
-        navigate("/");
+        navigate("/app");
       }
     }
   }, [user, loading, navigate, isPasswordReset]);
@@ -54,13 +54,13 @@ export default function Login() {
   const handleWelcomeComplete = () => {
     localStorage.setItem("echo:seen-welcome", "true");
     setShowWelcome(false);
-    navigate("/");
+    navigate("/app");
   };
 
   const handleWelcomeSkip = () => {
     localStorage.setItem("echo:seen-welcome", "true");
     setShowWelcome(false);
-    navigate("/");
+    navigate("/app");
   };
 
   if (showWelcome) {
@@ -138,8 +138,8 @@ export default function Login() {
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
       
-      // Navigate to home
-      navigate("/");
+      // Navigate to app
+      navigate("/app");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Failed to update password";
       setError(errorMessage);
@@ -224,7 +224,7 @@ export default function Login() {
           setError("This email is already registered. Please sign in instead.");
         } else if (data.session) {
           showSuccess("Account created successfully!");
-          navigate("/");
+          navigate("/app");
         } else {
           setMessage("Check your email for the confirmation link.");
         }
@@ -270,7 +270,7 @@ export default function Login() {
 
       if (data.session) {
         showSuccess("Signed in successfully!");
-        navigate("/");
+        navigate("/app");
       }
     } catch (err: unknown) {
       console.error("Sign in exception:", err);

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VoiceProvider } from "@/contexts/VoiceContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Marketing from "./pages/Marketing";
 
 // Lazy load all other pages
 const Chat = lazy(() => import("./pages/Chat"));
@@ -103,6 +104,42 @@ function QuickAddWrapper() {
   return <QuickAddModal open={isOpen} onClose={close} defaultTab={defaultTab} />;
 }
 
+// Conditional NavBar - hide on marketing page
+function ConditionalNavBar() {
+  const location = useLocation();
+  const isMarketingPage = location.pathname === "/";
+  
+  if (isMarketingPage) return null;
+  return <NavBar />;
+}
+
+// Conditional App Chrome - hide voice widgets on marketing page
+function ConditionalAppChrome() {
+  const location = useLocation();
+  const isMarketingPage = location.pathname === "/";
+  
+  if (isMarketingPage) return null;
+  
+  return (
+    <>
+      <VoiceStatusIndicator />
+      <CommandPaletteWrapper />
+      <GlobalShortcutsWrapper />
+      <VoicePreferencesWrapper />
+      <KeyboardShortcutsHelp />
+      <OnboardingTour />
+      <QuickAddWrapper />
+      <MicButton />
+      <FloatingVoiceWidget />
+      <ListeningModeIndicator />
+      <QuickAccessPanel />
+      <ThumbsPanel />
+      <ModelDownloadProgress />
+      <ProgressiveOnboarding />
+    </>
+  );
+}
+
 const App = () => (
   <ErrorBoundary onError={(error, errorInfo) => {
     trackError(error.message, {
@@ -117,20 +154,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <VoiceProvider>
-            <NavBar />
-            <VoiceStatusIndicator />
-            <CommandPaletteWrapper />
-            <GlobalShortcutsWrapper />
-            <VoicePreferencesWrapper />
+            <ConditionalNavBar />
             <PageTrackingWrapper />
-            <KeyboardShortcutsHelp />
-            <OnboardingTour />
-            <QuickAddWrapper />
             <Suspense fallback={<PageLoader />}>
               <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Marketing />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                
+                {/* Protected app routes */}
                 <Route
-                  path="/"
+                  path="/app"
                   element={
                     <ProtectedRoute>
                       <Index />
@@ -337,18 +373,10 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
-            <MicButton />
-            <FloatingVoiceWidget />
-            <ListeningModeIndicator />
-            <QuickAccessPanel />
-            <ThumbsPanel />
-            <ModelDownloadProgress />
-            <ProgressiveOnboarding />
+            <ConditionalAppChrome />
           </VoiceProvider>
         </BrowserRouter>
       </TooltipProvider>

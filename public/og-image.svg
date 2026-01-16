@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="50%" style="stop-color:#1e1b4b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="50%" style="stop-color:#c026d3"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="100" cy="100" r="200" fill="url(#accentGrad)" opacity="0.1"/>
+  <circle cx="1100" cy="530" r="250" fill="url(#accentGrad)" opacity="0.1"/>
+  
+  <!-- Logo -->
+  <g transform="translate(100, 200)">
+    <rect width="120" height="120" rx="30" fill="url(#accentGrad)"/>
+    <path d="M30 30 L90 30 L90 42 L45 42 L45 55 L80 55 L80 67 L45 67 L45 80 L90 80 L90 92 L30 92 Z" fill="white"/>
+    <path d="M95 40 Q108 60 95 80" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M105 32 Q122 60 105 88" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="250" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white">Echo</text>
+  <text x="250" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#94a3b8">Your Personal AI Assistant</text>
+  
+  <!-- Tagline -->
+  <text x="100" y="480" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#cbd5e1">Voice-first • Privacy-first • Offline-first</text>
+  
+  <!-- Features -->
+  <g transform="translate(100, 520)" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#64748b">
+    <text x="0" y="0">Tasks</text>
+    <text x="80" y="0">•</text>
+    <text x="100" y="0">Reminders</text>
+    <text x="220" y="0">•</text>
+    <text x="240" y="0">Notes</text>
+    <text x="310" y="0">•</text>
+    <text x="330" y="0">Calendar</text>
+    <text x="440" y="0">•</text>
+    <text x="460" y="0">Voice AI</text>
+  </g>
+  
+  <!-- URL -->
+  <text x="1100" y="590" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#475569" text-anchor="end">vibrant-dragon-echo.vercel.app</text>
+</svg>

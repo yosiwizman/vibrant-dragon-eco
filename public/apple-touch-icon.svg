@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="50%" style="stop-color:#c026d3"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="url(#bgGrad)"/>
+  
+  <!-- E letter with sound wave styling -->
+  <g>
+    <!-- Main E shape -->
+    <path d="M45 45 L125 45 L125 60 L65 60 L65 82 L115 82 L115 97 L65 97 L65 120 L125 120 L125 135 L45 135 Z" fill="white"/>
+    
+    <!-- Sound wave accent lines -->
+    <path d="M130 65 Q145 90 130 115" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M145 55 Q165 90 145 125" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

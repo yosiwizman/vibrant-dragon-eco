@@ -1,0 +1,22 @@
+{
+  "name": "Echo – Personal AI Assistant",
+  "short_name": "Echo",
+  "description": "Voice-first AI assistant for tasks, reminders, notes, and calendar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0a1e",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
