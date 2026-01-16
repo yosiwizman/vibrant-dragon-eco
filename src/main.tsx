@@ -1,32 +1,56 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
-import { initializeErrorTracking } from "./services/error-tracking";
-import { initializePostHog } from "./services/posthog-analytics";
-import { initializePerformanceOptimizations } from "./services/performance-optimizer";
-import { selfHealing } from "./services/self-healing";
-import { advancedAnalytics } from "./services/advanced-analytics";
 
-// Initialize error tracking
-initializeErrorTracking();
-
-// Initialize analytics
-initializePostHog();
-
-// Initialize performance optimizations
-initializePerformanceOptimizations();
-
-// Initialize self-healing (auto-starts in production)
-if (import.meta.env.PROD) {
-  selfHealing.startMonitoring(30000); // Check every 30 seconds
+// Safe initialization wrapper
+function safeInit(name: string, fn: () => void | Promise<void>) {
+  try {
+    const result = fn();
+    if (result instanceof Promise) {
+      result.catch(err => console.warn(`[Init] ${name} failed:`, err));
+    }
+  } catch (err) {
+    console.warn(`[Init] ${name} failed:`, err);
+  }
 }
 
-// Track app start
-advancedAnalytics.track('app_start', 'system', {
-  timestamp: Date.now(),
-  userAgent: navigator.userAgent,
-  online: navigator.onLine,
+// Initialize services safely (don't block app render)
+safeInit('ErrorTracking', async () => {
+  const { initializeErrorTracking } = await import("./services/error-tracking");
+  initializeErrorTracking();
 });
+
+safeInit('PostHog', async () => {
+  const { initializePostHog } = await import("./services/posthog-analytics");
+  initializePostHog();
+});
+
+safeInit('PerformanceOptimizations', async () => {
+  const { initializePerformanceOptimizations } = await import("./services/performance-optimizer");
+  initializePerformanceOptimizations();
+});
+
+// Initialize self-healing (auto-starts in production) - delayed
+if (import.meta.env.PROD) {
+  setTimeout(() => {
+    safeInit('SelfHealing', async () => {
+      const { selfHealing } = await import("./services/self-healing");
+      selfHealing.startMonitoring(30000);
+    });
+  }, 5000); // Delay 5 seconds to let app load first
+}
+
+// Track app start - delayed
+setTimeout(() => {
+  safeInit('Analytics', async () => {
+    const { advancedAnalytics } = await import("./services/advanced-analytics");
+    advancedAnalytics.track('app_start', 'system', {
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      online: navigator.onLine,
+    });
+  });
+}, 1000);
 
 // Register service worker for offline support (only in production)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

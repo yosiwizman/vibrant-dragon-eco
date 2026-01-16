@@ -4,7 +4,27 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { webLLM, isWebLLMSupported } from './web-llm';
+// Dynamic import for web-llm to prevent blocking
+let webLLMModule: { webLLM: any; isWebLLMSupported: () => boolean } | null = null;
+
+async function getWebLLMModule() {
+  if (!webLLMModule) {
+    try {
+      const module = await import('./web-llm');
+      webLLMModule = {
+        webLLM: module.webLLM,
+        isWebLLMSupported: module.isWebLLMSupported,
+      };
+    } catch (error) {
+      console.warn('[SystemHealth] Failed to load web-llm module:', error);
+      webLLMModule = {
+        webLLM: null,
+        isWebLLMSupported: () => false,
+      };
+    }
+  }
+  return webLLMModule;
+}
 
 export interface HealthCheckResult {
   component: string;
@@ -107,15 +127,25 @@ async function checkOpenAI(apiKey?: string): Promise<HealthCheckResult> {
 
 // Check WebLLM (offline AI)
 async function checkWebLLM(): Promise<HealthCheckResult> {
-  if (!isWebLLMSupported()) {
-    return {
-      component: 'WebLLM',
-      status: 'degraded',
-      message: 'WebGPU not supported',
-    };
-  }
-  
   try {
+    const { webLLM, isWebLLMSupported } = await getWebLLMModule();
+    
+    if (!isWebLLMSupported()) {
+      return {
+        component: 'WebLLM',
+        status: 'degraded',
+        message: 'WebGPU not supported',
+      };
+    }
+    
+    if (!webLLM) {
+      return {
+        component: 'WebLLM',
+        status: 'degraded',
+        message: 'WebLLM module not available',
+      };
+    }
+    
     const cached = await webLLM.isModelCached();
     const status = webLLM.getStatus();
     
@@ -131,7 +161,7 @@ async function checkWebLLM(): Promise<HealthCheckResult> {
   } catch (error: any) {
     return {
       component: 'WebLLM',
-      status: 'unhealthy',
+      status: 'degraded',
       message: error.message || 'Check failed',
     };
   }

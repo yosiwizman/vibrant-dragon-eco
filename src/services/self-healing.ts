@@ -330,7 +330,4 @@ class SelfHealingService {
 
 export const selfHealing = new SelfHealingService();
 
-// Auto-start monitoring in production
-if (typeof window !== 'undefined' && import.meta.env.PROD) {
-  selfHealing.startMonitoring();
-}
+// Note: Auto-start is now handled in main.tsx with proper error handling

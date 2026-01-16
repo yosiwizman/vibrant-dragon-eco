@@ -1,15 +1,16 @@
 "use client";
 
-import { CreateMLCEngine, MLCEngine, hasModelInCache } from '@mlc-ai/web-llm';
-
 // Model configurations - v2.1
 const MODELS = {
   mobile: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', // 1.5GB - for phones
   desktop: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', // 3GB - for computers
 };
 
+// Dynamic import types
+type MLCEngine = any;
+
 class WebLLMService {
-  private engine: MLCEngine | null = null;
+  private engine: MLCEngine = null;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
   private downloadProgress = 0;
@@ -24,8 +25,14 @@ class WebLLMService {
   }
 
   async isModelCached(): Promise<boolean> {
-    const modelId = this.getModelId();
-    return await hasModelInCache(modelId);
+    try {
+      const modelId = this.getModelId();
+      const { hasModelInCache } = await import('@mlc-ai/web-llm');
+      return await hasModelInCache(modelId);
+    } catch (error) {
+      console.warn('[WebLLM] Failed to check model cache:', error);
+      return false;
+    }
   }
 
   onProgress(callback: (progress: number) => void) {
@@ -51,8 +58,8 @@ class WebLLMService {
 
     this.initPromise = (async () => {
       try {
+        const { CreateMLCEngine } = await import('@mlc-ai/web-llm');
         const modelId = this.getModelId();
-        const cached = await this.isModelCached();
 
         this.engine = await CreateMLCEngine(modelId, {
           initProgressCallback: (progress) => {
