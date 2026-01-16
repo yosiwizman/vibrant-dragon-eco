@@ -62,16 +62,20 @@ export default function Settings() {
   }>({ totalMessages: 0, userMessages: 0, assistantMessages: 0 });
   const [loadingMemories, setLoadingMemories] = useState(false);
 
-  // Sync profile name with local input
+  // Sync profile name with local input and preferences
   useEffect(() => {
     if (profile?.preferred_name) {
       setNameInput(profile.preferred_name);
       // Also sync to preferences for voice greeting
       if (profile.preferred_name !== preferences.preferredName) {
+        console.log('[Settings] Syncing profile name to preferences:', profile.preferred_name);
         setPreferences(prev => ({ ...prev, preferredName: profile.preferred_name }));
       }
+    } else if (profile && !profile.preferred_name && nameInput === "") {
+      // Profile exists but no preferred name - keep input empty
+      setNameInput("");
     }
-  }, [profile?.preferred_name]);
+  }, [profile?.preferred_name, preferences.preferredName, setPreferences]);
 
   useEffect(() => {
     if (user && activeTab === "memory") {

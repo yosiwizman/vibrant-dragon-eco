@@ -389,13 +389,21 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     
     // Get user's preferred name for personalized greeting
     const userName = preferences.preferredName?.trim();
-    const greeting = userName
-      ? `Hi ${userName}! How can I help you?`
-      : `Hi! I'm ${config.assistantName}. How can I help you?`;
+    console.log('[Voice] User preferred name:', userName || '(not set)');
+    
+    // Personalized greeting - always use name if available
+    let greeting: string;
+    if (userName) {
+      greeting = `Hi ${userName}! How can I help you?`;
+    } else {
+      greeting = `Hi there! How can I help you?`;
+    }
+    
+    console.log('[Voice] Greeting:', greeting);
     
     // Speak greeting - the onEnd callback will automatically start listening
     await speak(greeting);
-  }, [isConversationMode, speak, config.assistantName, preferences.preferredName, setIsConversationMode, conversationModeRef]);
+  }, [isConversationMode, speak, preferences.preferredName, setIsConversationMode, conversationModeRef]);
 
   // Wake word detection
   useWakeWord({

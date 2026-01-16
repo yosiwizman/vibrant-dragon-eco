@@ -12,6 +12,7 @@ import ModelDownloadProgress from "@/components/ModelDownloadProgress";
 import ProgressiveOnboarding from "@/components/ProgressiveOnboarding";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useVoicePreferences } from "@/hooks/useVoicePreferences";
+import { useProfileSync } from "@/hooks/useProfileSync";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
 import QuickAddModal, { useQuickAdd } from "@/components/QuickAddModal";
@@ -94,6 +95,12 @@ function VoicePreferencesWrapper() {
   return null;
 }
 
+// Wrapper component for profile sync (loads profile name on startup)
+function ProfileSyncWrapper() {
+  useProfileSync();
+  return null;
+}
+
 // Wrapper component for page tracking
 function PageTrackingWrapper() {
   usePageTracking();
@@ -168,6 +175,7 @@ const App = () => (
           <VoiceProvider>
             <ConditionalNavBar />
             <PageTrackingWrapper />
+            <ProfileSyncWrapper />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public routes */}

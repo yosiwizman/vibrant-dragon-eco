@@ -71,23 +71,38 @@ export class ConversationManager {
 
   handleTranscript(userId: string, text: string): TranscriptHandlerResult {
     // Check for exit phrases in conversation mode
-    // Only exit if the ENTIRE message is an exit phrase (not just contains one)
+    // Only exit if the message is primarily an exit phrase
     const normalizedText = text.toLowerCase().trim();
-    const exitPhrases = [
-      'goodbye', 'bye', 'bye bye', 'stop', 'exit',
-      'end conversation', "that's all", 'thank you', 'thanks',
-      'good bye', 'see you', 'see ya', 'later', 'talk later',
-      'i\'m done', 'done', 'that\'s it', 'nothing else'
+    
+    // Exact exit phrases (must match exactly or be the primary content)
+    const exactExitPhrases = [
+      'goodbye', 'bye', 'bye bye', 'stop', 'exit', 'quit',
+      'end conversation', "that's all", 'good bye', 'see you',
+      'see ya', 'later', 'talk later', "i'm done", 'done',
+      "that's it", 'nothing else', 'end', 'close', 'finish'
     ];
     
-    // Check if the message is primarily an exit phrase (short message that matches)
-    const isExitPhrase = exitPhrases.some(phrase => {
-      // Exact match or message is very short and contains the phrase
-      return normalizedText === phrase ||
-             (normalizedText.length < 20 && normalizedText.includes(phrase));
-    });
+    // Phrases that indicate exit when they're the main content
+    const exitIndicators = ['thank you', 'thanks', 'ok thanks', 'okay thanks'];
     
-    if (this.isConversationActive && isExitPhrase) {
+    // Check for exact match first
+    const isExactMatch = exactExitPhrases.includes(normalizedText);
+    
+    // Check if it's a short message (< 25 chars) that contains an exit phrase
+    const isShortExitMessage = normalizedText.length < 25 &&
+      exactExitPhrases.some(phrase => normalizedText.includes(phrase));
+    
+    // Check for thank you variants only if they're standalone (not part of a longer request)
+    const isThankYouExit = normalizedText.length < 30 &&
+      exitIndicators.some(phrase => normalizedText.includes(phrase)) &&
+      !normalizedText.includes('can you') &&
+      !normalizedText.includes('please') &&
+      !normalizedText.includes('help');
+    
+    const shouldExit = isExactMatch || isShortExitMessage || isThankYouExit;
+    
+    if (this.isConversationActive && shouldExit) {
+      console.log('[ConversationManager] Exit phrase detected:', normalizedText);
       return {
         handled: true,
         action: 'exit',
