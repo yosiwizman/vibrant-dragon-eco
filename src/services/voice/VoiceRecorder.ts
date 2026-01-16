@@ -11,6 +11,7 @@ export class VoiceRecorder {
   private silenceTimeout: NodeJS.Timeout | null = null;
   private silenceStart: number | null = null;
   private mimeType = 'audio/webm';
+  private recordingStartTime: number = 0;
 
   async start(callbacks: RecordingCallbacks, enableSilenceDetection = false): Promise<void> {
     // Prevent duplicate starts
@@ -162,8 +163,6 @@ export class VoiceRecorder {
 
     return 'audio/webm';
   }
-
-  private recordingStartTime: number = 0;
 
   private startSilenceDetection(onSilenceDetected: () => void): void {
     // Track when recording started
