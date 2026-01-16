@@ -12,46 +12,147 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSecondBrain } from "@/hooks/useSecondBrain";
-import { speakerIdentification } from "@/services/second-brain/speaker-identification";
 
 interface SecondBrainIndicatorProps {
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
+// State interface
+interface SecondBrainState {
+  isActive: boolean;
+  isPrivacyMode: boolean;
+  speakerCount: number;
+  segmentCount: number;
+}
+
 export default function SecondBrainIndicator({ 
   position = 'top-right' 
 }: SecondBrainIndicatorProps) {
-  const [state, actions] = useSecondBrain();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [recentTranslation, setRecentTranslation] = useState<string | null>(null);
   const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
+  const [state, setState] = useState<SecondBrainState>({
+    isActive: false,
+    isPrivacyMode: false,
+    speakerCount: 0,
+    segmentCount: 0,
+  });
+  const [loaded, setLoaded] = useState(false);
 
-  // Update current speaker
+  // Load services and poll for status
+  useEffect(() => {
+    let mounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    async function init() {
+      try {
+        // Import the always-on assistant module
+        const assistantModule = await import('@/services/always-on-assistant');
+        
+        if (!mounted) return;
+
+        // Poll for status
+        const checkStatus = () => {
+          try {
+            const status = assistantModule.alwaysOnAssistant.getStatus();
+            setState({
+              isActive: status.isActive,
+              isPrivacyMode: status.privacyMode,
+              speakerCount: status.speakerCount,
+              segmentCount: status.segmentCount,
+            });
+          } catch (e) {
+            // Ignore errors
+          }
+        };
+
+        checkStatus();
+        interval = setInterval(checkStatus, 2000);
+        setLoaded(true);
+      } catch (error) {
+        console.warn('[SecondBrainIndicator] Failed to initialize:', error);
+      }
+    }
+
+    init();
+
+    return () => {
+      mounted = false;
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
+  // Load speaker identification lazily
   useEffect(() => {
     if (!state.isActive) return;
 
-    const interval = setInterval(() => {
-      const speaker = speakerIdentification.getCurrentSpeaker();
-      setCurrentSpeaker(speaker?.name || speaker?.id || null);
-    }, 1000);
+    let mounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    async function loadSpeakerID() {
+      try {
+        const module = await import('@/services/second-brain/speaker-identification');
+        
+        if (!mounted) return;
+
+        const checkSpeaker = () => {
+          try {
+            const speaker = module.speakerIdentification.getCurrentSpeaker();
+            setCurrentSpeaker(speaker?.name || speaker?.id || null);
+          } catch (e) {
+            // Ignore errors
+          }
+        };
+
+        checkSpeaker();
+        interval = setInterval(checkSpeaker, 1000);
+      } catch (error) {
+        console.warn('[SecondBrainIndicator] Failed to load speaker identification:', error);
+      }
+    }
+
+    loadSpeakerID();
+
+    return () => {
+      mounted = false;
+      if (interval) clearInterval(interval);
+    };
   }, [state.isActive]);
 
-  // Don't render if not active
-  if (!state.isActive) return null;
+  // Handle stop
+  const handleStop = async () => {
+    try {
+      const assistantModule = await import('@/services/always-on-assistant');
+      assistantModule.alwaysOnAssistant.stop();
+      setState(prev => ({ ...prev, isActive: false }));
+    } catch (e) {
+      console.error('[SecondBrainIndicator] Failed to stop:', e);
+    }
+  };
+
+  // Handle privacy toggle
+  const handleTogglePrivacy = async () => {
+    try {
+      const assistantModule = await import('@/services/always-on-assistant');
+      assistantModule.alwaysOnAssistant.exitPrivacyMode();
+      setState(prev => ({ ...prev, isPrivacyMode: !prev.isPrivacyMode }));
+    } catch (e) {
+      console.error('[SecondBrainIndicator] Failed to toggle privacy:', e);
+    }
+  };
+
+  // Don't render if not loaded or not active
+  if (!loaded || !state.isActive) return null;
 
   const positionClasses = {
-    'top-right': 'top-4 right-4',
-    'top-left': 'top-4 left-4',
+    'top-right': 'top-20 right-4',
+    'top-left': 'top-20 left-4',
     'bottom-right': 'bottom-4 right-4',
     'bottom-left': 'bottom-4 left-4',
   };
 
   return (
     <div 
-      className={`fixed ${positionClasses[position]} z-50 transition-all duration-300`}
+      className={`fixed ${positionClasses[position]} z-40 transition-all duration-300`}
     >
       {/* Collapsed View */}
       {!isExpanded && (
@@ -100,7 +201,7 @@ export default function SecondBrainIndicator({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={actions.stop}
+                onClick={handleStop}
               >
                 <X className="h-4 w-4 text-slate-400" />
               </Button>
@@ -135,17 +236,6 @@ export default function SecondBrainIndicator({
             </div>
           )}
 
-          {/* Recent Translation */}
-          {recentTranslation && (
-            <div className="mb-3 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-center gap-2 mb-1">
-                <Languages className="h-3 w-3 text-blue-400" />
-                <span className="text-xs text-blue-400">Translation</span>
-              </div>
-              <p className="text-xs text-white">{recentTranslation}</p>
-            </div>
-          )}
-
           {/* Stats */}
           <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
             <span>{state.speakerCount} speakers</span>
@@ -158,7 +248,7 @@ export default function SecondBrainIndicator({
               variant="outline"
               size="sm"
               className="w-full text-xs"
-              onClick={actions.enterPrivacyMode}
+              onClick={handleTogglePrivacy}
             >
               <ShieldCheck className="h-3 w-3 mr-1" />
               Enter Privacy Mode
@@ -168,7 +258,7 @@ export default function SecondBrainIndicator({
               variant="outline"
               size="sm"
               className="w-full text-xs border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
-              onClick={actions.exitPrivacyMode}
+              onClick={handleTogglePrivacy}
             >
               <Mic className="h-3 w-3 mr-1" />
               Resume Listening

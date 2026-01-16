@@ -71,4 +71,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Show loading indicator immediately
+const root = document.getElementById("root");
+if (root) {
+  // Render app
+  createRoot(root).render(<App />);
+} else {
+  console.error('[Main] Root element not found');
+}
