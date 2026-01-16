@@ -52,15 +52,21 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
     onTranscriptChange(text);
 
     try {
+      console.log('[VoiceCommands] Processing command:', text);
+      
       const result = await voiceProcessor.processCommand(
         text,
         userId,
         config.openaiApiKey,
         config,
         userLocation,
-        (path) => navigate(path)
+        (path) => {
+          console.log('[VoiceCommands] Navigating to:', path);
+          navigate(path);
+        }
       );
 
+      console.log('[VoiceCommands] Got response:', result.response.substring(0, 50) + '...');
       onResponseChange(result.response);
       onProcessingChange(false);
       
@@ -77,15 +83,20 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
 
   const handleTranscription = useCallback(async (text: string, isConversation: boolean) => {
     if (!text?.trim()) {
+      console.log('[VoiceCommands] Empty transcription, skipping');
       onProcessingChange(false);
       return;
     }
+
+    console.log('[VoiceCommands] Handling transcription:', text, 'isConversation:', isConversation);
 
     // Check for special commands via conversation manager
     if (userId) {
       const result = conversationManager.handleTranscript(userId, text);
       
       if (result.handled) {
+        console.log('[VoiceCommands] Special command handled:', result.action);
+        
         switch (result.action) {
           case 'exit':
             onProcessingChange(false);
@@ -147,6 +158,7 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
 
     // Process as regular command
     try {
+      console.log('[VoiceCommands] Processing as regular command');
       const response = await processCommand(text);
       playFeedback('success');
       
@@ -154,12 +166,17 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
         logVoiceCommand(userId, text, response);
       }
       
+      console.log('[VoiceCommands] Speaking response');
+      // The speak function will handle auto-continuing conversation mode via onEnd callback
       await speak(response);
+      console.log('[VoiceCommands] Finished speaking');
     } catch (error: any) {
       playFeedback('error');
       onProcessingChange(false);
+      console.error('[VoiceCommands] Error processing command:', error);
       showError(error.message || 'Voice processing failed');
       
+      // Speak error message - this will also trigger conversation continuation
       await speak('Sorry, I had trouble with that. Please try again.');
     }
   }, [userId, isQuietMode, processCommand, speak, playFeedback, stopConversationMode, enterQuietMode, exitQuietMode, onProcessingChange]);
