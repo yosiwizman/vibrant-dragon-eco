@@ -53,6 +53,7 @@ const DataManagement = lazy(() => import("./pages/DataManagement"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const SecondBrainPage = lazy(() => import("./pages/SecondBrain"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -67,6 +68,7 @@ import MicButton from "@/components/MicButton";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
 import VoiceStatusIndicator from "@/components/VoiceStatusIndicator";
 import ListeningModeIndicator from "@/components/ListeningModeIndicator";
+import SecondBrainIndicator from "@/components/SecondBrainIndicator";
 import VoiceCommandPalette, { useCommandPalette } from "@/components/VoiceCommandPalette";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import QuickAccessPanel from "@/components/QuickAccessPanel";
@@ -132,6 +134,7 @@ function ConditionalAppChrome() {
       <MicButton />
       <FloatingVoiceWidget />
       <ListeningModeIndicator />
+      <SecondBrainIndicator position="top-right" />
       <QuickAccessPanel />
       <ThumbsPanel />
       <ModelDownloadProgress />
@@ -370,6 +373,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/second-brain"
+                element={
+                  <ProtectedRoute>
+                    <SecondBrainPage />
                   </ProtectedRoute>
                 }
               />

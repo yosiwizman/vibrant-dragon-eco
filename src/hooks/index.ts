@@ -9,6 +9,9 @@ export { useVoiceCommands } from './useVoiceCommands';
 // Second Brain hook
 export { useSecondBrain } from './useSecondBrain';
 
+// Voice preferences
+export { useVoicePreferences } from './useVoicePreferences';
+
 // Utility hooks
 export { useAsyncOperation, useMutation, useQuery } from './useAsyncOperation';
 export { useDebounce, useDebouncedCallback, useThrottledCallback, useSearchInput, useInfiniteScroll } from './useDebounce';
