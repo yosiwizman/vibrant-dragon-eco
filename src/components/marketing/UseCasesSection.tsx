@@ -1,6 +1,17 @@
 "use client";
 
-import { Brain, Clock, FileText, Users, Zap, Smartphone } from "lucide-react";
+import { 
+  Brain, 
+  Clock, 
+  FileText, 
+  Users, 
+  Zap, 
+  Smartphone,
+  Languages,
+  TrendingUp,
+  ShieldCheck,
+  MessageSquareQuote
+} from "lucide-react";
 import UseCaseCard from "./UseCaseCard";
 
 const useCases = [
@@ -23,16 +34,34 @@ const useCases = [
       "Capture ideas on the go with voice notes that convert to searchable text.",
   },
   {
+    icon: Languages,
+    title: "Real-Time Translation",
+    description:
+      "Navigate foreign conversations with instant whispered translations in your ear.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Business Negotiations",
+    description:
+      "Get real-time fact-checking and market prices whispered during deals.",
+  },
+  {
+    icon: MessageSquareQuote,
+    title: "Meeting Assistant",
+    description:
+      "Echo captures who said what, extracts action items, and lets you recall later.",
+  },
+  {
     icon: Users,
     title: "Contact Organization",
     description:
       "Keep your professional and personal contacts organized and accessible.",
   },
   {
-    icon: Zap,
-    title: "Quick Actions",
+    icon: ShieldCheck,
+    title: "Private Conversations",
     description:
-      "Execute common tasks instantly with voice shortcuts and keyboard commands.",
+      "Instantly mute Echo for sensitive discussions with a simple voice command.",
   },
   {
     icon: Smartphone,
@@ -51,8 +80,8 @@ export default function UseCasesSection() {
             Built for Your Life
           </h2>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Whether you're managing work projects or personal goals, Echo
-            adapts to your needs.
+            Whether you're managing work projects, navigating foreign conversations, 
+            or negotiating deals—Echo adapts to your needs.
           </p>
         </div>
 

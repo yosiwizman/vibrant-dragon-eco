@@ -2,7 +2,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Mic, Sparkles, ArrowRight, Play } from "lucide-react";
+import { Mic, Sparkles, ArrowRight, Play, Brain } from "lucide-react";
 
 export default function HeroSection() {
   return (
@@ -20,9 +20,14 @@ export default function HeroSection() {
           </span>
         </h1>
 
-        <p className="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed">
+        <p className="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto mb-4 leading-relaxed">
           Your personal AI assistant that listens, understands, and helps you
           stay organized—all with natural voice commands.
+        </p>
+        
+        <p className="text-lg text-purple-300 max-w-2xl mx-auto mb-10 flex items-center justify-center gap-2">
+          <Brain className="h-5 w-5" />
+          <span>Your Second Brain: Always listening, translating, fact-checking, and remembering.</span>
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
@@ -64,6 +69,7 @@ function HeroVisual() {
           <div className="w-3 h-3 rounded-full bg-red-500" />
           <div className="w-3 h-3 rounded-full bg-yellow-500" />
           <div className="w-3 h-3 rounded-full bg-green-500" />
+          <span className="ml-2 text-xs text-slate-500">Echo Second Brain Active</span>
         </div>
         <div className="space-y-4">
           <div className="flex items-start gap-4">
@@ -72,17 +78,15 @@ function HeroVisual() {
             </div>
             <div className="bg-slate-800/50 rounded-2xl rounded-tl-none p-4 max-w-md">
               <p className="text-slate-300">
-                "Add a task to prepare the quarterly report, due Friday,
-                high priority"
+                "Hey Echo, what did Adam say I should bring to the party?"
               </p>
             </div>
           </div>
           <div className="flex items-start gap-4 justify-end">
             <div className="bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-2xl rounded-tr-none p-4 max-w-md">
               <p className="text-slate-200">
-                ✓ I've created a high-priority task "Prepare the quarterly
-                report" due this Friday. Would you like me to set a
-                reminder as well?
+                Based on your conversation with Adam earlier today, he mentioned you should bring: 
+                chips, drinks, plates, napkins, and ice. Would you like me to create a shopping list?
               </p>
             </div>
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center flex-shrink-0">

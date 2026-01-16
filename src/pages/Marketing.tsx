@@ -5,6 +5,7 @@ import {
   HeroSection,
   TrustStrip,
   FeaturesSection,
+  SecondBrainSection,
   HowItWorksSection,
   UseCasesSection,
   FAQSection,
@@ -19,6 +20,7 @@ export default function Marketing() {
       <HeroSection />
       <TrustStrip />
       <FeaturesSection />
+      <SecondBrainSection />
       <HowItWorksSection />
       <UseCasesSection />
       <FAQSection />

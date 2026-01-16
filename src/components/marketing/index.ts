@@ -3,6 +3,7 @@ export { default as MarketingNav } from "./MarketingNav";
 export { default as HeroSection } from "./HeroSection";
 export { default as TrustStrip } from "./TrustStrip";
 export { default as FeaturesSection } from "./FeaturesSection";
+export { default as SecondBrainSection } from "./SecondBrainSection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as UseCasesSection } from "./UseCasesSection";
 export { default as FAQSection } from "./FAQSection";

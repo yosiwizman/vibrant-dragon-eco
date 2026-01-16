@@ -108,9 +108,10 @@ Parse the user's command and respond naturally.`;
       toolResults.push(result);
     }
 
+    const toolsUsed = toolCalls.map(tc => tc.tool);
     trackVoiceCommand(text, true, userId);
 
-    return { response, toolResults };
+    return { response, toolResults, toolsUsed };
   }
 
   private async processWithOpenAI(
@@ -233,9 +234,10 @@ Parse the user's command and respond naturally.`;
       saveChatMessage(userId, 'assistant', finalResponse);
     }
 
+    const toolsUsed = toolCalls.map(tc => tc.tool);
     trackVoiceCommand(text, true, userId);
 
-    return { response: finalResponse, toolResults, navigateTo };
+    return { response: finalResponse, toolResults, toolsUsed, navigateTo };
   }
 }
 

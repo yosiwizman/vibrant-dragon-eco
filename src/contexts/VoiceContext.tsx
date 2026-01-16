@@ -5,6 +5,8 @@ import { getLocationContext, LocationContext } from '@/services/context';
 import { showSuccess } from '@/utils/toast';
 import { initializeRAGKnowledge } from '@/services/rag-knowledge';
 import { conversationManager, voiceRecorder, voicePlayer } from '@/services/voice';
+import { conversationMemory } from '@/services/conversation-memory';
+import { intentPredictor } from '@/services/intent-predictor';
 
 // Import modular hooks
 import { useVoiceState } from '@/hooks/useVoiceState';

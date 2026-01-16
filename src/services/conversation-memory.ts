@@ -29,7 +29,7 @@ class ConversationMemoryService {
   /**
    * Add a conversation turn
    */
-  async addTurn(user: string, assistant: string, tools?: string[]): Promise<void> {
+  async addTurn(user: string, assistant: string, tools: string[] = []): Promise<void> {
     const turn: ConversationTurn = {
       user,
       assistant,

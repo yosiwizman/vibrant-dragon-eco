@@ -5,6 +5,8 @@ import { logVoiceCommand, logAIError } from '@/services/ai-logging';
 import { LocationContext } from '@/services/context';
 import { useVoiceFeedback } from '@/components/VoiceFeedback';
 import { showError, showSuccess } from '@/utils/toast';
+import { conversationMemory } from '@/services/conversation-memory';
+import { intentPredictor } from '@/services/intent-predictor';
 
 export interface UseVoiceCommandsOptions {
   userId: string | null;
@@ -54,6 +56,12 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
     try {
       console.log('[VoiceCommands] Processing command:', text);
       
+      // Predict intent for faster processing
+      const predictedIntent = intentPredictor.predict(text);
+      if (predictedIntent) {
+        console.log('[VoiceCommands] Predicted intent:', predictedIntent.type, 'confidence:', predictedIntent.confidence);
+      }
+      
       const result = await voiceProcessor.processCommand(
         text,
         userId,
@@ -67,6 +75,10 @@ export function useVoiceCommands(options: UseVoiceCommandsOptions): UseVoiceComm
       );
 
       console.log('[VoiceCommands] Got response:', result.response.substring(0, 50) + '...');
+      
+      // Add to conversation memory for context
+      await conversationMemory.addTurn(text, result.response, result.toolsUsed || []);
+      
       onResponseChange(result.response);
       onProcessingChange(false);
       

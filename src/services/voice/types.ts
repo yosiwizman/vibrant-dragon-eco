@@ -45,6 +45,7 @@ export interface SpeechOptions {
 export interface ProcessingResult {
   response: string;
   toolResults?: any[];
+  toolsUsed?: string[];
   navigateTo?: string;
 }
 
