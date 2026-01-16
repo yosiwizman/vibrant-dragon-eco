@@ -143,9 +143,18 @@ function ConditionalAppChrome() {
   );
 }
 
+// Safe error tracking that won't throw
+const safeTrackError = (message: string, details: any) => {
+  try {
+    trackError(message, details);
+  } catch (e) {
+    console.error('[App] Error tracking failed:', e);
+  }
+};
+
 const App = () => (
   <ErrorBoundary onError={(error, errorInfo) => {
-    trackError(error.message, {
+    safeTrackError(error.message, {
       stack: error.stack,
       componentStack: errorInfo.componentStack,
     });

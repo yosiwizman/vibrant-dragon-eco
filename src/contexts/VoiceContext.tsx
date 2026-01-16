@@ -1,18 +1,52 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { usePreferences } from '@/state/preferences';
-import { getLocationContext, LocationContext } from '@/services/context';
 import { showSuccess } from '@/utils/toast';
-import { initializeRAGKnowledge } from '@/services/rag-knowledge';
-import { conversationManager, voiceRecorder, voicePlayer } from '@/services/voice';
-import { conversationMemory } from '@/services/conversation-memory';
-import { intentPredictor } from '@/services/intent-predictor';
 
 // Import modular hooks
 import { useVoiceState } from '@/hooks/useVoiceState';
 import { useVoiceConfig } from '@/hooks/useVoiceConfig';
 import { useWakeWord } from '@/hooks/useWakeWord';
 import { useVoiceCommands } from '@/hooks/useVoiceCommands';
+
+// Lazy imports for heavy services to prevent blocking
+let getLocationContext: any = null;
+let initializeRAGKnowledge: any = null;
+let conversationManager: any = null;
+let voiceRecorder: any = null;
+let voicePlayer: any = null;
+
+// Initialize services lazily
+async function initializeServices() {
+  try {
+    if (!getLocationContext) {
+      const contextModule = await import('@/services/context');
+      getLocationContext = contextModule.getLocationContext;
+    }
+    if (!initializeRAGKnowledge) {
+      const ragModule = await import('@/services/rag-knowledge');
+      initializeRAGKnowledge = ragModule.initializeRAGKnowledge;
+    }
+    if (!conversationManager || !voiceRecorder || !voicePlayer) {
+      const voiceModule = await import('@/services/voice');
+      conversationManager = voiceModule.conversationManager;
+      voiceRecorder = voiceModule.voiceRecorder;
+      voicePlayer = voiceModule.voicePlayer;
+    }
+    return true;
+  } catch (error) {
+    console.error('[VoiceContext] Failed to initialize services:', error);
+    return false;
+  }
+}
+
+// Location context type
+interface LocationContext {
+  city?: string;
+  country?: string;
+  timezone?: string;
+  coordinates?: { lat: number; lng: number };
+}
 
 interface VoiceContextType {
   isListening: boolean;
@@ -49,6 +83,9 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const { preferences } = usePreferences();
   const config = useVoiceConfig();
   
+  // Services initialized state
+  const [servicesReady, setServicesReady] = useState(false);
+  
   // Location state
   const [userLocation, setUserLocation] = useState<LocationContext | null>(null);
   
@@ -78,46 +115,55 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   // Ref to hold the startListening function for use in callbacks
   const startListeningRef = useRef<((isConversation: boolean) => Promise<void>) | null>(null);
 
-  // Get location on mount
+  // Initialize services on mount
   useEffect(() => {
-    getLocationContext().then(loc => {
-      if (loc) setUserLocation(loc);
-    }).catch(() => {});
+    initializeServices().then(ready => {
+      setServicesReady(ready);
+    });
   }, []);
 
-  // Initialize RAG knowledge base
+  // Get location on mount (after services ready)
   useEffect(() => {
-    if (user) {
-      initializeRAGKnowledge(user.id);
-    }
-  }, [user]);
+    if (!servicesReady || !getLocationContext) return;
+    
+    getLocationContext().then((loc: LocationContext | null) => {
+      if (loc) setUserLocation(loc);
+    }).catch(() => {});
+  }, [servicesReady]);
 
-  // Check quiet mode status on mount
+  // Initialize RAG knowledge base (after services ready)
   useEffect(() => {
-    if (user) {
-      const isActive = conversationManager.checkQuietModeStatus(user.id);
-      setIsQuietMode(isActive);
-    }
-  }, [user, setIsQuietMode]);
+    if (!servicesReady || !user || !initializeRAGKnowledge) return;
+    
+    initializeRAGKnowledge(user.id);
+  }, [user, servicesReady]);
+
+  // Check quiet mode status on mount (after services ready)
+  useEffect(() => {
+    if (!servicesReady || !user || !conversationManager) return;
+    
+    const isActive = conversationManager.checkQuietModeStatus(user.id);
+    setIsQuietMode(isActive);
+  }, [user, setIsQuietMode, servicesReady]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       isStartingRef.current = false;
-      voiceRecorder.stop();
-      voicePlayer.stop();
+      if (voiceRecorder) voiceRecorder.stop();
+      if (voicePlayer) voicePlayer.stop();
     };
   }, [isStartingRef]);
 
   // Stop speaking function
   const stopSpeaking = useCallback(() => {
-    voicePlayer.stop();
+    if (voicePlayer) voicePlayer.stop();
     setIsSpeaking(false);
   }, [setIsSpeaking]);
 
   // Speak function with auto-continue for conversation mode
   const speak = useCallback(async (text: string) => {
-    if (!text?.trim()) return;
+    if (!text?.trim() || !voicePlayer) return;
 
     stopSpeaking();
 
@@ -173,14 +219,14 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
   // Quiet mode handlers
   const enterQuietMode = useCallback((context?: string) => {
-    if (!user) return;
+    if (!user || !conversationManager) return;
     conversationManager.enterQuietMode(user.id, context);
     setIsQuietMode(true);
     showSuccess(`Entering quiet mode${context ? ` for ${context}` : ''}. I'll just listen.`);
   }, [user, setIsQuietMode]);
 
   const exitQuietMode = useCallback(async () => {
-    if (!user || !config.openaiApiKey) {
+    if (!user || !config.openaiApiKey || !conversationManager) {
       setIsQuietMode(false);
       return null;
     }
@@ -196,11 +242,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     conversationModeRef.current = false;
     setIsConversationMode(false);
     isStartingRef.current = false;
-    conversationManager.stopConversation();
+    if (conversationManager) conversationManager.stopConversation();
     
-    voiceRecorder.stop();
+    if (voiceRecorder) voiceRecorder.stop();
     setIsListening(false);
-    voicePlayer.stop();
+    if (voicePlayer) voicePlayer.stop();
     setIsSpeaking(false);
   }, [conversationModeRef, isStartingRef, setIsConversationMode, setIsListening, setIsSpeaking]);
 
@@ -234,6 +280,11 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
 
     if (!config.openaiApiKey) {
       console.log('[Voice] No API key');
+      return;
+    }
+
+    if (!voiceRecorder) {
+      console.log('[Voice] Voice recorder not ready');
       return;
     }
 
@@ -318,7 +369,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
   const stopListening = useCallback(() => {
     console.log('[Voice] Stopping listening');
     isStartingRef.current = false;
-    voiceRecorder.stop();
+    if (voiceRecorder) voiceRecorder.stop();
     setIsListening(false);
   }, [isStartingRef, setIsListening]);
 
@@ -334,7 +385,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     console.log('[Voice] Starting conversation mode');
     setIsConversationMode(true);
     conversationModeRef.current = true;
-    conversationManager.startConversation();
+    if (conversationManager) conversationManager.startConversation();
     
     // Speak greeting - the onEnd callback will automatically start listening
     await speak(`Hi! I'm ${config.assistantName}. How can I help you?`);
