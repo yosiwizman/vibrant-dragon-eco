@@ -71,7 +71,23 @@ export class ConversationManager {
 
   handleTranscript(userId: string, text: string): TranscriptHandlerResult {
     // Check for exit phrases in conversation mode
-    if (this.isConversationActive && /\b(goodbye|bye|stop|exit|end conversation|that's all|thank you|thanks)\b/i.test(text)) {
+    // Only exit if the ENTIRE message is an exit phrase (not just contains one)
+    const normalizedText = text.toLowerCase().trim();
+    const exitPhrases = [
+      'goodbye', 'bye', 'bye bye', 'stop', 'exit',
+      'end conversation', "that's all", 'thank you', 'thanks',
+      'good bye', 'see you', 'see ya', 'later', 'talk later',
+      'i\'m done', 'done', 'that\'s it', 'nothing else'
+    ];
+    
+    // Check if the message is primarily an exit phrase (short message that matches)
+    const isExitPhrase = exitPhrases.some(phrase => {
+      // Exact match or message is very short and contains the phrase
+      return normalizedText === phrase ||
+             (normalizedText.length < 20 && normalizedText.includes(phrase));
+    });
+    
+    if (this.isConversationActive && isExitPhrase) {
       return {
         handled: true,
         action: 'exit',

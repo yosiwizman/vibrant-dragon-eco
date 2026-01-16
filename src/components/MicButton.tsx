@@ -41,13 +41,13 @@ export default function MicButton() {
       // In conversation mode, clicking ends the conversation
       stopConversationMode();
     } else if (isSpeaking) {
-      // If speaking, stop and start listening
+      // If speaking outside conversation mode, stop
       stopSpeaking();
     } else if (isListening) {
-      // If listening, stop
+      // If listening outside conversation mode, stop
       stopListening();
     } else if (!isProcessing) {
-      // Start conversation mode
+      // Start conversation mode - this will greet and auto-listen
       await startConversationMode();
     }
   };
@@ -120,10 +120,10 @@ export default function MicButton() {
           <div className="flex items-center gap-2 mb-2">
             <div className={`w-2 h-2 rounded-full ${micState.pulseColor} ${isListening || isSpeaking ? 'animate-pulse' : ''}`} />
             <p className="text-xs text-green-300 font-medium">
-              {isListening ? "🎤 Listening..." : 
-               isProcessing ? "🤔 Thinking..." : 
-               isSpeaking ? "🔊 Speaking..." : 
-               "✅ Ready - speak now"}
+              {isListening ? "🎤 Listening... (speak now)" :
+               isProcessing ? "🤔 Processing..." :
+               isSpeaking ? "🔊 Speaking..." :
+               "⏳ Starting..."}
             </p>
           </div>
           
@@ -143,15 +143,17 @@ export default function MicButton() {
             </div>
           )}
           
-          {/* Instructions */}
-          {!isListening && !isProcessing && !isSpeaking && (
+          {/* Instructions when listening */}
+          {isListening && (
             <p className="text-xs text-green-400/70">
-              Speak naturally • Say "goodbye" to end
+              🎙️ Hands-free mode • I'll hear you automatically
             </p>
           )}
           
           {/* Tap to end hint */}
-          <p className="text-xs text-slate-500 mt-1">Tap mic to end conversation</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Say "goodbye" or tap mic to end
+          </p>
         </div>
       )}
 

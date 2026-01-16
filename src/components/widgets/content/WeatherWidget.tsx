@@ -46,7 +46,15 @@ export default function WeatherWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locationName, setLocationName] = useState<string>("Your Location");
-  const [useCelsius, setUseCelsius] = useState(true);
+  // Default to Fahrenheit for US users (detect via timezone or locale)
+  const [useCelsius, setUseCelsius] = useState(() => {
+    // Check if user is in US timezone or has US locale
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const locale = navigator.language || 'en-US';
+    const isUS = timezone.startsWith('America/') || locale.includes('US') || locale === 'en-US';
+    // Return false (Fahrenheit) for US users, true (Celsius) for others
+    return !isUS;
+  });
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState("");

@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { usePreferences } from "../state/preferences";
 import { useProviders } from "@/hooks/useProviders";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,14 +51,27 @@ export default function Settings() {
   const { preferences, setPreferences } = usePreferences();
   const { providers, saveProvider, toggleProvider } = useProviders();
   const { apiKey: openaiApiKey, hasKey: hasOpenAIKey } = useOpenAIKey();
+  const { profile, saving: savingProfile, saveProfile, updatePreferredName } = useProfile();
   const [activeTab, setActiveTab] = useState("general");
   const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [nameInput, setNameInput] = useState("");
   const [chatStats, setChatStats] = useState<{
     totalMessages: number;
     userMessages: number;
     assistantMessages: number;
   }>({ totalMessages: 0, userMessages: 0, assistantMessages: 0 });
   const [loadingMemories, setLoadingMemories] = useState(false);
+
+  // Sync profile name with local input
+  useEffect(() => {
+    if (profile?.preferred_name) {
+      setNameInput(profile.preferred_name);
+      // Also sync to preferences for voice greeting
+      if (profile.preferred_name !== preferences.preferredName) {
+        setPreferences(prev => ({ ...prev, preferredName: profile.preferred_name }));
+      }
+    }
+  }, [profile?.preferred_name]);
 
   useEffect(() => {
     if (user && activeTab === "memory") {
@@ -319,15 +333,51 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label className="text-slate-300">How would you like the assistant to call you?</Label>
-                  <Input
-                    className="bg-slate-900 border-slate-700 text-white"
-                    placeholder="Your name"
-                    value={preferences.preferredName || ""}
-                    onChange={(e) => setPreferences({ ...preferences, preferredName: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      className="bg-slate-900 border-slate-700 text-white flex-1"
+                      placeholder="Your name"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      onBlur={async () => {
+                        // Auto-save on blur if changed
+                        if (nameInput !== profile?.preferred_name) {
+                          const success = await updatePreferredName(nameInput);
+                          if (success) {
+                            setPreferences(prev => ({ ...prev, preferredName: nameInput }));
+                          }
+                        }
+                      }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const success = await updatePreferredName(nameInput);
+                          if (success) {
+                            setPreferences(prev => ({ ...prev, preferredName: nameInput }));
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={async () => {
+                        const success = await updatePreferredName(nameInput);
+                        if (success) {
+                          setPreferences(prev => ({ ...prev, preferredName: nameInput }));
+                        }
+                      }}
+                      disabled={savingProfile || nameInput === profile?.preferred_name}
+                      className="bg-fuchsia-600 text-white hover:bg-fuchsia-500"
+                    >
+                      {savingProfile ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
                   <p className="text-xs text-slate-500">
-                    This name will appear in greetings and throughout the app
+                    This name will appear in greetings and throughout the app. Press Enter or click Save.
                   </p>
+                  {profile?.preferred_name && (
+                    <p className="text-xs text-green-400">
+                      ✓ Saved as "{profile.preferred_name}"
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

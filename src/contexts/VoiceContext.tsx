@@ -387,9 +387,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     conversationModeRef.current = true;
     if (conversationManager) conversationManager.startConversation();
     
+    // Get user's preferred name for personalized greeting
+    const userName = preferences.preferredName?.trim();
+    const greeting = userName
+      ? `Hi ${userName}! How can I help you?`
+      : `Hi! I'm ${config.assistantName}. How can I help you?`;
+    
     // Speak greeting - the onEnd callback will automatically start listening
-    await speak(`Hi! I'm ${config.assistantName}. How can I help you?`);
-  }, [isConversationMode, speak, config.assistantName, setIsConversationMode, conversationModeRef]);
+    await speak(greeting);
+  }, [isConversationMode, speak, config.assistantName, preferences.preferredName, setIsConversationMode, conversationModeRef]);
 
   // Wake word detection
   useWakeWord({

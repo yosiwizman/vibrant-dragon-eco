@@ -12,6 +12,7 @@ export class VoiceRecorder {
   private silenceStart: number | null = null;
   private mimeType = 'audio/webm';
   private recordingStartTime: number = 0;
+  private hasDetectedSpeech: boolean = false;
 
   async start(callbacks: RecordingCallbacks, enableSilenceDetection = false): Promise<void> {
     // Prevent duplicate starts
@@ -21,6 +22,7 @@ export class VoiceRecorder {
     }
 
     this.isStarting = true;
+    this.hasDetectedSpeech = false;
 
     try {
       // Clean up any existing recording
@@ -85,6 +87,7 @@ export class VoiceRecorder {
       this.mediaRecorder.start(1000);
       this.isRecording = true;
       this.isStarting = false;
+      this.recordingStartTime = Date.now();
       callbacks.onStart();
 
       console.log('[VoiceRecorder] Recording started');
@@ -145,6 +148,7 @@ export class VoiceRecorder {
 
     this.analyser = null;
     this.silenceStart = null;
+    this.hasDetectedSpeech = false;
   }
 
   private getBestMimeType(): string {
@@ -165,8 +169,13 @@ export class VoiceRecorder {
   }
 
   private startSilenceDetection(onSilenceDetected: () => void): void {
-    // Track when recording started
-    this.recordingStartTime = Date.now();
+    // Configuration for hands-free conversation mode
+    const SPEECH_THRESHOLD = 15; // Audio level to consider as speech
+    const SILENCE_THRESHOLD = 8; // Audio level to consider as silence
+    const MIN_RECORDING_TIME = 1500; // Must record at least 1.5 seconds before checking silence
+    const SILENCE_DURATION_AFTER_SPEECH = 2000; // 2 seconds of silence after speech to stop
+    const MAX_RECORDING_TIME = 30000; // Maximum 30 seconds recording
+    const INITIAL_WAIT_TIME = 500; // Wait 500ms before starting detection
     
     const checkSilence = () => {
       if (!this.analyser || !this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
@@ -182,48 +191,60 @@ export class VoiceRecorder {
       // Also check the max value to detect any speech
       const maxValue = Math.max(...dataArray);
       
-      // FIXED: Much more lenient settings
-      const silenceThreshold = 5; // Very low threshold - only trigger on true silence
-      const silenceDuration = 3000; // 3 seconds of silence required
-      const minimumRecordingTime = 3000; // Must record for at least 3 seconds before checking silence
+      const timeSinceStart = Date.now() - this.recordingStartTime;
+
+      // Check for maximum recording time
+      if (timeSinceStart > MAX_RECORDING_TIME) {
+        console.log('[VoiceRecorder] Maximum recording time reached, stopping');
+        onSilenceDetected();
+        return;
+      }
 
       // Don't check for silence until minimum recording time has passed
-      const timeSinceStart = Date.now() - this.recordingStartTime;
-      if (timeSinceStart < minimumRecordingTime) {
+      if (timeSinceStart < MIN_RECORDING_TIME) {
         this.silenceTimeout = setTimeout(checkSilence, 100);
         return;
       }
 
-      // Log audio levels for debugging (only occasionally to avoid spam)
+      // Detect if user is speaking
+      const isSpeaking = average > SPEECH_THRESHOLD || maxValue > 40;
+      const isSilent = average < SILENCE_THRESHOLD && maxValue < 25;
+
+      // Log audio levels occasionally for debugging
       if (Math.random() < 0.1) {
-        console.log(`[VoiceRecorder] Audio level - avg: ${average.toFixed(1)}, max: ${maxValue}, time: ${(timeSinceStart/1000).toFixed(1)}s`);
+        console.log(`[VoiceRecorder] Audio level - avg: ${average.toFixed(1)}, max: ${maxValue}, time: ${(timeSinceStart/1000).toFixed(1)}s, speech: ${this.hasDetectedSpeech}`);
       }
 
-      // Consider it silence only if BOTH average AND max are very low
-      const isSilent = average < silenceThreshold && maxValue < 15;
-
-      if (isSilent) {
+      if (isSpeaking) {
+        // User is speaking - mark that we've detected speech and reset silence timer
+        if (!this.hasDetectedSpeech) {
+          console.log('[VoiceRecorder] Speech detected!');
+        }
+        this.hasDetectedSpeech = true;
+        this.silenceStart = null;
+      } else if (isSilent && this.hasDetectedSpeech) {
+        // User has stopped speaking - start silence timer
         if (this.silenceStart === null) {
           this.silenceStart = Date.now();
-          console.log('[VoiceRecorder] Silence started...');
-        } else if (Date.now() - this.silenceStart > silenceDuration) {
-          console.log('[VoiceRecorder] Silence detected after', ((Date.now() - this.silenceStart) / 1000).toFixed(1), 'seconds');
+          console.log('[VoiceRecorder] Silence started after speech...');
+        } else if (Date.now() - this.silenceStart > SILENCE_DURATION_AFTER_SPEECH) {
+          // Enough silence after speech - stop recording
+          console.log('[VoiceRecorder] Silence detected after speech, auto-stopping');
           onSilenceDetected();
           return;
         }
-      } else {
-        // Reset silence timer when sound is detected
-        if (this.silenceStart !== null) {
-          console.log('[VoiceRecorder] Sound detected, resetting silence timer');
-        }
-        this.silenceStart = null;
+      } else if (!this.hasDetectedSpeech && timeSinceStart > 8000) {
+        // No speech detected for 8 seconds - stop to avoid hanging
+        console.log('[VoiceRecorder] No speech detected for 8 seconds, stopping');
+        onSilenceDetected();
+        return;
       }
 
       this.silenceTimeout = setTimeout(checkSilence, 100);
     };
 
-    // Start checking after 2 seconds to give user time to start speaking
-    this.silenceTimeout = setTimeout(checkSilence, 2000);
+    // Start checking after initial wait
+    this.silenceTimeout = setTimeout(checkSilence, INITIAL_WAIT_TIME);
   }
 
   get recording(): boolean {
