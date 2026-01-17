@@ -43,6 +43,10 @@ export interface Preferences {
   pinEnabled: boolean;
   pinCode?: string;
   authToken?: string;
+
+  // Demo Mode (investor demo): use server-side proxy instead of client key.
+  demoModeEnabled: boolean;
+
   openaiApiKey?: string;
   openaiVoice: OpenAIVoice;
   preferOpenAIVoice?: boolean;

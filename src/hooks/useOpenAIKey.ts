@@ -1,5 +1,6 @@
 import { usePreferences } from "@/state/preferences";
 import { useProviders } from "@/hooks/useProviders";
+import { DEMO_MODE_SENTINEL_KEY } from "@/services/demo-mode";
 
 /**
  * Centralized hook to get the OpenAI API key.
@@ -13,10 +14,19 @@ import { useProviders } from "@/hooks/useProviders";
 export function useOpenAIKey(): {
   apiKey: string | undefined;
   hasKey: boolean;
-  source: "preferences" | "providers" | "none";
+  source: "demo" | "preferences" | "providers" | "none";
 } {
   const { preferences } = usePreferences();
   const { providers } = useProviders();
+
+  // Demo Mode: server-side proxy (no client key)
+  if (preferences.demoModeEnabled) {
+    return {
+      apiKey: DEMO_MODE_SENTINEL_KEY,
+      hasKey: true,
+      source: "demo",
+    };
+  }
 
   // Primary: Check preferences (localStorage)
   if (preferences.openaiApiKey && preferences.openaiApiKey.trim().length > 0) {
@@ -56,6 +66,12 @@ export function getOpenAIKeyFromPreferences(): string | undefined {
     const raw = localStorage.getItem("echo:prefs");
     if (raw) {
       const prefs = JSON.parse(raw);
+
+      // Demo Mode: treat as "configured" without exposing a real key.
+      if (prefs.demoModeEnabled === true) {
+        return DEMO_MODE_SENTINEL_KEY;
+      }
+
       if (prefs.openaiApiKey && prefs.openaiApiKey.trim().length > 0) {
         return prefs.openaiApiKey;
       }

@@ -1,4 +1,6 @@
 import type { OpenAIVoice } from "../types/models";
+import { DEMO_MODE_SENTINEL_KEY } from "@/services/demo-mode";
+import { proxySTT, proxyTTS, proxyChat } from "@/services/ai-proxy";
 
 const OPENAI_API_BASE = "https://api.openai.com/v1";
 
@@ -49,6 +51,12 @@ export async function transcribeAudio(
     console.warn('[Whisper] Audio blob is very small, might be too short');
   }
   
+  // Demo Mode: send audio to server-side proxy (requires Supabase session)
+  if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+    const result = await proxySTT({ file: audioBlob, filename, model: 'whisper-1' });
+    return { text: result.text || '' };
+  }
+
   const formData = new FormData();
   formData.append("file", audioBlob, filename);
   formData.append("model", "whisper-1");
@@ -117,6 +125,16 @@ export async function synthesizeSpeech(
   const maxLength = 4096;
   const truncatedText = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   
+  // Demo Mode: server-side proxy (no client key)
+  if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+    return proxyTTS({
+      input: truncatedText,
+      voice: validatedVoice,
+      model: 'tts-1',
+      speed: 1.0,
+    });
+  }
+
   const response = await fetch(`${OPENAI_API_BASE}/audio/speech`, {
     method: "POST",
     headers: {
@@ -157,6 +175,19 @@ export async function chatWithOpenAI(
   messages: { role: string; content: string }[],
   apiKey: string
 ): Promise<string> {
+  // Demo Mode: server-side proxy (no client key)
+  if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+    const res = await proxyChat({
+      model: 'gpt-4o-mini',
+      messages: messages.map(m => ({
+        role: m.role === 'system' || m.role === 'assistant' ? m.role : 'user',
+        content: m.content,
+      })),
+      max_tokens: 1000,
+    });
+    return res.content;
+  }
+
   const response = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
     method: "POST",
     headers: {

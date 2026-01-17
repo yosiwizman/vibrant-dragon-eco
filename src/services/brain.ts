@@ -1,4 +1,6 @@
 import type { Message } from "@/types/models";
+import { DEMO_MODE_SENTINEL_KEY } from "@/services/demo-mode";
+import { proxyChat } from "@/services/ai-proxy";
 
 export interface ChatRequest {
   messages: { role: Message["role"]; content: string }[];
@@ -37,6 +39,16 @@ async function chatWithOpenAI(
   apiKey: string,
   req: ChatRequest
 ): Promise<ChatResponse> {
+  // Demo Mode: use secure server-side proxy instead of client key
+  if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+    const result = await proxyChat({
+      model: req.model || 'gpt-4o-mini',
+      messages: req.messages as any,
+      max_tokens: req.maxTokens || 1024,
+    });
+    return { content: result.content };
+  }
+
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {

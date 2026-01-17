@@ -8,7 +8,7 @@
 **Architecture:** React + TypeScript + Supabase + WebLLM  
 **Deployment:** Web (Vercel) + Mobile (iOS/Android via Capacitor)  
 **Database:** Supabase (PostgreSQL with RLS)  
-**AI:** OpenAI GPT-4o (online) + WebLLM LLaMA 3.2 (offline)
+**AI:** OpenAI GPT-4o (online) + WebLLM LLaMA 3.2 (offline) + optional server-side OpenAI proxy for Demo Mode
 
 ---
 
@@ -88,6 +88,9 @@ vercel --prod
 # Environment variables needed:
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# Optional (required for Demo Mode server proxy):
+OPENAI_API_KEY=your-openai-key
 ```
 
 ### **iOS Deployment:**
@@ -127,12 +130,17 @@ npx cap open android
 ### **Environment Variables:**
 
 ```env
-# Required
+# Required (client + server)
 VITE_SUPABASE_URL=https://pkwiahckdwxzdpusnsui.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 
+# Optional (Demo Mode server proxy)
+# If set, authenticated users can enable Demo Mode (no client key required).
+# Server-side only. Do NOT prefix with VITE_.
+OPENAI_API_KEY=your-openai-key
+
 # Optional (user-provided)
-# Users add their own OpenAI API key in Settings
+# Users can still add their own OpenAI API key in Settings for Online Mode.
 ```
 
 ### **Supabase Configuration:**
@@ -193,8 +201,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ### **API Security:**
 - Rate limiting (4 limiters)
 - Cost controls
-- Keys stored client-side only
-- No server-side secrets
+- User-provided keys are stored client-side only (browser localStorage)
+- Demo Mode uses server-side `OPENAI_API_KEY` via `/api/ai/*` with Supabase JWT validation and never returns the key to the client
 
 ### **Privacy:**
 - Private mode available

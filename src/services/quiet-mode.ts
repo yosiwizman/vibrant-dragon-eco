@@ -1,6 +1,8 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
+import { DEMO_MODE_SENTINEL_KEY } from "@/services/demo-mode";
+import { proxyChat } from "@/services/ai-proxy";
 
 export interface ListeningSession {
   id: string;
@@ -137,18 +139,10 @@ export async function endListeningSession(
       .map(t => `[${t.speaker || "Speaker"}]: ${t.text}`)
       .join("\n");
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are a meeting assistant. Analyze the following conversation transcript and provide:
+    const messages = [
+      {
+        role: "system",
+        content: `You are a meeting assistant. Analyze the following conversation transcript and provide:
 1. A brief summary (2-3 sentences)
 2. Key bullet points (up to 5)
 3. Action items mentioned (if any)
@@ -159,22 +153,44 @@ Format your response as JSON:
   "bulletPoints": ["...", "..."],
   "actionItems": ["...", "..."]
 }`,
-          },
-          {
-            role: "user",
-            content: `Context: ${session.context || "General conversation"}\n\nTranscript:\n${fullTranscript}`,
-          },
-        ],
+      },
+      {
+        role: "user",
+        content: `Context: ${session.context || "General conversation"}\n\nTranscript:\n${fullTranscript}`,
+      },
+    ];
+
+    let content: string;
+
+    // Demo Mode: server-side proxy
+    if (openaiApiKey === DEMO_MODE_SENTINEL_KEY) {
+      const res = await proxyChat({
+        model: 'gpt-4o-mini',
+        messages: messages as any,
         max_tokens: 1024,
-      }),
-    });
+      });
+      content = res.content;
+    } else {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages,
+          max_tokens: 1024,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to generate summary");
+      if (!response.ok) {
+        throw new Error("Failed to generate summary");
+      }
+
+      const data = await response.json();
+      content = data.choices[0].message.content;
     }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
 
     // Parse JSON response
     let parsed;
