@@ -5,7 +5,7 @@ import {
   sendText,
   truncateString,
   verifySupabaseJwt,
-} from '../../src/server/ai-proxy';
+} from '../../src/server/ai-proxy.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -54,12 +54,15 @@ export default async function handler(req: any, res: any) {
       minFileSize: 1,
     });
 
-    ({ fields, files } = await new Promise((resolve, reject) => {
+    const parsed = await new Promise<any>((resolve, reject) => {
       form.parse(req, (err: any, flds: any, fls: any) => {
         if (err) return reject(err);
         resolve({ fields: flds, files: fls });
       });
-    }));
+    });
+
+    fields = parsed.fields;
+    files = parsed.files;
   } catch (e: any) {
     return sendJson(res, 400, { error: 'Invalid multipart form', message: e?.message });
   }
