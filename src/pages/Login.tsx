@@ -40,15 +40,13 @@ export default function Login() {
     
     // Check for access_token which indicates a recovery session
     const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
     
     console.log('[Password Reset] Checking URL params:', {
       hashType,
       queryType,
       hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
-      hash: window.location.hash,
-      search: window.location.search,
+      hash: window.location.hash.substring(0, 100),
+      search: window.location.search.substring(0, 100),
     });
     
     if (hashType === 'recovery' || queryType === 'recovery') {
@@ -56,12 +54,21 @@ export default function Login() {
       setIsPasswordReset(true);
     }
     
+    // Listen for Supabase auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Password Reset] Auth event:', event);
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[Password Reset] PASSWORD_RECOVERY event received');
+        setIsPasswordReset(true);
+      }
+    });
+    
     // Also check if there's a recovery session in Supabase
     const checkRecoverySession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         // Check if this is a recovery session by looking at the URL
-        const isRecovery = window.location.hash.includes('type=recovery') ||
+        const isRecovery = window.location.hash.includes('type=recovery') || 
                           window.location.search.includes('type=recovery');
         if (isRecovery) {
           console.log('[Password Reset] Recovery session detected');
@@ -71,9 +78,13 @@ export default function Login() {
     };
     
     checkRecoverySession();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-=======
 
+  // Handle redirect after login
   useEffect(() => {
     // Don't redirect if we're in password reset mode
     if (isPasswordReset) {
