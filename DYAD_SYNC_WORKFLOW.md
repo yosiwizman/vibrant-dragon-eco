@@ -26,6 +26,12 @@ This guide prevents the “fetch first / non-fast-forward” error and keeps the
 ## Standards (already enforced)
 - `main` is protected: CI required, no force-push, branches deleted after merge, squash-merge PRs.
 
+## Dyad Publish UI
+- In Publish → GitHub, set Branch to `dyad/workspace` (NOT `main`).
+- Use Sync only on `dyad/workspace`.
+- To merge to `main`: open a PR from `dyad/workspace` (or your feature branch) and squash-merge after CI is green.
+- Never click “Force Push (Dangerous)”. If Publish shows Branch: `main`, switch to `dyad/workspace` or follow this guide to re-align.
+
 ## Helpful links
 - Repo: https://github.com/yosiwizman/vibrant-dragon-eco
 - New PR: https://github.com/yosiwizman/vibrant-dragon-eco/compare
