@@ -127,6 +127,26 @@ npx cap open android
 
 ## 🔧 CONFIGURATION
 
+### Vercel Routing (SPA + API exclusion)
+
+- SPA fallback keeps client-side routing working.
+- API routes under `/api/*` must NOT be rewritten to the SPA.
+- vercel.json rewrites:
+
+```json
+{
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
+```
+
+Order notes:
+- Vercel matches API routes first; the negative lookahead ensures `/api/*` never hits the SPA rewrite.
+- All other paths fall through to `/index.html`.
+
+## 🔧 CONFIGURATION
+
 ### **Environment Variables:**
 
 ```env
