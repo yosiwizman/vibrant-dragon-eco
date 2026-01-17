@@ -7,7 +7,7 @@ import {
   truncateString,
   readJson,
   verifySupabaseJwt,
-} from '../../src/server/ai-proxy';
+} from '../../src/server/ai-proxy.js';
 
 export const config = {
   runtime: 'nodejs',

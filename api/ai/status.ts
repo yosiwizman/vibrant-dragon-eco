@@ -1,4 +1,4 @@
-import { getOpenAIEnv, getSupabaseEnv, sendJson, sendText } from '../../src/server/ai-proxy';
+import { getOpenAIEnv, getSupabaseEnv, sendJson, sendText } from '../../src/server/ai-proxy.js';
 
 export const config = {
   runtime: 'nodejs',
