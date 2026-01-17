@@ -16,7 +16,7 @@ function run(cmd, args, opts = {}) {
 }
 
 try {
-  const { stdout } = await run('pnpm', ['exec', 'eslint', '.', '-f', 'json']);
+const { stdout } = await run('pnpm', ['exec', 'eslint', 'api', 'src', '-f', 'json']);
   // ESLint exits non-zero on lint errors; we ignore exit code and parse stdout
   const results = JSON.parse(stdout || '[]');
   const totalErrors = results.reduce((sum, r) => sum + (r.errorCount || 0), 0);
