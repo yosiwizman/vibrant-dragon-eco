@@ -1,5 +1,7 @@
 import { transcribeAudio } from '@/services/openai-voice';
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from '@/services/orchestrator';
+import { DEMO_MODE_SENTINEL_KEY } from '@/services/demo-mode';
+import { proxyChat } from '@/services/ai-proxy';
 import { normalizeSpeechInput } from '@/services/conversation-manager';
 import { getMemoryContext } from '@/services/memory';
 import { saveChatMessage, getChatContext } from '@/services/chat-history';
@@ -152,27 +154,38 @@ Parse the user's command and respond naturally.`;
       saveChatMessage(userId, 'user', text);
     }
 
-    // Call OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
+    // Call OpenAI (direct) or Demo Mode server proxy
+    let aiResponse: string;
+
+    if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+      const proxyRes = await proxyChat({
         model: 'gpt-4o-mini',
-        messages,
+        messages: messages as any,
         max_tokens: 1024,
-      }),
-    });
+      });
+      aiResponse = proxyRes.content;
+    } else {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages,
+          max_tokens: 1024,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`AI request failed: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AI request failed: ${errorText}`);
+      }
+
+      const data = await response.json();
+      aiResponse = data.choices[0].message.content;
     }
-
-    const data = await response.json();
-    let aiResponse = data.choices[0].message.content;
 
     // Execute tool calls
     const toolCalls = parseToolCalls(aiResponse);
@@ -195,27 +208,38 @@ Parse the user's command and respond naturally.`;
         .map((r) => (r.data?.voiceText ? r.data.voiceText : `${r.tool}: ${r.success ? 'Success' : r.error}`))
         .join('\n');
 
-      const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text },
-            { role: 'assistant', content: aiResponse },
-            { role: 'user', content: `Results: ${toolResultsText}\n\nGive a brief voice response.` },
-          ],
-          max_tokens: 256,
-        }),
-      });
+      const followUpMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text },
+        { role: 'assistant', content: aiResponse },
+        { role: 'user', content: `Results: ${toolResultsText}\n\nGive a brief voice response.` },
+      ];
 
-      if (followUpResponse.ok) {
-        const followUpData = await followUpResponse.json();
-        aiResponse = followUpData.choices[0].message.content;
+      if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+        const follow = await proxyChat({
+          model: 'gpt-4o-mini',
+          messages: followUpMessages as any,
+          max_tokens: 256,
+        });
+        aiResponse = follow.content;
+      } else {
+        const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: followUpMessages,
+            max_tokens: 256,
+          }),
+        });
+
+        if (followUpResponse.ok) {
+          const followUpData = await followUpResponse.json();
+          aiResponse = followUpData.choices[0].message.content;
+        }
       }
     }
 

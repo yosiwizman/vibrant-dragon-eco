@@ -12,6 +12,7 @@ const DEFAULT: Preferences = {
   pinEnabled: false,
   pinCode: undefined,
   authToken: undefined,
+  demoModeEnabled: false,
   openaiApiKey: undefined,
   openaiVoice: "nova",
   preferOpenAIVoice: true,

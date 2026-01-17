@@ -52,7 +52,9 @@ export default function IntegrationStatus() {
       category: "ai",
       status: hasOpenAI || hasAnthropic ? "connected" : "not_configured",
       provider: hasOpenAI
-        ? `OpenAI${openaiSource === "preferences" ? " (Settings)" : " (Providers)"}`
+        ? openaiSource === "demo"
+          ? "OpenAI (Demo Mode)"
+          : `OpenAI${openaiSource === "preferences" ? " (Settings)" : " (Providers)"}`
         : hasAnthropic ? "Anthropic" : undefined,
     });
 
@@ -61,7 +63,11 @@ export default function IntegrationStatus() {
       name: "Voice",
       category: "voice",
       status: hasOpenAI ? "connected" : "not_configured",
-      provider: hasOpenAI ? "OpenAI Whisper + TTS" : "Add API key in Settings",
+      provider: hasOpenAI
+        ? openaiSource === "demo"
+          ? "OpenAI (Demo Mode)"
+          : "OpenAI Whisper + TTS"
+        : "Add API key in Settings",
     });
 
     // Check Search (we have free DuckDuckGo + Wikipedia)

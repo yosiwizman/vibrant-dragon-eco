@@ -148,7 +148,7 @@ export default function Chat() {
         preferences.baseUrl,
         { messages: chatMessages },
         preferences.authToken,
-        preferences.openaiApiKey
+        openaiApiKey
       );
 
       const toolCalls = parseToolCalls(res.content);
@@ -176,7 +176,7 @@ export default function Chat() {
             preferences.baseUrl,
             { messages: followUpMessages },
             preferences.authToken,
-            preferences.openaiApiKey
+            openaiApiKey
           );
 
           finalContent = followUp.content;

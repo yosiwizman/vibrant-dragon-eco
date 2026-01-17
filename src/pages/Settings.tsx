@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProviderCard from "@/components/ProviderCard";
 import IntegrationStatus from "@/components/IntegrationStatus";
+import DemoModeCard from "@/components/DemoModeCard";
 import AITestButton from "@/components/AITestButton";
 import OfflineAIDownloader from "@/components/OfflineAIDownloader";
 import { PROVIDER_CONFIGS, PROVIDER_CATEGORIES } from "@/types/providers";
@@ -413,17 +414,27 @@ export default function Settings() {
               </CardContent>
             </Card>
 
+            <DemoModeCard />
+
             <Card className="border-fuchsia-500/30 bg-slate-800/50 backdrop-blur">
               <CardHeader>
                 <CardTitle className="text-xl text-white flex items-center gap-2">
                   <Key className="h-5 w-5 text-fuchsia-400" />
                   OpenAI API Key
-                  <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/50">
-                    Online Mode
-                  </Badge>
+                  {preferences.demoModeEnabled ? (
+                    <Badge className="ml-2 bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40">
+                      Optional in Demo Mode
+                    </Badge>
+                  ) : (
+                    <Badge className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/50">
+                      Online Mode
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                  For online mode with GPT-4o. Or use Offline AI below for zero-cost, privacy-first operation.
+                  {preferences.demoModeEnabled
+                    ? "Demo Mode is enabled — no client API key is required. (You can still provide your own key if you want.)"
+                    : "For online mode with GPT-4o. Or use Offline AI below for zero-cost, privacy-first operation."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -437,9 +448,16 @@ export default function Settings() {
                       value={preferences.openaiApiKey || ""}
                       onChange={(e) => setPreferences({ ...preferences, openaiApiKey: e.target.value })}
                     />
-                    <AITestButton apiKey={preferences.openaiApiKey || ""} provider="openai" />
+                    {preferences.openaiApiKey ? (
+                      <AITestButton apiKey={preferences.openaiApiKey} provider="openai" />
+                    ) : null}
                   </div>
-                  {preferences.openaiApiKey ? (
+                  {preferences.demoModeEnabled ? (
+                    <div className="flex items-center gap-2 text-green-400 text-sm">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Demo Mode enabled - AI features work without a client key</span>
+                    </div>
+                  ) : preferences.openaiApiKey ? (
                     <div className="flex items-center gap-2 text-green-400 text-sm">
                       <CheckCircle2 className="h-4 w-4" />
                       <span>API key configured - all AI features are enabled</span>
@@ -451,7 +469,10 @@ export default function Settings() {
                     </div>
                   )}
                   <p className="text-xs text-slate-500">
-                    Your key is stored locally in your browser. It's only sent to OpenAI's servers when you use AI features.
+                    {preferences.demoModeEnabled
+                      ? "In Demo Mode, OpenAI requests are made server-side via /api/ai/* (your key stays optional and local)."
+                      : "Your key is stored locally in your browser. It's only sent to OpenAI's servers when you use AI features."}
+                    {" "}
                     Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-fuchsia-400 hover:underline">platform.openai.com</a>
                   </p>
                 </div>

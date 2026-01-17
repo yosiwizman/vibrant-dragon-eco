@@ -9,6 +9,8 @@ import { usePreferences } from "../state/preferences";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { transcribeAudio, synthesizeSpeech } from "../services/openai-voice";
+import { DEMO_MODE_SENTINEL_KEY } from "@/services/demo-mode";
+import { proxyChat } from "@/services/ai-proxy";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
 import { buildSystemPrompt, parseToolCalls, executeTool, ActionResult } from "@/services/orchestrator";
 import { getLocationContext, LocationContext } from "@/services/context";
@@ -27,6 +29,19 @@ async function chatWithOpenAITools(
   messages: { role: string; content: string }[],
   apiKey: string
 ): Promise<string> {
+  // Demo Mode: server-side proxy (no client key)
+  if (apiKey === DEMO_MODE_SENTINEL_KEY) {
+    const res = await proxyChat({
+      model: 'gpt-4o-mini',
+      messages: messages.map(m => ({
+        role: m.role === 'system' || m.role === 'assistant' ? m.role : 'user',
+        content: m.content,
+      })),
+      max_tokens: 1024,
+    });
+    return res.content;
+  }
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {

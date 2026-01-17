@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePreferences } from "@/state/preferences";
+import { useOpenAIKey } from "@/hooks/useOpenAIKey";
 import { getSessionStatus, endListeningSession } from "@/services/quiet-mode";
 import { EarOff, Mic, Clock, FileText, X } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
@@ -17,6 +18,7 @@ interface ListeningModeIndicatorProps {
 export default function ListeningModeIndicator({ onSummaryReady }: ListeningModeIndicatorProps) {
   const { user } = useAuth();
   const { preferences } = usePreferences();
+  const { apiKey: openaiApiKey } = useOpenAIKey();
   const [isActive, setIsActive] = useState(false);
   const [duration, setDuration] = useState(0);
   const [transcriptCount, setTranscriptCount] = useState(0);
@@ -39,14 +41,14 @@ export default function ListeningModeIndicator({ onSummaryReady }: ListeningMode
   }, [user]);
 
   const handleEndSession = async () => {
-    if (!user || !preferences.openaiApiKey) {
-      showError("API key required to generate summary");
+    if (!user || !openaiApiKey) {
+      showError("AI not configured");
       return;
     }
 
     setIsEnding(true);
     try {
-      const result = await endListeningSession(user.id, preferences.openaiApiKey);
+      const result = await endListeningSession(user.id, openaiApiKey);
       
       if (result.success) {
         showSuccess("Listening session ended");
