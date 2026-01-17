@@ -310,6 +310,17 @@
 
 ---
 
+## Automated Smoke Monitor
+
+A scheduled GitHub Actions workflow runs every 15 minutes (and can be triggered manually) to verify production health.
+
+- Workflow: .github/workflows/prod-smoke.yml ("Production Smoke Monitor")
+- Checks:
+  - /api/ai/status → 200 + application/json + configured=true
+  - /login → 200 + text/html
+  - / (optional) → 200 reachability
+- Where to see runs: GitHub → Actions → Production Smoke Monitor
+
 ## QUICK VERIFICATION SCRIPT (CLI)
 
 ```bash
