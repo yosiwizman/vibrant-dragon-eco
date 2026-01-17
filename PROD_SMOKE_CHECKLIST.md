@@ -321,6 +321,20 @@ A scheduled GitHub Actions workflow runs every 15 minutes (and can be triggered 
   - / (optional) → 200 reachability
 - Where to see runs: GitHub → Actions → Production Smoke Monitor
 
+### Failure Alerts
+- If the smoke workflow fails, a GitHub Issue is created or updated with title: "🚨 PROD Smoke Monitor Failing" (labels: ops, prod-smoke).
+- The issue dedupes by reusing the same open issue and adding a new comment with the run URL and timestamp.
+- When the monitor recovers, the workflow adds a comment "✅ Recovered" and closes the issue automatically.
+
+A scheduled GitHub Actions workflow runs every 15 minutes (and can be triggered manually) to verify production health.
+
+- Workflow: .github/workflows/prod-smoke.yml ("Production Smoke Monitor")
+- Checks:
+  - /api/ai/status → 200 + application/json + configured=true
+  - /login → 200 + text/html
+  - / (optional) → 200 reachability
+- Where to see runs: GitHub → Actions → Production Smoke Monitor
+
 ## QUICK VERIFICATION SCRIPT (CLI)
 
 ```bash
