@@ -11,6 +11,8 @@ Goal: Prevent regressions in lint/test debt during the investor demo window, wit
 
 The baselines are recorded in `quality-baseline.json` and used by CI to enforce the ratchet.
 
+Scope: Ratchet linting runs against `api/` and `src/` to avoid noise from generated or vendor files.
+
 ## How the ratchet works
 - CI still runs `pnpm run lint` and `pnpm run test` with `continue-on-error: true` (demo-safe).
 - A new required step runs `node scripts/ci/quality-ratchet.mjs` which:
