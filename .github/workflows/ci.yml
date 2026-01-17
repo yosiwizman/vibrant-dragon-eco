@@ -39,5 +39,8 @@ jobs:
         run: pnpm run test
         continue-on-error: true  # TODO: Fix 20 pre-existing failing tests, then remove this
 
+      - name: Quality Debt Ratchet (no regressions)
+        run: node scripts/ci/quality-ratchet.mjs
+
       - name: Build
         run: pnpm run build
