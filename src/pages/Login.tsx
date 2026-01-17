@@ -30,17 +30,58 @@ export default function Login() {
 
   // Check if user arrived from password reset link
   useEffect(() => {
+    // Check hash parameters (Supabase sometimes uses hash)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get('type');
+    const hashType = hashParams.get('type');
     
-    if (type === 'recovery') {
+    // Check query parameters (Supabase sometimes uses query)
+    const queryParams = new URLSearchParams(window.location.search);
+    const queryType = queryParams.get('type');
+    
+    // Check for access_token which indicates a recovery session
+    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
+    
+    console.log('[Password Reset] Checking URL params:', {
+      hashType,
+      queryType,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      hash: window.location.hash,
+      search: window.location.search,
+    });
+    
+    if (hashType === 'recovery' || queryType === 'recovery') {
       console.log('[Password Reset] User arrived from password reset link');
       setIsPasswordReset(true);
     }
+    
+    // Also check if there's a recovery session in Supabase
+    const checkRecoverySession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if this is a recovery session by looking at the URL
+        const isRecovery = window.location.hash.includes('type=recovery') ||
+                          window.location.search.includes('type=recovery');
+        if (isRecovery) {
+          console.log('[Password Reset] Recovery session detected');
+          setIsPasswordReset(true);
+        }
+      }
+    };
+    
+    checkRecoverySession();
   }, []);
+=======
 
   useEffect(() => {
-    if (!loading && user && !isPasswordReset) {
+    // Don't redirect if we're in password reset mode
+    if (isPasswordReset) {
+      console.log('[Login] In password reset mode, not redirecting');
+      return;
+    }
+    
+    if (!loading && user) {
       // Check if this is first login
       const hasSeenWelcome = localStorage.getItem("echo:seen-welcome");
       if (!hasSeenWelcome) {

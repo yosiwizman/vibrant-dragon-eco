@@ -12,7 +12,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import {
   Brain, Mic, Volume2, Search, MapPin, Map, CloudSun, Cloud,
   Phone, Mail, Calendar, Shield, Zap, Sparkles, AudioLines,
-  ChevronDown, ExternalLink, Check, Loader2
+  ChevronDown, ExternalLink, Check, Loader2, Link2
 } from "lucide-react";
 
 const ICON_MAP: Record<string, any> = {
@@ -45,6 +45,7 @@ export default function ProviderCard({ config, provider, onSave, onToggle }: Pro
   const IconComponent = ICON_MAP[config.icon] || Brain;
   const isEnabled = provider?.is_enabled || false;
   const hasApiKey = !!provider?.api_key;
+  const isSyncedFromGeneral = (provider?.config as any)?.synced_from_general === true;
 
   const handleSave = async () => {
     setSaving(true);
@@ -97,12 +98,18 @@ export default function ProviderCard({ config, provider, onSave, onToggle }: Pro
                 <IconComponent className={`h-5 w-5 ${isEnabled ? "text-fuchsia-400" : "text-slate-400"}`} />
               </div>
               <div>
-                <CardTitle className="text-base text-white flex items-center gap-2">
+                <CardTitle className="text-base text-white flex items-center gap-2 flex-wrap">
                   {config.displayName}
                   {hasApiKey && (
                     <Badge variant="outline" className="text-xs border-green-500/50 text-green-400">
                       <Check className="h-3 w-3 mr-1" />
                       Configured
+                    </Badge>
+                  )}
+                  {isSyncedFromGeneral && (
+                    <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-400">
+                      <Link2 className="h-3 w-3 mr-1" />
+                      Synced
                     </Badge>
                   )}
                 </CardTitle>

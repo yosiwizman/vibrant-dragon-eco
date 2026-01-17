@@ -13,6 +13,7 @@ import ProgressiveOnboarding from "@/components/ProgressiveOnboarding";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useVoicePreferences } from "@/hooks/useVoicePreferences";
 import { useProfileSync } from "@/hooks/useProfileSync";
+import { useAPIKeySync } from "@/hooks/useAPIKeySync";
 import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import OnboardingTour from "@/components/OnboardingTour";
 import QuickAddModal, { useQuickAdd } from "@/components/QuickAddModal";
@@ -101,6 +102,12 @@ function ProfileSyncWrapper() {
   return null;
 }
 
+// Wrapper component for API key sync (syncs OpenAI key to providers)
+function APIKeySyncWrapper() {
+  useAPIKeySync();
+  return null;
+}
+
 // Wrapper component for page tracking
 function PageTrackingWrapper() {
   usePageTracking();
@@ -176,6 +183,7 @@ const App = () => (
             <ConditionalNavBar />
             <PageTrackingWrapper />
             <ProfileSyncWrapper />
+            <APIKeySyncWrapper />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public routes */}

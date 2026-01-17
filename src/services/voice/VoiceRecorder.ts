@@ -170,12 +170,14 @@ export class VoiceRecorder {
 
   private startSilenceDetection(onSilenceDetected: () => void): void {
     // Configuration for hands-free conversation mode
-    const SPEECH_THRESHOLD = 15; // Audio level to consider as speech
-    const SILENCE_THRESHOLD = 8; // Audio level to consider as silence
-    const MIN_RECORDING_TIME = 1500; // Must record at least 1.5 seconds before checking silence
-    const SILENCE_DURATION_AFTER_SPEECH = 2000; // 2 seconds of silence after speech to stop
-    const MAX_RECORDING_TIME = 30000; // Maximum 30 seconds recording
-    const INITIAL_WAIT_TIME = 500; // Wait 500ms before starting detection
+    // TUNED FOR BETTER ACCURACY - less sensitive to brief pauses
+    const SPEECH_THRESHOLD = 12; // Audio level to consider as speech (lowered for sensitivity)
+    const SILENCE_THRESHOLD = 6; // Audio level to consider as silence (lowered)
+    const MIN_RECORDING_TIME = 2000; // Must record at least 2 seconds before checking silence
+    const SILENCE_DURATION_AFTER_SPEECH = 2500; // 2.5 seconds of silence after speech to stop
+    const MAX_RECORDING_TIME = 45000; // Maximum 45 seconds recording
+    const INITIAL_WAIT_TIME = 800; // Wait 800ms before starting detection
+    const NO_SPEECH_TIMEOUT = 10000; // 10 seconds without speech before stopping
     
     const checkSilence = () => {
       if (!this.analyser || !this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
@@ -233,9 +235,9 @@ export class VoiceRecorder {
           onSilenceDetected();
           return;
         }
-      } else if (!this.hasDetectedSpeech && timeSinceStart > 8000) {
-        // No speech detected for 8 seconds - stop to avoid hanging
-        console.log('[VoiceRecorder] No speech detected for 8 seconds, stopping');
+      } else if (!this.hasDetectedSpeech && timeSinceStart > NO_SPEECH_TIMEOUT) {
+        // No speech detected for timeout period - stop to avoid hanging
+        console.log(`[VoiceRecorder] No speech detected for ${NO_SPEECH_TIMEOUT/1000} seconds, stopping`);
         onSilenceDetected();
         return;
       }

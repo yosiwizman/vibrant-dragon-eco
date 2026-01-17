@@ -38,8 +38,22 @@ export default function MicButton() {
     }
 
     if (isConversationMode) {
-      // In conversation mode, clicking ends the conversation
-      stopConversationMode();
+      // In conversation mode:
+      // - If speaking, skip to listening (interrupt)
+      // - If listening or processing, do nothing (let it continue)
+      // - If idle (waiting), end conversation
+      if (isSpeaking) {
+        // Interrupt speech and continue listening
+        stopSpeaking();
+        // The onEnd callback in speak() will auto-start listening
+      } else if (isListening || isProcessing) {
+        // Don't interrupt - let the conversation flow naturally
+        // User can say "goodbye" to end
+        console.log('[MicButton] Conversation in progress, ignoring click');
+      } else {
+        // Conversation mode but not doing anything - end it
+        stopConversationMode();
+      }
     } else if (isSpeaking) {
       // If speaking outside conversation mode, stop
       stopSpeaking();
