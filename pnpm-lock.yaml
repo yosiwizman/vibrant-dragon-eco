@@ -130,8 +130,8 @@ importers:
         specifier: ^2.90.1
         version: 2.90.1
       '@tanstack/react-query':
-        specifier: ^5.90.18
-        version: 5.90.18(react@18.3.1)
+        specifier: ^5.90.19
+        version: 5.90.19(react@18.3.1)
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -160,8 +160,8 @@ importers:
         specifier: ^3.5.4
         version: 3.5.4
       happy-dom:
-        specifier: ^20.3.1
-        version: 20.3.1
+        specifier: ^20.3.3
+        version: 20.3.3
       idb:
         specifier: ^8.0.3
         version: 8.0.3
@@ -175,8 +175,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       posthog-js:
-        specifier: ^1.326.0
-        version: 1.326.0
+        specifier: ^1.328.0
+        version: 1.328.0
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -212,7 +212,7 @@ importers:
         version: 0.9.9(@types/react-dom@18.3.6(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       vitest:
         specifier: ^4.0.17
-        version: 4.0.17(@opentelemetry/api@1.9.0)(@types/node@25.0.9)(happy-dom@20.3.1)(jiti@1.21.7)(yaml@2.7.1)
+        version: 4.0.17(@opentelemetry/api@1.9.0)(@types/node@25.0.9)(happy-dom@20.3.3)(jiti@1.21.7)(yaml@2.7.1)
       zod:
         specifier: ^4.3.5
         version: 4.3.5
@@ -797,8 +797,8 @@ packages:
   '@posthog/core@1.10.0':
     resolution: {integrity: sha512-Xk3JQ+cdychsvftrV3G9ZrN9W329lbyFW0pGJXFGKFQf8qr4upw2SgNg9BVorjSrfhoXZRnJGt/uNF4nGFBL5A==}
 
-  '@posthog/types@1.326.0':
-    resolution: {integrity: sha512-ksM7wuL3FHB6Es96QLDdDLpSBkTC2tCLiWDne+XR3+vb35lYkhqwB93TKO/zSlK4yRUtGZ64qwXJ9iiXB18hCA==}
+  '@posthog/types@1.328.0':
+    resolution: {integrity: sha512-T8RPYpgPxwtAMqtfj8+3VSw3Xca2hIYb3BN3ohPAZhN8eQOtkC00jEKy+bOcniy1BJCbbhpmGtxqQCpzr4/EXQ==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -1616,11 +1616,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@rollup/rollup-openbsd-x64@4.55.1':
-    resolution: {integrity: sha512-eLXw0dOiqE4QmvikfQ6yjgkg/xDM+MdU9YJuP4ySTibXU0oAvnEWXt7UDJmD4UkYialMfOGFPJnIHSe/kdzPxg==}
-    cpu: [x64]
-    os: [openbsd]
-
   '@rollup/rollup-openharmony-arm64@4.55.1':
     resolution: {integrity: sha512-xzm44KgEP11te3S2HCSyYf5zIzWmx3n8HDCc7EE59+lTcswEWNpvMLfd9uJvVX8LCg9QWG67Xt75AuHn4vgsXw==}
     cpu: [arm64]
@@ -1796,11 +1791,11 @@ packages:
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1'
 
-  '@tanstack/query-core@5.90.18':
-    resolution: {integrity: sha512-rbGx6bHgPNVzutP7BEr+53UPKohpckqlMAad+To9UxTbeaQ+kC/1SDRj+QzkwbQ7qhLT/1IKp34yS6thda6fzA==}
+  '@tanstack/query-core@5.90.19':
+    resolution: {integrity: sha512-GLW5sjPVIvH491VV1ufddnfldyVB+teCnpPIvweEfkpRx7CfUmUGhoh9cdcUKBh/KwVxk22aNEDxeTsvmyB/WA==}
 
-  '@tanstack/react-query@5.90.18':
-    resolution: {integrity: sha512-KqNZX0C5IFz4639zR1ilnQ288tQdJrMNLtzmlzyJ14xauBkhtLEy3mPU/V4KiHsr41eL1ILZbDP36TB12lYfCQ==}
+  '@tanstack/react-query@5.90.19':
+    resolution: {integrity: sha512-qTZRZ4QyTzQc+M0IzrbKHxSeISUmRB3RPGmao5bT+sI6ayxSRhn0FXEnT5Hg3as8SBFcRosrXXRFB+yAcxVxJQ==}
     peerDependencies:
       react: ^18.3.1
 
@@ -1871,9 +1866,6 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
-
-  '@types/node@20.19.30':
-    resolution: {integrity: sha512-WJtwWJu7UdlvzEAUm484QNg5eAoq5QR08KDNx7g45Usrs2NtOPiX8ugDqmKdXkyL03rBqU5dYNYVQetEpBHq2g==}
 
   '@types/node@25.0.9':
     resolution: {integrity: sha512-/rpCXHlCWeqClNBwUhDcusJxXYDjZTyE8v5oTO7WbL8eij2nKhUeU89/6xgjU7N4/Vh3He0BtyhJdQbDyhiXAw==}
@@ -2340,6 +2332,10 @@ packages:
   emoji-regex@9.2.2:
     resolution: {integrity: sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==}
 
+  entities@4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
   env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
     engines: {node: '>=6'}
@@ -2552,8 +2548,8 @@ packages:
   guid-typescript@1.0.9:
     resolution: {integrity: sha512-Y8T4vYhEfwJOTbouREvG+3XDsjr8E3kIr7uf+JZ0BYloFsttiHU0WfvANVsR7TxNUJa/WpCnw/Ino/p+DeBhBQ==}
 
-  happy-dom@20.3.1:
-    resolution: {integrity: sha512-tLvsizNno05Hij0PoB0QN/S8xf0YU2AGvO11/JlJDw5McA/gzyn0Ni1RwbTI1/zteUbOekJH0t6q8HFvjbxsGg==}
+  happy-dom@20.3.3:
+    resolution: {integrity: sha512-hM9gltmtQLfmWPqoPreUtRdP3nZCSzQEw7l/JC+up5CxquDykhYFKzIzoFFeVev3AGFEULNvsbE8fpZPgxUYEQ==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -2969,8 +2965,8 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  posthog-js@1.326.0:
-    resolution: {integrity: sha512-8Z/Hb3rMDdntpIrvcg/+xhiioYjY89mwNr61YJGye8D+Mjt08LljSrhYSV2VwOtWTtnYoSkfWnJ0S3BdojKPsQ==}
+  posthog-js@1.328.0:
+    resolution: {integrity: sha512-1TzO1WOq53vnn+4W7Evda4QyBOcLI1svoMJy1x4CyiR1RgCHh2hhcmCcKeRJh8CAUV8H69qLo6dGvjMY8ENkrg==}
 
   preact@10.28.2:
     resolution: {integrity: sha512-lbteaWGzGHdlIuiJ0l2Jq454m6kcpI1zNje6d8MlGAFlYvP2GO4ibnat7P74Esfz4sPTdM6UxtTwh/d3pwM9JA==}
@@ -3276,6 +3272,7 @@ packages:
   tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
@@ -3340,9 +3337,6 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
-
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
@@ -4110,7 +4104,7 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.6
 
-  '@posthog/types@1.326.0': {}
+  '@posthog/types@1.328.0': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -4916,9 +4910,6 @@ snapshots:
   '@rollup/rollup-linux-x64-musl@4.55.1':
     optional: true
 
-  '@rollup/rollup-openbsd-x64@4.55.1':
-    optional: true
-
   '@rollup/rollup-openharmony-arm64@4.55.1':
     optional: true
 
@@ -5080,11 +5071,11 @@ snapshots:
       postcss-selector-parser: 6.0.10
       tailwindcss: 3.4.17
 
-  '@tanstack/query-core@5.90.18': {}
+  '@tanstack/query-core@5.90.19': {}
 
-  '@tanstack/react-query@5.90.18(react@18.3.1)':
+  '@tanstack/react-query@5.90.19(react@18.3.1)':
     dependencies:
-      '@tanstack/query-core': 5.90.18
+      '@tanstack/query-core': 5.90.19
       react: 18.3.1
 
   '@testing-library/dom@10.4.1':
@@ -5157,10 +5148,6 @@ snapshots:
       '@types/node': 25.0.9
 
   '@types/json-schema@7.0.15': {}
-
-  '@types/node@20.19.30':
-    dependencies:
-      undici-types: 6.21.0
 
   '@types/node@25.0.9':
     dependencies:
@@ -5612,6 +5599,8 @@ snapshots:
 
   emoji-regex@9.2.2: {}
 
+  entities@4.5.0: {}
+
   env-paths@2.2.1: {}
 
   es-module-lexer@1.7.0: {}
@@ -5864,11 +5853,12 @@ snapshots:
 
   guid-typescript@1.0.9: {}
 
-  happy-dom@20.3.1:
+  happy-dom@20.3.3:
     dependencies:
-      '@types/node': 20.19.30
+      '@types/node': 25.0.9
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
+      entities: 4.5.0
       whatwg-mimetype: 3.0.0
       ws: 8.19.0
     transitivePeerDependencies:
@@ -6229,7 +6219,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  posthog-js@1.326.0:
+  posthog-js@1.328.0:
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/api-logs': 0.208.0
@@ -6237,7 +6227,7 @@ snapshots:
       '@opentelemetry/resources': 2.4.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-logs': 0.208.0(@opentelemetry/api@1.9.0)
       '@posthog/core': 1.10.0
-      '@posthog/types': 1.326.0
+      '@posthog/types': 1.328.0
       core-js: 3.47.0
       dompurify: 3.3.1
       fflate: 0.4.8
@@ -6451,7 +6441,6 @@ snapshots:
       '@rollup/rollup-linux-s390x-gnu': 4.55.1
       '@rollup/rollup-linux-x64-gnu': 4.55.1
       '@rollup/rollup-linux-x64-musl': 4.55.1
-      '@rollup/rollup-openbsd-x64': 4.55.1
       '@rollup/rollup-openharmony-arm64': 4.55.1
       '@rollup/rollup-win32-arm64-msvc': 4.55.1
       '@rollup/rollup-win32-ia32-msvc': 4.55.1
@@ -6656,8 +6645,6 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  undici-types@6.21.0: {}
-
   undici-types@7.16.0: {}
 
   universalify@2.0.1: {}
@@ -6735,7 +6722,7 @@ snapshots:
       jiti: 1.21.7
       yaml: 2.7.1
 
-  vitest@4.0.17(@opentelemetry/api@1.9.0)(@types/node@25.0.9)(happy-dom@20.3.1)(jiti@1.21.7)(yaml@2.7.1):
+  vitest@4.0.17(@opentelemetry/api@1.9.0)(@types/node@25.0.9)(happy-dom@20.3.3)(jiti@1.21.7)(yaml@2.7.1):
     dependencies:
       '@vitest/expect': 4.0.17
       '@vitest/mocker': 4.0.17(vite@6.4.1(@types/node@25.0.9)(jiti@1.21.7)(yaml@2.7.1))
@@ -6760,7 +6747,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/node': 25.0.9
-      happy-dom: 20.3.1
+      happy-dom: 20.3.3
     transitivePeerDependencies:
       - jiti
       - less
